@@ -1,7 +1,7 @@
 import AnimatedCounter from './AnimatedCounter';
 
 const TotalBalanceBox = ({
-  accounts = [], totalBanks, totalCurrentBalance
+  totalCurrentBalance=1234.56
 }: TotalBalanceBoxProps) => {
   return (
     <section className="total-balance">

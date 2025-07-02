@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Eye, EyeOff, ArrowUpRight, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import WalletFundingCard from './walletFunding';
 
 export default function WalletPage() {
   const dispatch = useDispatch();
@@ -55,32 +56,6 @@ export default function WalletPage() {
     }
   }, [error, dispatch]);
 
-  const handleFundWallet = () => {
-    if (fundAmount < 100) {
-      toast.error('Minimum funding amount is ₦100');
-      return;
-    }
-
-    if (paymentMethod === 'monnify') {
-      dispatch(initializeMonnifyFunding(fundAmount) as any);
-    } else {
-      dispatch(initializePaystackFunding(fundAmount) as any);
-    }
-  };
-
-  const handleVerifyPayment = () => {
-    if (!verificationRef) {
-      toast.error('Please enter a reference');
-      return;
-    }
-
-    if (paymentMethod === 'monnify') {
-      dispatch(verifyMonnifyFunding(verificationRef) as any);
-    } else {
-      dispatch(verifyPaystackFunding(verificationRef) as any);
-    }
-  };
-
   const formatCurrency = (amount: number | null) => {
     if (amount === null) return '₦0.00';
     return new Intl.NumberFormat('en-NG', {
@@ -89,7 +64,7 @@ export default function WalletPage() {
     }).format(amount);
   };
 
-  const transactions = fullWallet?.transactions || [];
+  const transactions = fullWallet?.walletTransaction || [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -112,7 +87,7 @@ export default function WalletPage() {
           </CardHeader>
           <CardContent>
             <div className="text-4xl font-bold mb-4">
-              {showBalance ? formatCurrency(balance) : '•••••••'}
+              {showBalance ?balance : '•••••••'}
             </div>
             <div className="flex items-center gap-4">
               <div className="flex-1">
@@ -129,127 +104,7 @@ export default function WalletPage() {
           </CardContent>
         </Card>
 
-        {/* Wallet Actions */}
-        <Tabs defaultValue="fund" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="fund">Fund Wallet</TabsTrigger>
-            <TabsTrigger value="verify">Verify Payment</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="fund">
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle>Fund Your Wallet</CardTitle>
-                <CardDescription>Add money to your wallet using any payment method</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount (₦)</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    value={fundAmount}
-                    onChange={(e) => setFundAmount(Number(e.target.value))}
-                    min="100"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Payment Method</Label>
-                  <div className="flex gap-4">
-                    <Button
-                      variant={paymentMethod === 'paystack' ? 'default' : 'outline'}
-                      onClick={() => setPaymentMethod('paystack')}
-                      className={`w-full ${paymentMethod === 'paystack' ? 'bg-gradient-to-r from-purple-600 to-blue-500 text-white' : ''}`}
-                    >
-                      Paystack
-                    </Button>
-                    <Button
-                      variant={paymentMethod === 'monnify' ? 'default' : 'outline'}
-                      onClick={() => setPaymentMethod('monnify')}
-                      className={`w-full ${paymentMethod === 'monnify' ? 'bg-gradient-to-r from-green-600 to-teal-500 text-white' : ''}`}
-                    >
-                      Monnify
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button
-                  onClick={handleFundWallet}
-                  disabled={fundingStatus === 'loading'}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
-                >
-                  {fundingStatus === 'loading' ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Continue to Payment'
-                  )}
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="verify">
-            <Card className="border-0 shadow-lg">
-              <CardHeader>
-                <CardTitle>Verify Payment</CardTitle>
-                <CardDescription>Verify your payment if you've already made one</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Payment Method</Label>
-                  <div className="flex gap-4">
-                    <Button
-                      variant={paymentMethod === 'paystack' ? 'default' : 'outline'}
-                      onClick={() => setPaymentMethod('paystack')}
-                      className={`w-full ${paymentMethod === 'paystack' ? 'bg-gradient-to-r from-purple-600 to-blue-500 text-white' : ''}`}
-                    >
-                      Paystack
-                    </Button>
-                    <Button
-                      variant={paymentMethod === 'monnify' ? 'default' : 'outline'}
-                      onClick={() => setPaymentMethod('monnify')}
-                      className={`w-full ${paymentMethod === 'monnify' ? 'bg-gradient-to-r from-green-600 to-teal-500 text-white' : ''}`}
-                    >
-                      Monnify
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="reference">Payment Reference</Label>
-                  <Input
-                    id="reference"
-                    placeholder="Enter your payment reference"
-                    value={verificationRef}
-                    onChange={(e) => setVerificationRef(e.target.value)}
-                  />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button
-                  onClick={handleVerifyPayment}
-                  disabled={verifyStatus === 'verifying'}
-                  className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white"
-                >
-                  {verifyStatus === 'verifying' ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Verifying...
-                    </>
-                  ) : (
-                    'Verify Payment'
-                  )}
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
+        
         {/* Crypto Wallet */}
         {cryptoWallet && (
           <Card className="border-0 shadow-lg">
@@ -276,7 +131,7 @@ export default function WalletPage() {
             </CardFooter>
           </Card>
         )}
-
+<WalletFundingCard/>
         {/* Transaction History */}
         <Card className="border-0 shadow-lg">
           <CardHeader>

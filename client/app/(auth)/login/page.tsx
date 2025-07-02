@@ -1,14 +1,10 @@
-// app/login/page.tsx
-'use client'; // This page is interactive, so it must be a Client Component
-
-// src/app/(auth)/login/page.tsx
-import LoginForm from '@/components/auth/loginForm'; // Adjust path if needed
-import SimpleLoginForm from '@/components/auth/simpleLoginForm';
+'use client'; // 
+import LoginForm from '@/components/auth/LoginForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'; // Shadcn Card
 
 export default function LoginPage() {
   return (
-    <div>
+    <div className="min-h-screen flex items-center justify-center py-12">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
@@ -17,7 +13,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SimpleLoginForm/>
+          <LoginForm/>
         </CardContent>
       </Card>
     </div>

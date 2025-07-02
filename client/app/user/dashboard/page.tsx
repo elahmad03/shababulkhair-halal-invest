@@ -14,7 +14,6 @@ export default function DashboardPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
 
-  // Basic redirect if not authenticated (AuthWrapper does more robust checks)
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
@@ -37,7 +36,6 @@ export default function DashboardPage() {
       <NavBar />
       <div style={{ padding: '20px' }}>
         <h1>Welcome to Your Dashboard, {user?.firstName || user?.email}!</h1>
-        <p>User ID: {user?.id}</p>
         <p>User Role: {user?.role}</p>
         {user?.profilePicture && (
           <div>
@@ -51,8 +49,6 @@ export default function DashboardPage() {
 
         <hr style={{ margin: '30px 0' }} />
 
-        {/* Integrate the Profile Picture Upload component */}
-        <ProfilePictureUpload />
       </div>
     </AuthWrapper>
   );
