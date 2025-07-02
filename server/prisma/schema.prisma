@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  email          String     @unique
+  phone          String     @unique
+  password       String
+  firstName      String
+  lastName       String
+  gender         String?
+  dateOfBirth    DateTime?
+  currency       String?
+  occupation     String?
+  profilePicture String?
+  address        Address
+  identity       Identity
+  nextOfKin      NextOfKin
+  role           Role       @default(USER)
+  status         UserStatus @default(PENDING)
+  tier           Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Relations
+  wallet              Wallet?
+  cryptoWallet        CryptoWallet?
+  userShares          UserShare[]
+  withdrawals         WithdrawalRequest[]
+  emergencies         EmergencyRequest[]
+  businessInvestments BusinessInvestor[] // ✅ fixed reverse relation
+}
+
+type Address {
+  country     String
+  countryCode String
+  state       String
+  city        String
+  street      String
+  postalCode  String?
+}
+
+type Identity {
+  nin       String
+  idCardUrl String
+  selfieUrl String
+  verified  Boolean @default(false)
+}
+
+type NextOfKin {
+  name         String
+  relationship String
+  phone        String
+}
+
+enum WalletType {
+  INTERNAL
+  VIRTUAL
+}
+
+model Wallet {
+  id                String              @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String              @unique @db.ObjectId
+  user              User                @relation(fields: [userId], references: [id])
+  internalWalletId  String              @unique
+  bankName          String?
+  bankAccountNumber String?
+  balance           Float               @default(0)
+  tier              Int                 @default(1)
+  type              WalletType          @default(INTERNAL) // 👈
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  transactions      WalletTransaction[]
+}
+
+model WalletTransaction {
+  id        String            @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String            @db.ObjectId
+  walletId  String            @db.ObjectId
+  wallet    Wallet            @relation(fields: [walletId], references: [id])
+  amount    Float
+  type      TransactionType
+  reference String            @unique
+  status    TransactionStatus
+  provider  String?
+  narration String?
+  metadata  Json?
+  createdAt DateTime          @default(now())
+}
+
+model CryptoWallet {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId              String   @unique @db.ObjectId
+  user                User     @relation(fields: [userId], references: [id])
+  address             String
+  encryptedPrivateKey String
+  network             String
+  createdAt           DateTime @default(now())
+}
+
+model Cycle {
+  id         String      @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  startDate  DateTime
+  endDate    DateTime
+  isOpen     Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  userShares UserShare[]
+  businesses Business[]
+}
+
+model UserShare {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @db.ObjectId
+  cycleId         String   @db.ObjectId
+  user            User     @relation(fields: [userId], references: [id])
+  cycle           Cycle    @relation(fields: [cycleId], references: [id])
+  shares          Float
+  remainingShares Float
+  lockedUntil     DateTime
+  createdAt       DateTime @default(now())
+
+  // IMPORTANT: Give your composite unique constraint a name
+  @@unique([userId, cycleId], name: "User_Cycle_Unique") // <--- ADD THIS NAME
+}
+
+model Business {
+  id              String              @id @default(auto()) @map("_id") @db.ObjectId
+  cycleId         String              @db.ObjectId
+  name            String
+  amountAllocated Float
+  status          BusinessStatus
+  investors       BusinessInvestor[]
+  profitLogs      BusinessProfitLog[] // Added reverse relation
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  cycle           Cycle               @relation(fields: [cycleId], references: [id])
+}
+
+model BusinessInvestor {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @db.ObjectId
+  businessId String   @db.ObjectId
+  amount     Float
+  sharesUsed Float
+  user       User     @relation(fields: [userId], references: [id])
+  business   Business @relation(fields: [businessId], references: [id])
+}
+
+model BusinessProfitLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  businessId  String   @db.ObjectId
+  business    Business @relation(fields: [businessId], references: [id])
+  amount      Float
+  notedBy     String // Admin name or ID
+  distributed Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  ProfitDistributionLog ProfitDistributionLog[]
+}
+
+// Add this new model to your schema.prisma file
+model ProfitDistributionLog {
+  id            String            @id @default(auto()) @map("_id") @db.ObjectId
+  profitLogId   String            @unique @db.ObjectId // Make unique if each BusinessProfitLog has only one distribution log
+  profitLog     BusinessProfitLog @relation(fields: [profitLogId], references: [id]) // Relation to BusinessProfitLog
+  reserveAmount Float
+  userAmount    Float
+  createdAt     DateTime          @default(now())
+}
+
+model WithdrawalRequest {
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String           @db.ObjectId
+  user        User             @relation(fields: [userId], references: [id])
+  amount      Float
+  type        WithdrawalType
+  status      WithdrawalStatus
+  approvedBy  String?
+  createdAt   DateTime         @default(now())
+  processedAt DateTime?
+}
+
+model EmergencyRequest {
+  id          String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String          @db.ObjectId
+  user        User            @relation(fields: [userId], references: [id])
+  reason      String
+  amount      Float
+  status      EmergencyStatus @default(PENDING)
+  createdAt   DateTime        @default(now())
+  processedAt DateTime?
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPERADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING
+  BANNED
+  DECEASED
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+  TRANSFER
+  WITHDRAWAL
+  DEPOSIT
+  PROFIT_DISTRIBUTION
+  BUSINESS_INVESTMENT
+  EMERGENCY_WITHDRAWAL
+  REFUND
+  FUNDING
+}
+
+enum TransactionStatus {
+  SUCCESS
+  FAILED
+  PENDING
+}
+
+enum BusinessStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum WithdrawalType {
+  PROFIT
+  SHARE
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  PROCESSED
+}
+
+enum EmergencyStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
