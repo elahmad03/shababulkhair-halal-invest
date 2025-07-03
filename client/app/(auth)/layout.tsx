@@ -30,7 +30,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       ></div>
 
       {/* Content Container - z-index ensures it's above overlays */}
-      <div className="relative z-10 w-full max-w-md md:max-w-lg lg:max-w-xl p-6 bg-white/90 dark:bg-zinc-800/90 rounded-xl shadow-2xl backdrop-blur-sm">
+      <div className="relative z-10 w-full max-w-md md:max-w-lg lg:max-w-xl p-6 bg-white/90 dark:bg-zinc-800/90 rounded-xl shadow-2xl backdrop-blur-sm align">
         {children}
       </div>
     </div>

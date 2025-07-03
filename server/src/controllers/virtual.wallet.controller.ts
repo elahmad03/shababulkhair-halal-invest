@@ -149,7 +149,7 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import axios, { AxiosResponse } from 'axios';
 import crypto from 'crypto';
-import { AuthenticatedRequest } from '../middleware/auth1';
+// import { AuthenticatedRequest } from '../middleware/auth';
 import {
   MonnifyConfig,
   MonnifyTokenResponse,
@@ -204,7 +204,7 @@ class WalletController {
   }
 
   // Initialize funding transaction
-  public async initializeFunding(req: AuthenticatedRequest, res: Response): Promise<void> {
+  public async initializeFunding(req: Request, res: Response): Promise<void> {
     try {
       const { amount }: FundingInitializeRequest = req.body;
       const userId = req.user.id;
@@ -322,7 +322,7 @@ class WalletController {
   }
 
   // Verify funding transaction
-  public async verifyFunding(req: AuthenticatedRequest, res: Response): Promise<void> {
+  public async verifyFunding(req: Request, res: Response): Promise<void> {
     try {
       const { reference } = req.params;
       const userId = req.user.id;
@@ -518,7 +518,7 @@ class WalletController {
   }
 
   // Get wallet balance
-  public async getWalletBalance(req: AuthenticatedRequest, res: Response): Promise<void> {
+  public async getWalletBalance(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user.id;
 
@@ -553,7 +553,7 @@ class WalletController {
   }
 
   // Get wallet transactions
-  public async getTransactions(req: AuthenticatedRequest, res: Response): Promise<void> {
+  public async getTransactions(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user.id;
       const { page = '1', limit = '20', type } = req.query;
