@@ -152,7 +152,8 @@ export const loginUser = async (req: Request, res: Response) => {
     // This check is already enforced in config.ts via the throw, but good as a runtime guard
     if (!JWT_SECRET) {
       console.error("DEBUG BACKEND: JWT_SECRET is not defined, cannot sign token."); // MODIFIED LOG
-      return res.status(500).json({ message: "Server configuration error" });
+       res.status(500).json({ message: "Server configuration error" });
+       return;
     }
 
     const secret: Secret = JWT_SECRET;

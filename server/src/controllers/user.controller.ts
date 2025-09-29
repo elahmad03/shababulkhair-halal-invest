@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import prisma from "../prisma/client";
-import { AuthRequest } from '../middleware/auth';
 
 export const uploadProfilePicture = async (req: Request, res: Response) => {
   try {
