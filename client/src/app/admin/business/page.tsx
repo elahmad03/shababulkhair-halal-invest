@@ -1,9 +1,12 @@
-import React from 'react'
+import HeaderBox from "@/components/common/HeaderBox";
 
 function page() {
   return (
-    <div>page</div>
-  )
+    <HeaderBox
+      title="Business management"
+      subtext="manage all business related services "
+    />
+  );
 }
 
-export default page
+export default page;

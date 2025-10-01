@@ -2,7 +2,7 @@
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/admin/AppSidebar";
-import Topbar from "@/components/layout/admin/MobileHeader";
+import Topbar from "@/components/layout/MobileHeader";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

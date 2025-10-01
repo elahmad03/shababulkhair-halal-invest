@@ -1,10 +1,10 @@
-import HeaderBox from '@/components/HeaderBox'
+import HeaderBox from '@/components/common/HeaderBox'
 
-const Home = ()=> {
+const Page = ()=> {
  
   return (
-    <section className="home">
-      <div className="home-content">
+    <section className="m-4 ">
+      <div className="p-6">
         <HeaderBox type='greeting' title={'welcome '} subtext={'admin'}/>
       </div>
 
@@ -12,4 +12,4 @@ const Home = ()=> {
   )
 }
 
-export default Home;
+export default Page;

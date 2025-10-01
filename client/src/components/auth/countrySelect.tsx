@@ -2,21 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { Country } from "@/src/lib/types/country";
-import { Label } from "@/src/components/ui/label";
+import { Country } from "@/lib/types/country";
+import { Label } from "@/components/ui/label";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-} from "@/src/components/ui/command";
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/src/components/ui/popover";
-import { Button } from "@/src/components/ui/button";
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import { Check, ChevronDown } from "lucide-react";
 
 

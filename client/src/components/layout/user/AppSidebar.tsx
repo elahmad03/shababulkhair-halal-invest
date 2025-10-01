@@ -15,14 +15,11 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 
 const items = [
-   { title: "Dashboard", url: "/admin/dashboard", icon: CircleDashedIcon },
-  { title: "Manage Cycle", url: "/admin/cycles", icon: Recycle },
-  { title: "Manage Business", url: "/admin/business", icon: Briefcase },
-  { title: "transactions", url: "/admin/transactions", icon: CopySlash },
-   { title: "Manage investors", url: "/admin/users", icon: User2 },
-    { title: "Manage expenses", url: "/admin/expenses", icon: ReceiptPoundSterling},
-     { title: "Manage widthrawals", url: "/admin/widthrawals", icon: ArrowBigDown },
-     
+   { title: "Dashboard", url: "/user/dashboard", icon: CircleDashedIcon },
+  { title: "Cycle", url: "/user/cycles", icon: Recycle },
+  { title: "Wallet", url: "/user/wallet", icon: Briefcase },
+  { title: "investment", url: "/user/investments", icon: CopySlash },
+
 ];
 
 export function AppSidebar() {

@@ -1,5 +1,5 @@
-import KYCForm from '@/src/components/kyc/kycForm';
-import KYCStatus from '@/src/components/kyc/kycStatus';
+import KYCForm from '@/components/kyc/kycForm';
+import KYCStatus from '@/components/kyc/kycStatus';
 
 export default function KYCPage() {
   return (

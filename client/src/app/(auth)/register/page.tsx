@@ -1,5 +1,4 @@
-import { CountrySelect } from "@/src/components/auth/countrySelect";
-import RegisterForm from "@/src/components/auth/registerform";
+import RegisterForm from "@/components/auth/registerform";
 
 
 export default function Registerpage() {

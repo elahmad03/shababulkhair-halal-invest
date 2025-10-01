@@ -1,6 +1,6 @@
 "use client";
 
-import ProfilePictureUpload from "@/src/components/user/profileUpload"
+import ProfilePictureUpload from "@/components/user/profileUpload"
 
 
 function userPage() {

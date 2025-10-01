@@ -3,31 +3,31 @@
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
-import { CountrySelect } from "@/src/components/auth/countrySelect";
-import { RadioGroup, RadioGroupItem } from "@/src/components/ui/radio-group";
-import { Popover, PopoverContent, PopoverTrigger } from "@/src/components/ui/popover";
-import { Calendar } from "@/src/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CountrySelect } from "@/components/auth/countrySelect";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import { cn } from "@/src/lib/utils";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useEffect } from "react";
-import { Checkbox } from "@/src/components/ui/checkbox";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useRouter } from 'next/navigation';
 
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/src/store";
+import { RootState } from "@/store";
 import {
   registerStart,
   registerSuccess,
   registerFailure,
   clearAuthError,
-} from "@/src/store/features/auth/authSlice";
+} from "@/store/features/auth/authSlice";
 import axios from 'axios';
-import { api } from "@/src/lib/api";
+import { api } from "@/lib/api";
 
 const registrationSchema = z.object({
   firstName: z.string().min(2, "First name is required"),

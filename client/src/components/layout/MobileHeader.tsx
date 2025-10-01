@@ -23,6 +23,7 @@ import { logout } from "@/store/features/auth/authSlice";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function Topbar() {
   const { user } = useAppSelector((state) => state.auth);
@@ -40,7 +41,7 @@ export default function Topbar() {
   };
 
   return (
-    <header className="relative px-4 py-3 border-b bg-white dark:bg-gray-900 flex items-center justify-between">
+    <header className="relative px-4 py-4 border-b bg-white dark:bg-gray-900 flex items-center justify-between">
       {/* Left: Logo and toggle */}
       <div className="flex items-center gap-4">
         <div className="md:hidden">
@@ -49,7 +50,7 @@ export default function Topbar() {
           </SidebarTrigger>
         </div>
         <h1 className="text-xl font-bold text-emerald-600">
-          Shababulkhair
+          <Image src='/logo.png' width={32} height={32} alt={"shaba bulkhair"} /> Shababulkhair
         </h1>
       </div>
 
@@ -58,9 +59,9 @@ export default function Topbar() {
         {/* Notifications */}
         <button
           aria-label="Notifications"
-          className="text-gray-600 dark:text-gray-300 hover:text-emerald-500"
+          className="border-1 p-2 rounded-xl  text-gray-600 dark:text-gray-300 hover:text-emerald-500"
         >
-          <Bell className="w-5 h-5" />
+          <Bell className="w-5 h-5 " />
         </button>
 
         {/* Dark/Light Toggle */}
@@ -68,7 +69,7 @@ export default function Topbar() {
           <button
             aria-label="Toggle Theme"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="text-gray-600 dark:text-gray-300 hover:text-emerald-500"
+            className="border-1 p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-emerald-500"
           >
             {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
@@ -77,9 +78,9 @@ export default function Topbar() {
         {/* Avatar Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Avatar className="cursor-pointer">
+            <Avatar className="border-1 p-2 rounded-full cursor-pointer">
               <AvatarImage
-                src={user?.profilePicture ?? "/fallback.png"}
+                src={user?.profilePicture ?? "/noImage.png"}
                 className="w-8 h-8 rounded-full object-cover"
               />
               <AvatarFallback>{user?.firstName?.[0] ?? "U"}</AvatarFallback>

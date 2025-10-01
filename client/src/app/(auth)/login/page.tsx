@@ -1,6 +1,6 @@
 'use client'; // 
-import LoginForm from '@/src/components/auth/LoginForm';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/src/components/ui/card'; // Shadcn Card
+import LoginForm from '@/components/auth/LoginForm';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'; // Shadcn Card
 
 export default function LoginPage() {
   return (
