@@ -1,9 +1,28 @@
-import React from 'react'
+// app/admin/cycles/page.tsx
+"use client";
 
-function page() {
+import { useState } from "react";
+import { CycleManagementHeader } from "@/components/admin/cycles/cycle-management-header";
+import { CyclesDataTable } from "@/components/admin/cycles/CycleDataTable";
+import { CreateCycleDialog } from "@/components/admin/cycles/CreateCycleDiaglog";
+
+export default function CycleManagementPage() {
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
   return (
-    <div>cycles page</div>
-  )
-}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <CycleManagementHeader onCreateClick={() => setIsCreateDialogOpen(true)} />
+        
+        <div className="mt-8">
+          <CyclesDataTable />
+        </div>
 
-export default page
+        <CreateCycleDialog 
+          open={isCreateDialogOpen} 
+          onOpenChange={setIsCreateDialogOpen} 
+        />
+      </div>
+    </div>
+  );
+}

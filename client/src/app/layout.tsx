@@ -1,5 +1,5 @@
-import Metadata from "next";
-import StoreProvider from "./storeProvider";
+import type { Metadata } from "next";
+import StoreProvider from "@/store/storeProvider";
 import { Toaster } from "sonner";
 
 import localFont from 'next/font/local';

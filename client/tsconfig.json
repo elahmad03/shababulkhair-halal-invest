@@ -33,6 +33,6 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     ".next/types/**/*.ts"
-  ],
+, "src/components/admin/cycles/cycle-management-header.tsx"  ],
   "exclude": ["node_modules"]
 }

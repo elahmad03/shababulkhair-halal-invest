@@ -6,7 +6,7 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react'; // For loading state
 
 // Import the store and persistor directly from your store/index.ts
-import { getClientStore, persistor } from '@/store'; // <-- Import persistor here!
+import { getClientStore, persistor } from '@/store/index1'; // <-- Import persistor here!
 
 interface StoreProviderProps {
   children: React.ReactNode;
