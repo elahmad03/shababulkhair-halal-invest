@@ -1,6 +1,6 @@
 // src/components/token/WalletNames.ts
 
-export const walletNames: Record<string, string> = {
+const rawWalletNames: Record<string, string> = {
   '0x5e1c7a84fec900ed0d8e9ce8304a53f9fa4c1e9d': 'levihouesinon CEC idm',
   '0x9948c0d4b2f8eed11215986a0d8884656ea7bf76': 'Ahmad C.E.O Bzst',
   '0xd49e5fc5994f9b55294c0b60118f5bc2f73fd507': 'Asrar Ahmad CTO',
@@ -36,10 +36,15 @@ export const walletNames: Record<string, string> = {
   '0x56b41a7F9916A3DDC1290bC572793cADD362E8c0':'umar mohammad hamman Ui/ux',
   '0x3c628b76c718ecc056dbbe2a884075b7334cb9ca': 'joshua emmanuel',
   '0xf5e867bfc53e553b928343644b5d7099c6ea66ac': 'wxiantai',
-  '0x81e14aabb212da94c5a5ec92c6c16190e5ca255d': 'liquidity pool',
-  '0xcd5a24dc493e79851af8ec423d7e669a61877f94': 'SDA',
+  '0x7A12382Ca9410ee3050590556FAc8416654aA195': 'liquidity pool Sda',
+  '0x4bd3efCd0b2D7C365f2ADfF27EF5df72fbc08087': 'Liquidity route noor alhaqq'
 
 };
+
+// Normalize keys to lowercase so lookups are case-insensitive.
+export const walletNames: Record<string, string> = Object.fromEntries(
+  Object.entries(rawWalletNames).map(([k, v]) => [k.toLowerCase(), v])
+);
 
 export const walletAddresses = Object.keys(walletNames);
 

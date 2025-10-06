@@ -1,15 +1,7 @@
-'use client';
+"use client";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import {
-  Menu,
-  LogOut,
-  User,
-  Bell,
-  Sun,
-  Moon,
-  ShieldCheck,
-} from "lucide-react";
+import { Menu, LogOut, User, Bell, Sun, Moon, ShieldCheck } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@radix-ui/react-avatar";
 import {
   DropdownMenu,
@@ -26,19 +18,13 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 
 export default function Topbar() {
-  const { user } = useAppSelector((state) => state.auth);
-  const dispatch = useAppDispatch();
   const router = useRouter();
 
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    localStorage.removeItem("token");
-    router.push("/login");
-  };
+ 
 
   return (
     <header className="relative px-4 py-4 border-b bg-white dark:bg-gray-900 flex items-center justify-between">
@@ -50,7 +36,13 @@ export default function Topbar() {
           </SidebarTrigger>
         </div>
         <h1 className="text-xl font-bold text-emerald-600">
-          <Image src='/logo.png' width={32} height={32} alt={"shaba bulkhair"} /> Shababulkhair
+          <Image
+            src="/logo.png"
+            width={32}
+            height={32}
+            alt={"shaba bulkhair"}
+          />{" "}
+          Shababulkhair
         </h1>
       </div>
 
@@ -71,7 +63,11 @@ export default function Topbar() {
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="border-1 p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-emerald-500"
           >
-            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {theme === "dark" ? (
+              <Sun className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
           </button>
         )}
 
@@ -80,14 +76,14 @@ export default function Topbar() {
           <DropdownMenuTrigger asChild>
             <Avatar className="border-1 p-2 rounded-full cursor-pointer">
               <AvatarImage
-                src={user?.profilePicture ?? "/noImage.png"}
+                src={"/noImage.png"}
                 className="w-8 h-8 rounded-full object-cover"
               />
-              <AvatarFallback>{user?.firstName?.[0] ?? "U"}</AvatarFallback>
+              <AvatarFallback>{ "U"}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-48 bg-white dark:bg-gray-900 p-1 rounded-md shadow z-50">
-            {user?.role === "admin" && (
+            { (
               <div className="flex items-center px-3 py-2 text-xs text-gray-500 gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
                 <span className="uppercase font-semibold">Admin</span>
@@ -105,7 +101,7 @@ export default function Topbar() {
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              onClick={handleLogout}
+              
               className="flex gap-2 items-center px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 rounded"
             >
               <LogOut className="w-4 h-4" />

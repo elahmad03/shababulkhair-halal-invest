@@ -12,7 +12,7 @@ const rpcUrl = process.env.NEXT_PUBLIC_SIDRA_RPC_URL!;
 const contractAddress = process.env.NEXT_PUBLIC_SIDRA_CONTRACT_ADDRESS!;
 const walletAddress = process.env.NEXT_PUBLIC_SIDRA_WALLET_ADDRESS!;
 
-export default function TokenMonitor() {
+export default function TokenPage() {
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
   const [decimals, setDecimals] = useState(18);
