@@ -68,6 +68,8 @@ next-env.d.ts
 *.iml
 
 # Monorepo common patterns (ignore nested node_modules and build outputs)
+/.next
+./next
 **/node_modules/
 **/.next/
 **/dist/

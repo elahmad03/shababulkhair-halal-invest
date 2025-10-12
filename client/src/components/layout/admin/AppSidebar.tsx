@@ -21,7 +21,7 @@ const items = [
   { title: "transactions", url: "/admin/transactions", icon: CopySlash },
    { title: "Manage investors", url: "/admin/users", icon: User2 },
     { title: "Manage expenses", url: "/admin/expenses", icon: ReceiptPoundSterling},
-     { title: "Manage widthrawals", url: "/admin/widthrawals", icon: ArrowBigDown },
+     { title: "Manage withdrawals", url: "/admin/withdrawals", icon: ArrowBigDown },
      
 ];
 
