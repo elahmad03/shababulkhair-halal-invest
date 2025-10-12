@@ -31,7 +31,7 @@ const rawWalletNames: Record<string, string> = {
   '0xc858217Aa36d075dB6d09ce70692D2fBa11B8867': 'umar abdullahi Customer Support',
   '0x169c3A637c743962Def7968A0c00587120533187': 'Dahiru ibrahim customer support',
   '0x4eD7154B6550702cDC3FcDEA82eAd34081dc2F85': 'Abduljalil Sani Customer specialist',
-  '0x8117e0FDd8c3E833C697036AD49B9842C18B78c3': 'Alasan Idris CTO',
+  '0x8117e0FDd8c3E833C697036AD49B9842C18B78c3': 'Alhasan Idris CTO',
   '0x874a365A86bb53960937C47586Fa2F6eDDDA8e33': 'Alamin tijjani Data analyst',
   '0x56b41a7F9916A3DDC1290bC572793cADD362E8c0':'umar mohammad hamman Ui/ux',
   '0x3c628b76c718ecc056dbbe2a884075b7334cb9ca': 'joshua emmanuel',
