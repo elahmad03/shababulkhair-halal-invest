@@ -68,6 +68,7 @@ next-env.d.ts
 *.iml
 
 # Monorepo common patterns (ignore nested node_modules and build outputs)
+
 /.next
 ./next
 **/node_modules/
@@ -80,6 +81,3 @@ next-env.d.ts
 
 # Coverage and test output
 /coverage/
-
-# Keep the .gitignore itself tracked
-!.gitignore

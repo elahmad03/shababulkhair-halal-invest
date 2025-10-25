@@ -1,5 +1,5 @@
 // app/(app)/dashboard/page.tsx (Final UI)
-import { mockData } from '@/lib/data/mockData';
+import { mockData } from '@/db/mockData';
 import { StatCard } from '@/components/widgets/Statscard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -69,7 +69,7 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2 shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-2xl font-semibold">Current Investment Cycles</CardTitle>
-            <Link href="/investments" passHref>
+            <Link href="/user/investments" passHref>
               <Button variant="ghost" className="text-ember-green-700 dark:text-ember-green-500">
                 View All <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

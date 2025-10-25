@@ -1,8 +1,5 @@
-// app/(app)/wallet/page.tsx
-// This is a Server Component. It focuses on DATA FILTERING and COMPONENT COMPOSITION.
 
-import { mockData } from "@/lib/data/mockData";
-import { Separator } from "@/components/ui/separator";
+import { mockData } from "@/db/mockData";
 import HeaderBox from "@/components/common/HeaderBox";
 import TotalBalanceBox from "@/components/common/TotalBalanceBox";
 import { WalletActions } from "@/components/wallet/walletActions";
@@ -18,7 +15,7 @@ interface ParsedWallet {
   balance: number;
 }
 
-const CURRENT_USER_ID = 2;
+const CURRENT_USER_ID = 1;
 
 interface WalletScreenData {
   userName: string;
@@ -60,7 +57,7 @@ export default async function WalletPage() {
   const walletData = processWalletData(CURRENT_USER_ID);
 
   return (
-    <section className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8">
+    <section className="p-4 md:p-8  space-y-6 md:space-y-8">
       <HeaderBox
         title="wallet"
         subtext="Manage your available funds and transactions."

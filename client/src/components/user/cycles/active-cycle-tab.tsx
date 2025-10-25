@@ -1,6 +1,6 @@
 'use client';
 
-import { mockData } from '@/lib/data/mockData'; // Adjust path as needed
+import { mockData } from '@/db/mockData'; // Adjust path as needed
 import { CycleCard } from './cycle-card';
 import { useRouter } from 'next/navigation';
 

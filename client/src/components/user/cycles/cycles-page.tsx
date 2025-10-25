@@ -13,9 +13,9 @@ export function InvestmentCyclesPage() {
 
       <Tabs defaultValue="open" className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-8">
-          <TabsTrigger value="open">Open for Investment</TabsTrigger>
-          <TabsTrigger value="active">My Active Cycles</TabsTrigger>
-          <TabsTrigger value="history">Investment History</TabsTrigger>
+          <TabsTrigger value="open">Open </TabsTrigger>
+          <TabsTrigger value="active">Active Cycles</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="open">

@@ -43,13 +43,13 @@ export const UserProfileSchema = z.object({
   country: z.string().nullable(),
   dateOfBirth: z.coerce.date().nullable(),
   kycStatus: z.enum(["not_submitted", "pending_review", "verified", "rejected"]),
-  profilePictureUrl: z.string().url({ message: "Invalid profile picture URL." }).nullable(),
+  profilePictureUrl: z.string().url().nullable(),
   governmentIdType: z.enum(["national_id", "drivers_license", "passport", "voters_card"]).nullable(),
-  idCardFrontUrl: z.string().url({ message: "Invalid front ID card URL." }).nullable(),
-  idCardBackUrl: z.string().url({ message: "Invalid back ID card URL." }).nullable(),
-  nextOfKinName: z.string().min(3, { message: "Next of kin name is required." }),
-  nextOfKinRelationship: z.string().min(2, { message: "Relationship is required." }),
-  nextOfKinPhoneNumber: z.string().min(5, { message: "Valid phone number is required." }),
+  idCardFrontUrl: z.string().url().nullable(),
+  idCardBackUrl: z.string().url().nullable(),
+  nextOfKinName: z.string().min(3),
+  nextOfKinRelationship: z.string().min(2),
+  nextOfKinPhoneNumber: z.string().min(5),
 });
 
 // ====================================================================================
@@ -58,7 +58,7 @@ export const UserProfileSchema = z.object({
 
 /**
  * ## Wallet Schema
- * Validates a user's wallet. All monetary values use `z.bigint()` for absolute precision.
+ * Validates a user's wallet. All monetary values use `z.bigint()` for precision.
  */
 export const WalletSchema = z.object({
   id: z.number().int().positive(),
@@ -143,7 +143,6 @@ export const BusinessVentureSchema = z.object({
   managedBy: z.number().int().positive(),
   companyName: z.string().min(3),
   allocatedAmount: z.bigint().positive(), // Represents Kobo
-  expectedProfit: z.bigint().nonnegative().default(0n), 
   profitRealized: z.bigint().nonnegative().default(0n), // Represents Kobo
 });
 
@@ -216,27 +215,9 @@ export const DeceasedUserClaimSchema = z.object({
     claimantName: z.string().min(3),
     claimantContact: z.string().min(5),
     status: z.enum(["pending_review", "documents_requested", "approved_for_payout", "completed", "rejected"]),
-    deathCertificateUrl: z.string().url({ message: "A valid certificate URL is required." }).nullable(),
+    deathCertificateUrl: z.string().url().nullable(),
     adminNotes: z.string().nullable(),
     processedBy: z.number().int().positive().nullable(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date().nullable(),
 });
-
-// =======================================
-// TYPE EXPORTS
-// =======================================
-export type User = z.infer<typeof UserSchema>;
-export type VerificationToken = z.infer<typeof VerificationTokenSchema>;
-export type UserProfile = z.infer<typeof UserProfileSchema>;
-export type Wallet = z.infer<typeof WalletSchema>;
-export type Transaction = z.infer<typeof TransactionSchema>;
-export type InvestmentCycle = z.infer<typeof InvestmentCycleSchema>;
-export type ShareholderInvestment = z.infer<typeof ShareholderInvestmentSchema>;
-export type OrganizationalLedger = z.infer<typeof OrganizationalLedgerSchema>;
-export type BusinessVenture = z.infer<typeof BusinessVentureSchema>;
-export type Notification = z.infer<typeof NotificationSchema>;
-export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
-export type WithdrawalRequest = z.infer<typeof WithdrawalRequestSchema>;
-export type EmergencyWithdrawalRequest = z.infer<typeof EmergencyWithdrawalRequestSchema>;
-export type DeceasedUserClaim = z.infer<typeof DeceasedUserClaimSchema>;

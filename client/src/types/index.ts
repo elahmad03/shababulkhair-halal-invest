@@ -1,318 +1,167 @@
-/* eslint-disable no-unused-vars */
+// src/types/db.ts
+// =======================================================
+// FRONTEND TYPES (aligned with your Drizzle schema)
+// =======================================================
 
-declare type SearchParamProps = {
-  params: { [key: string]: string };
-  searchParams: { [key: string]: string | string[] | undefined };
-};
-
-// ========================================
-
-declare type SignUpParams = {
-  firstName: string;
-  lastName: string;
-  address1: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  dateOfBirth: string;
-  ssn: string;
+export interface User {
+  id: number;
+  fullName: string;
   email: string;
-  password: string;
-};
+  passwordHash: string;
+  phoneNumber?: string;
+  role: "member" | "committee" | "admin";
+  status: "active" | "suspended" | "deceased";
+  emailVerified?: string | null;
+  createdAt: string;
+}
 
-declare type LoginUser = {
-  email: string;
-  password: string;
-};
+export interface VerificationToken {
+  identifier: string;
+  token: string;
+  expires: string;
+}
 
-declare type User = {
-  $id: string;
-  email: string;
-  userId: string;
-  dwollaCustomerUrl: string;
-  dwollaCustomerId: string;
-  firstName: string;
-  lastName: string;
+export interface UserProfile {
+  id: number;
+  userId: number;
+  streetAddress?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  dateOfBirth?: string;
+  kycStatus: "not_submitted" | "pending_review" | "verified" | "rejected";
+  profilePictureUrl?: string;
+  governmentIdType?: "national_id" | "drivers_license" | "passport" | "voters_card";
+  idCardFrontUrl?: string;
+  idCardBackUrl?: string;
+  nextOfKinName: string;
+  nextOfKinRelationship: string;
+  nextOfKinPhoneNumber: string;
+}
+
+export interface Wallet {
+  id: number;
+  userId: number;
+  balance: bigint;
+  updatedAt: string;
+}
+
+export interface Transaction {
+  id: number;
+  userId: number;
+  type:
+    | "deposit"
+    | "share_purchase"
+    | "capital_return"
+    | "profit_distribution"
+    | "withdrawal"
+    | "service_payment"
+    | "emergency_withdrawal";
+  amount: bigint;
+  status: "pending" | "completed" | "failed";
+  description?: string;
+  relatedEntityType?: "withdrawal" | "investment" | "expense_reimbursement" | "emergency_request";
+  relatedEntityId?: number;
+  createdAt: string;
+}
+
+export interface InvestmentCycle {
+  id: number;
   name: string;
-  address1: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  dateOfBirth: string;
-  ssn: string;
-};
+  status: "pending" | "open_for_investment" | "active" | "completed";
+  pricePerShare: bigint;
+  startDate?: string;
+  endDate?: string;
+  totalProfitRealized: bigint;
+  investorProfitPool: bigint;
+  organizationProfitShare: bigint;
+  profitDistributionStatus: "pending" | "completed";
+}
 
-declare type NewUserParams = {
-  userId: string;
-  email: string;
-  name: string;
-  password: string;
-};
+export interface ShareholderInvestment {
+  id: number;
+  userId: number;
+  cycleId: number;
+  shares: number;
+  amountInvested: bigint;
+  profitEarned: bigint;
+  createdAt: string;
+}
 
-declare type Account = {
-  id: string;
-  availableBalance: number;
-  currentBalance: number;
-  officialName: string;
-  mask: string;
-  institutionId: string;
-  name: string;
-  type: string;
-  subtype: string;
-  appwriteItemId: string;
-  shareableId: string;
-};
+export interface BusinessVenture {
+  id: number;
+  cycleId: number;
+  managedBy: number;
+  companyName: string;
+  allocatedAmount: bigint;
+  expectedProfit: bigint;
+  profitRealized: bigint;
+}
 
-declare type Transaction = {
-  id: string;
-  $id: string;
-  name: string;
-  paymentChannel: string;
-  type: string;
-  accountId: string;
-  amount: number;
-  pending: boolean;
-  category: string;
+export interface OrganizationalLedger {
+  id: number;
+  entryType: "income" | "expense";
+  source: string;
+  amount: bigint;
   date: string;
-  image: string;
-  $createdAt: string;
-  channel: string;
-  senderBankId: string;
-  receiverBankId: string;
-};
-
-declare type Bank = {
-  $id: string;
-  accountId: string;
-  bankId: string;
-  accessToken: string;
-  fundingSourceUrl: string;
-  userId: string;
-  shareableId: string;
-};
-
-declare type AccountTypes =
-  | "depository"
-  | "credit"
-  | "loan "
-  | "investment"
-  | "other";
-
-declare type Category = "Food and Drink" | "Travel" | "Transfer";
-
-declare type CategoryCount = {
-  name: string;
-  count: number;
-  totalCount: number;
-};
-
-declare type Receiver = {
-  firstName: string;
-  lastName: string;
-};
-
-declare type TransferParams = {
-  sourceFundingSourceUrl: string;
-  destinationFundingSourceUrl: string;
-  amount: string;
-};
-
-declare type AddFundingSourceParams = {
-  dwollaCustomerId: string;
-  processorToken: string;
-  bankName: string;
-};
-
-declare type NewDwollaCustomerParams = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  type: string;
-  address1: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  dateOfBirth: string;
-  ssn: string;
-};
-
-declare interface CreditCardProps {
-  account: Account;
-  userName: string;
-  showBalance?: boolean;
+  relatedCycleId?: number;
+  recordedBy: number;
+  createdAt: string;
 }
 
-declare interface BankInfoProps {
-  account: Account;
-  appwriteItemId?: string;
-  type: "full" | "card";
+export interface WithdrawalRequest {
+  id: number;
+  userId: number;
+  amount: bigint;
+  withdrawalType: "wallet_balance" | "full_divestment" | "profit_only";
+  relatedCycleId?: number;
+  status: "pending" | "approved" | "processed" | "rejected";
+  requestedAt: string;
+  approvedBy?: number;
+  processedAt?: string;
+  rejectionReason?: string;
 }
 
-declare interface HeaderBoxProps {
-  type?: "title" | "greeting";
+export interface EmergencyWithdrawalRequest {
+  id: number;
+  userId: number;
+  reason: string;
+  amount: bigint;
+  status: "pending" | "approved" | "rejected";
+  requestedAt: string;
+  processedAt?: string;
+}
+
+export interface Notification {
+  id: number;
+  userId: number;
   title: string;
-  subtext: string;
-  user?: string;
+  message: string;
+  isRead: boolean;
+  link?: string;
+  createdAt: string;
 }
 
-declare interface MobileNavProps {
-  user: User;
+export interface UserPreference {
+  id: number;
+  userId: number;
+  autoReinvest: boolean;
 }
 
-declare interface PageHeaderProps {
-  topTitle: string;
-  bottomTitle: string;
-  topDescription: string;
-  bottomDescription: string;
-  connectBank?: boolean;
-}
-
-declare interface PaginationProps {
-  page: number;
-  totalPages: number;
-}
-
-declare interface PlaidLinkProps {
-  user: User;
-  variant?: "primary" | "ghost";
-  dwollaCustomerId?: string;
-}
-
-// declare type User = sdk.Models.Document & {
-//   accountId: string;
-//   email: string;
-//   name: string;
-//   items: string[];
-//   accessToken: string;
-//   image: string;
-// };
-
-declare interface AuthFormProps {
-  type: "sign-in" | "sign-up";
-}
-
-
-declare interface BankTabItemProps {
-  account: Account;
-  appwriteItemId?: string;
-}
-
-declare interface TotalBalanceBoxProps {
-  accounts: Account[];
-  totalBanks: number;
-  totalCurrentBalance: number;
-}
-
-declare interface FooterProps {
-  user: User;
-  type?: 'mobile' | 'desktop'
-}
-
-declare interface RightSidebarProps {
-  user: User;
-  transactions: Transaction[];
-  banks: Bank[] & Account[];
-}
-
-declare interface SiderbarProps {
-  user: User;
-}
-
-declare interface RecentTransactionsProps {
-  accounts: Account[];
-  transactions: Transaction[];
-  appwriteItemId: string;
-  page: number;
-}
-
-declare interface TransactionHistoryTableProps {
-  transactions: Transaction[];
-  page: number;
-}
-
-declare interface CategoryBadgeProps {
-  category: string;
-}
-
-declare interface TransactionTableProps {
-  transactions: Transaction[];
-}
-
-declare interface CategoryProps {
-  category: CategoryCount;
-}
-
-declare interface DoughnutChartProps {
-  accounts: Account[];
-}
-
-declare interface PaymentTransferFormProps {
-  accounts: Account[];
-}
-
-// Actions
-declare interface getAccountsProps {
-  userId: string;
-}
-
-declare interface getAccountProps {
-  appwriteItemId: string;
-}
-
-declare interface getInstitutionProps {
-  institutionId: string;
-}
-
-declare interface getTransactionsProps {
-  accessToken: string;
-}
-
-
-declare interface CreateTransactionProps {
-  name: string;
-  amount: string;
-  senderId: string;
-  senderBankId: string;
-  receiverId: string;
-  receiverBankId: string;
-  email: string;
-}
-
-declare interface getTransactionsByBankIdProps {
-  bankId: string;
-}
-
-declare interface signInProps {
-  email: string;
-  password: string;
-}
-
-declare interface getUserInfoProps {
-  userId: string;
-}
-
-declare interface exchangePublicTokenProps {
-  publicToken: string;
-  user: User;
-}
-
-declare interface createBankAccountProps {
-  accessToken: string;
-  userId: string;
-  accountId: string;
-  bankId: string;
-  fundingSourceUrl: string;
-  shareableId: string;
-}
-
-declare interface getBanksProps {
-  userId: string;
-}
-
-declare interface getBankProps {
-  documentId: string;
-}
-
-declare interface getBankByAccountIdProps {
-  accountId: string;
+export interface DeceasedUserClaim {
+  id: number;
+  deceasedUserId: number;
+  claimantName: string;
+  claimantContact: string;
+  status:
+    | "pending_review"
+    | "documents_requested"
+    | "approved_for_payout"
+    | "completed"
+    | "rejected";
+  deathCertificateUrl?: string;
+  adminNotes?: string;
+  processedBy?: number;
+  createdAt: string;
+  updatedAt?: string;
 }

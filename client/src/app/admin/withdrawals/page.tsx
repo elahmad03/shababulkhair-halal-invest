@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { mockData } from "@/lib/data/mockData";
+import { mockData } from "@/db/mockData";
 import { User, WithdrawalRequest } from "@/schemas/app";
 import HeaderBox from "@/components/common/HeaderBox";
 import { AdminWithdrawalList } from "@/components/admin/withdrawals/WthdrawalList";

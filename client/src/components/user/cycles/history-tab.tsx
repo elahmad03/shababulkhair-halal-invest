@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockData } from '@/lib/data/mockData'; // Adjust path as needed
+import { mockData } from '@/db/mockData'; 
 
 const CURRENT_USER_ID = 3; // Replace with actual auth context
 
@@ -75,7 +75,7 @@ export function HistoryTab() {
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="w-full overflow-auto rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>

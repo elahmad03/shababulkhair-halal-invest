@@ -1,7 +1,7 @@
 import { WithdrawalRequestForm } from "@/components/user/withdrawals/WithrawalsRequestForm";
 import { WithdrawalHistory } from "@/components/user/withdrawals/WithdrawalsHistory";
 import { Separator } from "@/components/ui/separator";
-import { mockData } from "@/lib/data/mockData"; // Assuming mock data is in lib
+import { mockData } from "@/db/mockData"; // Assuming mock data is in lib
 import { InvestmentCycle, ShareholderInvestment } from "@/schemas/app";
 import HeaderBox from "@/components/common/HeaderBox";
 
