@@ -24,22 +24,24 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
-      <h2 className="text-3xl font-bold tracking-tight">User Profile</h2>
+      <h2 className="text-3xl font-bold tracking-tight">{user.fullName}</h2>
+      <p className="text-sm text-muted-foreground">Admin view — user profile and KYC</p>
+
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-        {/* Left Column */}
-        <div className="space-y-4 lg:col-span-1">
-          <UserProfileCard user={user} />
+  {/* Left Column */}
+  <aside className="space-y-4 lg:col-span-1 lg:sticky lg:top-6">
+          <UserProfileCard user={user} profile={profile} />
           <UserKycCard profile={profile} />
-        </div>
+        </aside>
 
         {/* Right Column */}
-        <div className="lg:col-span-2">
-            <UserFinancialsTabs 
-                investments={investments} 
-                transactions={transactions} 
-                withdrawals={withdrawals} 
-            />
-        </div>
+        <main className="lg:col-span-2">
+          <UserFinancialsTabs
+            investments={investments}
+            transactions={transactions}
+            withdrawals={withdrawals}
+          />
+        </main>
       </div>
     </div>
   );

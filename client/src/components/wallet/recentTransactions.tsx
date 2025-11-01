@@ -107,8 +107,9 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ transact
       </CardHeader>
 
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
+        <div className="overflow-x-auto w-full">
+          <div className="min-w-full">
+            <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="font-semibold">Transaction</TableHead>
@@ -191,7 +192,8 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({ transact
                 </TableRow>
               )}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </div>
 
         {/* Pagination (Optional - Add if needed) */}

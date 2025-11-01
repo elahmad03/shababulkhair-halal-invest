@@ -8,11 +8,45 @@ export function cn(...inputs: ClassValue[]) {
 
 
 
-export function formatCurrency(amount: number): string {
+/**
+ * Convert a value stored in kobo (bigint | string | number) to NGN number.
+ * Returns a JS number representing NGN (e.g., 100000 -> 1000.00 NGN when input is 100000 kobo)
+ */
+export function koboToNgn(value: number | bigint | string | null | undefined): number {
+  if (value == null) return 0;
+  if (typeof value === 'bigint') return Number(value) / 100;
+  if (typeof value === 'number') return value / 100; // treat numeric input as kobo by default
+  const parsed = parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed / 100 : 0;
+}
+
+/**
+ * Format currency for display. Input may be:
+ * - bigint (interpreted as kobo)
+ * - number (interpreted as NGN if fraction present, otherwise treated as kobo for backward compat)
+ * - string (numeric string in kobo)
+ * To keep behavior predictable, when a bigint is provided it's treated as kobo and converted.
+ */
+export function formatCurrency(amount: number | bigint | string | null | undefined): string {
+  let ngnValue: number;
+  if (amount == null) ngnValue = 0;
+  else if (typeof amount === 'bigint') ngnValue = Number(amount) / 100;
+  else if (typeof amount === 'number') {
+    // Distinguish between callers passing NGN (with decimals) vs kobo as whole numbers.
+    // If the number has a fractional part, assume it's already NGN. Otherwise treat as kobo.
+    ngnValue = Number.isInteger(amount) ? amount / 100 : amount;
+  } else {
+    // string
+    const parsed = parseFloat(amount);
+    ngnValue = Number.isFinite(parsed) ? parsed / 100 : 0;
+  }
+
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: 'NGN',
-  }).format(amount);
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(ngnValue);
 }
 
 

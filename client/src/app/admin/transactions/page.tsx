@@ -1,8 +1,12 @@
+import HeaderBox from '@/components/common/HeaderBox'
+import { title } from 'process'
 import React from 'react'
 
 function page() {
   return (
-    <div>transactions page</div>
+   <HeaderBox title="Transactions" 
+   subtext='Manage all transactions made on the platform'/>
+
   )
 }
 

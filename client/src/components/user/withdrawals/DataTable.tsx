@@ -32,9 +32,9 @@ export function DataTable<TData, TValue>({
   });
 
   return (
-    <div className="rounded-md border">
-      {/* Add a minimum width to the table itself */}
-      <Table className="min-w-[400px]">
+    <div className="rounded-md border w-full max-w-full">
+      <div className="overflow-x-auto w-full">
+        <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
@@ -76,6 +76,7 @@ export function DataTable<TData, TValue>({
           )}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

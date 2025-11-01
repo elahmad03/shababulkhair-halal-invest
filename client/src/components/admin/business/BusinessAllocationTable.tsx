@@ -29,7 +29,8 @@ import {
 } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, ChevronLeft, ChevronRight } from "lucide-react"
-import { investmentCycles } from "@/lib/data/Businessdata"
+import { mockInvestmentCycles } from "@/db"
+import type { InvestmentCycle } from "@/db/types"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -90,8 +91,8 @@ export function BusinessAllocationsTable<TData, TValue>({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Cycles</SelectItem>
-              {investmentCycles.map((cycle) => (
-                <SelectItem key={cycle.id} value={cycle.name}>
+              {mockInvestmentCycles.map((cycle: InvestmentCycle) => (
+                <SelectItem key={cycle.id} value={String(cycle.id)}>
                   {cycle.name}
                 </SelectItem>
               ))}
@@ -100,9 +101,10 @@ export function BusinessAllocationsTable<TData, TValue>({
         </div>
       </CardHeader>
       <CardContent className="p-0 sm:p-6">
-        <div className="rounded-md border overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
+        <div className="rounded-md border">
+          <div className="overflow-x-auto w-full">
+            <div className="min-w-full">
+              <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id} className="bg-muted/50">
@@ -153,7 +155,8 @@ export function BusinessAllocationsTable<TData, TValue>({
                   </TableRow>
                 )}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           </div>
         </div>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-2 sm:px-0">

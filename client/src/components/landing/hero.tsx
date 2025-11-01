@@ -1,4 +1,4 @@
-// app/landing/components/Hero.tsx
+
 export default function Hero() {
   return (
     <section className="text-center py-20 px-4 bg-gradient-to-b from-white to-zinc-100 dark:from-zinc-900 dark:to-zinc-800">

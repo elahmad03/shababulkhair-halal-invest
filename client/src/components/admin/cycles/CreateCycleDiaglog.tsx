@@ -1,4 +1,3 @@
-// components/admin/cycles/create-cycle-dialog.tsx
 "use client";
 
 import { useState } from "react";
@@ -28,7 +27,10 @@ interface CreateCycleDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function CreateCycleDialog({ open, onOpenChange }: CreateCycleDialogProps) {
+export function CreateCycleDialog({
+  open,
+  onOpenChange,
+}: CreateCycleDialogProps) {
   const [cycleName, setCycleName] = useState("");
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
@@ -55,7 +57,9 @@ export function CreateCycleDialog({ open, onOpenChange }: CreateCycleDialogProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Create New Cycle</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">
+            Create New Cycle
+          </DialogTitle>
           <DialogDescription>
             Set up a new investment cycle with all the necessary details.
           </DialogDescription>

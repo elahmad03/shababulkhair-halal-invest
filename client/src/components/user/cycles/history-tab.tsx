@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { koboToNgn, formatCurrency } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -9,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockData } from '@/db/mockData'; 
+import {  mockInvestmentCycles, mockShareholderInvestments } from '@/db'; 
 
 const CURRENT_USER_ID = 3; // Replace with actual auth context
 
@@ -20,21 +21,22 @@ export function HistoryTab() {
   const [sortField, setSortField] = useState<SortField>('completedOn');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
+
   // Get completed investments for the current user
-  const completedInvestments = mockData.shareholderInvestments
+  const completedInvestments = mockShareholderInvestments
     .filter((investment) => {
-      const cycle = mockData.investmentCycles.find(
+      const cycle = mockInvestmentCycles.find(
         (c) => c.id === investment.cycleId && c.status === 'completed'
       );
       return investment.userId === CURRENT_USER_ID && cycle;
     })
     .map((investment) => {
-      const cycle = mockData.investmentCycles.find(
+      const cycle = mockInvestmentCycles.find(
         (c) => c.id === investment.cycleId
       );
-      // Convert string amounts to numbers
-      const amountInvested = parseFloat(investment.amountInvested);
-      const profitEarned = parseFloat(investment.profitEarned);
+  // Convert stored kobo values (bigint | string) to NGN numbers safely for calculation/sorting
+  const amountInvested = koboToNgn(investment.amountInvested as any);
+  const profitEarned = koboToNgn(investment.profitEarned as any);
       
       return {
         id: investment.id,
@@ -75,8 +77,10 @@ export function HistoryTab() {
   }
 
   return (
-    <div className="w-full overflow-auto rounded-md border">
-      <Table>
+    <div className="w-full rounded-md border">
+      <div className="overflow-x-auto w-full">
+        <div className="min-w-full">
+          <Table>
         <TableHeader>
           <TableRow>
             <TableHead
@@ -115,24 +119,9 @@ export function HistoryTab() {
           {sortedInvestments.map((investment) => (
             <TableRow key={investment.id}>
               <TableCell className="font-medium">{investment.cycleName}</TableCell>
-              <TableCell>
-                ₦{investment.amountInvested.toLocaleString('en-NG', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </TableCell>
-              <TableCell className="text-green-400 font-semibold">
-                +₦{investment.profitEarned.toLocaleString('en-NG', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </TableCell>
-              <TableCell className="font-semibold">
-                ₦{investment.totalReturn.toLocaleString('en-NG', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </TableCell>
+              <TableCell>{formatCurrency(investment.amountInvested)}</TableCell>
+              <TableCell className="text-green-400 font-semibold">+{formatCurrency(investment.profitEarned)}</TableCell>
+              <TableCell className="font-semibold">{formatCurrency(investment.totalReturn)}</TableCell>
               <TableCell>
                 {investment.completedOn.toLocaleDateString('en-NG', {
                   year: 'numeric',
@@ -143,7 +132,9 @@ export function HistoryTab() {
             </TableRow>
           ))}
         </TableBody>
-      </Table>
+          </Table>
+        </div>
+      </div>
     </div>
   );
 }

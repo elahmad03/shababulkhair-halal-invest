@@ -6,15 +6,15 @@ import { cn } from "@/lib/utils"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div
-      data-slot="table-container"
-      className="relative w-full overflow-x-auto"
-    >
-      <table
-        data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
-        {...props}
-      />
+    <div data-slot="table-container" className="relative w-full max-w-full">
+      <div className="overflow-x-auto w-full">
+        <table
+          data-slot="table"
+          // Allow table to be wider than viewport but contain it in a horizontally scrollable area
+          className={cn("min-w-full caption-bottom text-sm", className)}
+          {...props}
+        />
+      </div>
     </div>
   )
 }

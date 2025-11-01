@@ -1,7 +1,7 @@
 // components/admin/investors-table.tsx
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -12,8 +12,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { Input } from "@/components/ui/input"
+} from "@tanstack/react-table";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -21,9 +21,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Investor } from "@/lib/types/cycle"
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Investor } from "@/lib/types/cycle";
 
 const columns: ColumnDef<Investor>[] = [
   {
@@ -60,17 +60,17 @@ const columns: ColumnDef<Investor>[] = [
         ? `₦${row.original.amountWithProfit.toLocaleString()}`
         : "N/A",
   },
-]
+];
 
 interface InvestorsTableProps {
-  data: Investor[]
+  data: Investor[];
 }
 
 export function InvestorsTable({ data }: InvestorsTableProps) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
-  )
+  );
 
   const table = useReactTable({
     data,
@@ -85,7 +85,7 @@ export function InvestorsTable({ data }: InvestorsTableProps) {
       sorting,
       columnFilters,
     },
-  })
+  });
 
   return (
     <div className="space-y-4">
@@ -100,49 +100,53 @@ export function InvestorsTable({ data }: InvestorsTableProps) {
         className="max-w-sm"
       />
       <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
+        <div className="overflow-x-auto w-full">
+          <div className="min-w-full">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
                 ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      No results.
                     </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </div>
       <div className="flex items-center justify-end space-x-2">
         <Button
@@ -163,5 +167,5 @@ export function InvestorsTable({ data }: InvestorsTableProps) {
         </Button>
       </div>
     </div>
-  )
+  );
 }

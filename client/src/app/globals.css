@@ -45,6 +45,13 @@
 
 :root {
   --radius: 0.625rem;
+  /* Apple-like tokens */
+  --system-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  --ui-surface: oklch(0.99 0 0);
+  --ui-text: oklch(0.12 0 0);
+  --ui-muted: oklch(0.6 0 0 / 0.85);
+  --ui-border-soft: rgba(0,0,0,0.06);
+  --ui-shadow-subtle: 0 6px 18px rgba(10, 10, 10, 0.06);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -113,10 +120,37 @@
 }
 
 @layer base {
+  :root {
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+  }
+
+  .dark {
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
+  }
+}
+
+@layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
+    font-family: var(--system-font);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     @apply bg-background text-foreground;
   }
 }
+
+/* Light adjustments for Apple-like UI */
+.bg-apple-surface { background-color: var(--ui-surface); }
+.text-apple-muted { color: var(--ui-muted); }
+.shadow-apple { box-shadow: var(--ui-shadow-subtle); }
+.border-soft { border: 1px solid var(--ui-border-soft); }

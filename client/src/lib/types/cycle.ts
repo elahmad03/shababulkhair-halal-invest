@@ -1,4 +1,4 @@
-// lib/types/cycle.ts
+
 export type CycleStatus = "Active" | "Completed" | "Pending"
 
 export interface Investor {
@@ -23,12 +23,13 @@ export interface CycleDetails {
   id: string
   name: string
   status: CycleStatus
-  totalCapitalInvested: number
+  totalCapitalInvested: BigInt
   totalSharesSold: number
   numberOfInvestors: number
-  profitRealized?: number
-  investorPool?: number
-  organizationalShare?: number
+  profitRealized?: BigInt
+  expectedProfit?: BigInt
+  investorPool?: BigInt
+  organizationalShare?: BigInt
   investors: Investor[]
   ventures: BusinessVenture[]
 }

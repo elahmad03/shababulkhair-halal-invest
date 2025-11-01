@@ -7,6 +7,7 @@ import { PendingTasksCard } from "@/components/admin/dahsboard/pendingCard";
 import { getKpiData, getCurrentCycleDetails, getRecentActivity, getPendingTasks } from "@/lib/data/data";
 import { formatCurrency } from "@/lib/utils";
 import { Banknote, Users, TrendingUp, AlertTriangle } from "lucide-react";
+import { ProfitChart } from "@/components/user/dashboard/charts";
 
 // This makes the page automatically refresh its data periodically
 export const revalidate = 60; // Revalidate every 60 seconds
@@ -51,6 +52,8 @@ export default async function AdminDashboardPage() {
 
       {/* Main Content Area - Mobile: single column, Desktop: multi-column grid */}
       <div className="grid gap-4 lg:grid-cols-3">
+        <ProfitChart />
+
         <CurrentCycleCard data={currentCycle} />
         {/* The following cards will stack on mobile and sit beside the cycle card on desktop */}
         <div className="space-y-4">

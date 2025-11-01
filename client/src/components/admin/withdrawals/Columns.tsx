@@ -4,6 +4,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { PendingWithdrawal } from "@/app/admin/withdrawals/page";
 import { AdminWithdrawalActions } from "./WithdrawalsActions";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency, koboToNgn } from '@/lib/utils';
 
 const formatType = (type: string) => {
     return type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -18,11 +19,9 @@ export const getColumns = ({ onAction }: { onAction: (requestId: number) => void
         accessorKey: "amount",
         header: () => <div className="text-right">Amount</div>,
         cell: ({ row }) => {
-            const amount = parseFloat(row.getValue("amount"));
-            const formatted = new Intl.NumberFormat("en-NG", {
-                style: "currency", currency: "NGN"
-            }).format(amount);
-            return <div className="text-right font-medium">{formatted}</div>;
+            // `amount` may be bigint (kobo) or number/string. Use formatCurrency to normalize.
+            const raw = row.getValue("amount") as any;
+            return <div className="text-right font-medium">{formatCurrency(raw)}</div>;
         },
     },
     {

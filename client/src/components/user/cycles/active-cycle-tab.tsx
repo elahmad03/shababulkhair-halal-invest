@@ -1,6 +1,6 @@
 'use client';
 
-import { mockData } from '@/db/mockData'; // Adjust path as needed
+import { mockInvestmentCycles, mockShareholderInvestments } from '@/db'; 
 import { CycleCard } from './cycle-card';
 import { useRouter } from 'next/navigation';
 
@@ -11,9 +11,9 @@ export function ActiveCyclesTab() {
   const router = useRouter();
 
   // Get user's active investments
-  const userActiveInvestments = mockData.shareholderInvestments.filter(
+  const userActiveInvestments = mockShareholderInvestments.filter(
     (investment) => {
-      const cycle = mockData.investmentCycles.find(
+      const cycle = mockInvestmentCycles.find(
         (c) => c.id === investment.cycleId && c.status === 'active'
       );
       return investment.userId === CURRENT_USER_ID && cycle;
@@ -37,7 +37,7 @@ export function ActiveCyclesTab() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {userActiveInvestments.map((investment) => {
-        const cycle = mockData.investmentCycles.find(
+        const cycle = mockInvestmentCycles.find(
           (c) => c.id === investment.cycleId
         );
 
@@ -51,7 +51,7 @@ export function ActiveCyclesTab() {
             details={[
               {
                 label: 'My Investment',
-                value: `₦${parseFloat(investment.amountInvested).toLocaleString('en-NG', {
+                value: `₦${parseFloat(investment.amountInvested.toString()).toLocaleString('en-NG', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}`,

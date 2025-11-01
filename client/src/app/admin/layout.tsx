@@ -16,7 +16,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col ">
           {/* Top navigation bar */}
           <Topbar />
-          <main className="flex-1">{children}</main>
+          <main className="w-full">{children}</main>
         </div>
       </div>
     </SidebarProvider>

@@ -1,7 +1,8 @@
 // components/admin/cycles/cycle-status-badge.tsx
 import { Badge } from "@/components/ui/badge";
+import { InvestmentCycle } from "@/db";
 
-type CycleStatus = "pending" | "open" | "active" | "completed";
+type CycleStatus = InvestmentCycle["status"];
 
 interface CycleStatusBadgeProps {
   status: CycleStatus;
@@ -17,6 +18,10 @@ export function CycleStatusBadge({ status }: CycleStatusBadgeProps) {
       label: "Open for Investment",
       className: "bg-green-100 text-green-700 hover:bg-green-100",
     },
+    open_for_investment: {
+      label: "Open for Investment",
+      className: "bg-green-100 text-green-700 hover:bg-green-100",
+    },
     active: {
       label: "Active",
       className: "bg-blue-100 text-blue-700 hover:bg-blue-100",
@@ -27,7 +32,7 @@ export function CycleStatusBadge({ status }: CycleStatusBadgeProps) {
     },
   };
 
-  const config = statusConfig[status];
+  const config = status != null ? statusConfig[status] : statusConfig.pending;
 
   return (
     <Badge className={config.className} variant="secondary">

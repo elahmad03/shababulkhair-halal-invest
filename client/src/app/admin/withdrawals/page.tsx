@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { mockData } from "@/db/mockData";
-import { User, WithdrawalRequest } from "@/schemas/app";
+import { getPendingWithdrawals } from "@/lib/data/data";
+import type { User, WithdrawalRequest } from "@/db/types";
 import HeaderBox from "@/components/common/HeaderBox";
 import { AdminWithdrawalList } from "@/components/admin/withdrawals/WthdrawalList";
 import { AdminWithdrawalTable } from "@/components/admin/withdrawals/WithdrawalsTable";
@@ -25,23 +25,8 @@ const useMediaQuery = (query: string) => {
   return matches;
 };
 
-// Helper to fetch and combine data
-const getPendingWithdrawals = (): PendingWithdrawal[] => {
-  const pending = mockData.withdrawalRequests.filter(
-    (req) => req.status === "pending"
-  );
-
-  return pending.map((req) => {
-    const user = mockData.users.find((u) => u.id === req.userId);
-    return {
-      ...req,
-      user: {
-        fullName: user?.fullName || "Unknown User",
-        email: user?.email || "No email",
-      },
-    };
-  });
-};
+// Use centralized data helper so we can swap out the source later
+// getPendingWithdrawals returns PendingWithdrawal[]
 
 export default function AdminPendingWithdrawalsPage() {
   const pendingWithdrawals = getPendingWithdrawals();

@@ -1,60 +1,61 @@
 
-import { mockData } from "@/db/mockData";
+import { mockUsers, mockWallets, mockTransactions } from "@/db/mockData";
 import HeaderBox from "@/components/common/HeaderBox";
 import TotalBalanceBox from "@/components/common/TotalBalanceBox";
 import { WalletActions } from "@/components/wallet/walletActions";
 import { TransactionHistory } from "@/components/wallet/recentTransactions";
 
-// Import the necessary Zod schemas and define local types
-import { TransactionSchema, WalletSchema, UserSchema } from "@/schemas/app";
-import { z } from "zod";
-
-type Transaction = z.infer<typeof TransactionSchema>;
-type User = z.infer<typeof UserSchema>;
-interface ParsedWallet {
-  balance: number;
-}
+// We'll use the mock data exports directly and transform them into shapes
+// expected by UI components (numbers for amounts, Date objects for createdAt).
 
 const CURRENT_USER_ID = 1;
 
-interface WalletScreenData {
-  userName: string;
-  balance: number;
-  recentTransactions: Transaction[];
+type UiTransaction = {
+  id: number;
+  type: string;
+  description: string | null;
+  amount: number; // in Naira with 2 decimals (UI-friendly)
+  status: 'completed' | 'pending' | 'failed';
+  createdAt: Date;
+};
+
+function getUserWalletBalance(userId: number): number {
+  const wallet = mockWallets.find((w) => w.userId === userId);
+  if (!wallet) return 0;
+
+  // mockWallets store balance as BigInt representing kobo (or assumed smallest unit).
+  // Convert to a JS number in Naira (divide by 100 to get Naira if stored in kobo),
+  // but some mock files already treat the BigInt as kobo-ish. To be safe we'll
+  // convert BigInt -> number and divide by 100 to format for UI with 2 decimals.
+  try {
+    const raw = Number(wallet.balance);
+    return raw / 100; // show Naira with 2 decimals
+  } catch (e) {
+    return 0;
+  }
 }
 
-/**
- * Function to process the raw mockData into a clean, usable structure.
- * Filtering and Zod transformation assumptions happen here.
- */
-function processWalletData(userId: number): WalletScreenData {
-  const { users, wallets, transactions } = mockData;
-
-  // 1. Get User Name
-  const user = users.find((u) => u.id === userId) as User;
-  const userName = user?.fullName.split(" ")[0] || "Member";
-
-  // 2. Get Wallet Balance (Assumes Zod transformation to number occurred during mockData load)
-  const userWalletRaw = wallets.find(
-    (w) => w.userId === userId
-  ) as unknown as ParsedWallet;
-  const balance = userWalletRaw ? userWalletRaw.balance : 0.0;
-
-  // 3. Get Recent Transactions
-  const recentTransactions: Transaction[] = transactions
+function getRecentTransactionsForUser(userId: number, limit = 5): UiTransaction[] {
+  const txs = mockTransactions
     .filter((t) => t.userId === userId)
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    .slice(0, 5) as Transaction[];
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limit)
+    .map((t) => ({
+      id: t.id,
+      type: t.type,
+      description: t.description ?? null,
+      // convert BigInt amounts to number in Naira with 2 decimals
+      amount: typeof t.amount === 'bigint' ? Number(t.amount) / 100 : Number(t.amount) / 100,
+      status: (t.status as 'completed' | 'pending' | 'failed') ?? 'completed',
+      createdAt: new Date(t.createdAt),
+    }));
 
-  return {
-    userName,
-    balance,
-    recentTransactions,
-  };
+  return txs;
 }
 
-export default async function WalletPage() {
-  const walletData = processWalletData(CURRENT_USER_ID);
+export default function WalletPage() {
+  const balance = getUserWalletBalance(CURRENT_USER_ID);
+  const recentTransactions = getRecentTransactionsForUser(CURRENT_USER_ID, 8);
 
   return (
     <section className="p-4 md:p-8  space-y-6 md:space-y-8">
@@ -63,17 +64,15 @@ export default async function WalletPage() {
         subtext="Manage your available funds and transactions."
       />
 
-      {/* 1. Header and Balance (Grid Layout for responsiveness) */}
       <div className="bg-zinc-100 dark:bg-zinc-800 rounded-lg shadow p-4">
         <div className="mb-4">
-          <TotalBalanceBox totalCurrentBalance={walletData.balance} />
+          <TotalBalanceBox totalCurrentBalance={balance} />
         </div>
 
         <WalletActions />
 
-        {/* 2. Recent Transactions (Full Width) */}
         <div className="pt-4">
-          <TransactionHistory transactions={walletData.recentTransactions} />
+          <TransactionHistory transactions={recentTransactions} />
         </div>
       </div>
     </section>

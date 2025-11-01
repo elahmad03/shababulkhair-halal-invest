@@ -35,7 +35,7 @@ export default function Topbar() {
             <Menu className="w-6 h-6 text-gray-800 dark:text-white" />
           </SidebarTrigger>
         </div>
-        <h1 className="text-xl font-bold text-emerald-600">
+        <span className="text-xl font-bold text-emerald-600">
           <Image
             src="/logo.png"
             width={32}
@@ -43,7 +43,7 @@ export default function Topbar() {
             alt={"shaba bulkhair"}
           />{" "}
           Shababulkhair
-        </h1>
+        </span>
       </div>
 
       {/* Right: Icons and Avatar */}

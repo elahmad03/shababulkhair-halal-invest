@@ -15,65 +15,60 @@ import { Search } from "lucide-react";
 import { CycleStatusBadge } from "./CyclestatusBadge";
 import { CycleActionsMenu } from "./CycleActionMenu";
 
-// Mock data - replace with actual data fetching
-const mockCycles = [
-  {
-    id: "1",
-    name: "November 2025 Cycle",
-    status: "open" as const,
-    totalInvested: 15000000,
-    investors: 42,
-    startDate: "2025-11-01",
-    endDate: "2025-11-30",
-  },
-  {
-    id: "2",
-    name: "October 2025 Cycle",
-    status: "active" as const,
-    totalInvested: 28500000,
-    investors: 67,
-    startDate: "2025-10-01",
-    endDate: "2025-10-31",
-  },
-  {
-    id: "3",
-    name: "September 2025 Cycle",
-    status: "completed" as const,
-    totalInvested: 32000000,
-    investors: 58,
-    startDate: "2025-09-01",
-    endDate: "2025-09-30",
-  },
-  {
-    id: "4",
-    name: "December 2025 Cycle",
-    status: "pending" as const,
-    totalInvested: 0,
-    investors: 0,
-    startDate: "2025-12-01",
-    endDate: "2025-12-31",
-  },
-];
+// --- CHANGE 1: Import the actual mockData from your db file ---
+import { mockData } from "@/db";
+import { formatCurrency } from "@/lib/utils";
+// The InvestmentCycle type from your db/types is used implicitly, no need to import it here.
 
 export function CyclesDataTable() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredCycles = mockCycles.filter((cycle) =>
+  // --- CHANGE 2: Process the real mock data to calculate derived values ---
+  // This logic creates a new array that matches the structure your table expects.
+  const processedCycles = mockData.investmentCycles.map((cycle) => {
+    // Find all investments that belong to the current cycle
+    const investmentsForCycle = mockData.shareholderInvestments.filter(
+      (investment) => investment.cycleId === cycle.id
+    );
+
+    // Calculate the total amount invested by summing up amounts from related investments.
+    // We start with 0n because the amounts are BigInts.
+    const totalInvested = investmentsForCycle.reduce(
+      (sum, investment) => sum + investment.amountInvested,
+      0n
+    );
+
+    // Count the number of unique investors using a Set to avoid duplicates.
+    const uniqueInvestorIds = new Set(
+      investmentsForCycle.map((investment) => investment.userId)
+    );
+    const investorsCount = uniqueInvestorIds.size;
+
+    // Return a new object that includes the original cycle data plus our calculated fields.
+    return {
+      ...cycle,
+      totalInvested: Number(totalInvested), // Convert the BigInt to a number for the formatCurrency function
+      investors: investorsCount,
+    };
+  });
+  // --- END OF CHANGES ---
+
+  // The search filter now works on the newly processed data
+  const filteredCycles = processedCycles.filter((cycle) =>
     cycle.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const formatDateRange = (start: string, end: string) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
-    return `${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    return `${startDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    })} - ${endDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })}`;
   };
 
   return (
@@ -96,18 +91,33 @@ export function CyclesDataTable() {
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50 hover:bg-slate-50">
-              <TableHead className="font-semibold text-slate-900">Cycle Name</TableHead>
-              <TableHead className="font-semibold text-slate-900">Status</TableHead>
-              <TableHead className="font-semibold text-slate-900">Total Invested</TableHead>
-              <TableHead className="font-semibold text-slate-900">Investors</TableHead>
-              <TableHead className="font-semibold text-slate-900">Date Range</TableHead>
-              <TableHead className="font-semibold text-slate-900 text-right">Actions</TableHead>
+              <TableHead className="font-semibold text-slate-900">
+                Cycle Name
+              </TableHead>
+              <TableHead className="font-semibold text-slate-900">
+                Status
+              </TableHead>
+              <TableHead className="font-semibold text-slate-900">
+                Total Invested
+              </TableHead>
+              <TableHead className="font-semibold text-slate-900">
+                Investors
+              </TableHead>
+              <TableHead className="font-semibold text-slate-900">
+                Date Range
+              </TableHead>
+              <TableHead className="font-semibold text-slate-900 text-right">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredCycles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                <TableCell
+                  colSpan={6}
+                  className="text-center py-12 text-slate-500"
+                >
                   No cycles found matching your search.
                 </TableCell>
               </TableRow>

@@ -32,7 +32,8 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div className="overflow-hidden rounded-md border w-full">
+    // Allow horizontal scrolling on small screens instead of expanding layout
+    <div className="overflow-x-auto rounded-md border w-full max-w-full">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (

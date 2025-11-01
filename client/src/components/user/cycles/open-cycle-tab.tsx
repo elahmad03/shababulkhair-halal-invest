@@ -1,16 +1,25 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { mockData } from '@/db/mockData'; // Adjust path as needed
-import { CycleCard } from './cycle-card';
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
+import { CycleCard } from "./cycle-card";
+import { mockInvestmentCycles } from "@/db";
+import type { InvestmentCycle } from "@/db/types";
+import { formatCurrency } from "@/lib/utils";
 
 export function OpenCyclesTab() {
   const router = useRouter();
   
-  const openCycles = mockData.investmentCycles.filter(
-    (cycle) => cycle.status === 'open_for_investment'
+  const openCycles: InvestmentCycle[] = mockInvestmentCycles.filter(
+    (cycle) => cycle.status === "open_for_investment"
   );
+
+  const formatDateRange = (start?: string | null, end?: string | null) => {
+    if (!start || !end) return "-";
+    const s = new Date(start);
+    const e = new Date(end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return "-";
+    return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+  };
 
   const handleInvestNow = (cycleId: number) => {
     // Navigate to investment page or open a dialog
@@ -33,11 +42,17 @@ export function OpenCyclesTab() {
         <CycleCard
           key={cycle.id}
           title={cycle.name}
-          status="open_for_investment"
+          status={"open_for_investment"}
           details={[
-            { label: 'Investment Window', value: 'Oct 1 - Oct 15, 2025' },
-            { label: 'Cycle Duration', value: '3 Months' },
-            { label: 'Share Price', value: '₦10000' },
+            {
+              label: "Investment Window",
+              value: formatDateRange(cycle.startDate, cycle.endDate),
+            },
+            { label: "Cycle Duration", value: "1 Month" },
+            {
+              label: "Share Price",
+              value: formatCurrency(cycle.pricePerShare),
+            },
           ]}
           buttonText="Invest Now"
           buttonVariant="default"

@@ -106,7 +106,7 @@ export const transactions = pgTable("transactions", {
   amount: bigint("amount", { mode: "bigint" }).notNull(), // Stored as Kobo
   status: text("status", { enum: ["pending", "completed", "failed"] }).notNull(),
   description: text("description"),
-  relatedEntityType: text("related_entity_type", { enum: ["withdrawal", "investment", "expense_reimbursement", "emergency_request"] }),
+  relatedEntityType: text("related_entity_type", { enum: ["deposit","withdrawal", "investment", "expense_reimbursement", "emergency_request"] }),
   relatedEntityId: integer("related_entity_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
@@ -155,7 +155,7 @@ export const shareholderInvestments = pgTable("shareholder_investments", {
 /**
  * ## Organizational Ledger Table
  * The organization's master financial record. This table directly connects the company's profit
- * to each specific cycle, as you requested.
+ * to each specific cycle
  */
 export const organizationalLedger = pgTable("organizational_ledger", {
     id: serial("id").primaryKey(),

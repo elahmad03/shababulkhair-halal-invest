@@ -21,12 +21,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ShareholderInvestment } from "@/schemas/app";
+import { formatCurrency } from "@/lib/utils";
 
 // Define a type for the completed investments prop for clarity
 type CompletedInvestment = ShareholderInvestment & { cycleName: string };
 
 interface WithdrawalRequestFormProps {
-  walletBalance: number;
+  // Keep wallet balance in kobo (bigint) to match DB schema
+  walletBalance: bigint;
   completedInvestments: CompletedInvestment[];
 }
 
@@ -43,23 +45,24 @@ export function WithdrawalRequestForm({
     (inv) => inv.id.toString() === selectedCycleId
   );
 
-  const getWithdrawalAmount = () => {
+  // Return amounts as kobo bigint to align with DB schema
+  const getWithdrawalAmount = (): bigint => {
     if (source === "wallet") {
-      return parseFloat(amount) || 0;
+      // parse user input as NGN (may include decimals), convert to kobo
+      const parsed = parseFloat(amount || "0");
+      const kobo = Math.round(parsed * 100);
+      return BigInt(kobo);
     }
     if (source === "investment" && selectedInvestment) {
       if (divestmentType === "profit") return selectedInvestment.profitEarned;
       if (divestmentType === "full")
         return selectedInvestment.amountInvested + selectedInvestment.profitEarned;
     }
-    return 0;
+    return 0n;
   };
 
   const finalAmount = getWithdrawalAmount();
-  const formattedWalletBalance = new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-  }).format(walletBalance);
+  const formattedWalletBalance = formatCurrency(walletBalance);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,13 +143,13 @@ export function WithdrawalRequestForm({
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="profit" id="profit" />
                         <Label htmlFor="profit">
-                          Profit Only ({new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(selectedInvestment.profitEarned)})
+                          Profit Only ({formatCurrency(selectedInvestment.profitEarned)})
                         </Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="full" id="full" />
                         <Label htmlFor="full">
-                          Full Divestment (Capital + Profit) ({new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(selectedInvestment.amountInvested + selectedInvestment.profitEarned)})
+                          Full Divestment (Capital + Profit) ({formatCurrency(selectedInvestment.amountInvested + selectedInvestment.profitEarned)})
                         </Label>
                       </div>
                     </RadioGroup>
@@ -159,19 +162,17 @@ export function WithdrawalRequestForm({
         
         {/* Step 3: Confirmation & Submission */}
         <CardFooter className="flex flex-col items-start gap-4">
-          {finalAmount > 0 && (
+          {finalAmount > 0n && (
             <p className="text-lg">
-              You are about to request a withdrawal of{" "}
-              <strong>
-                {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(finalAmount)}.
-              </strong>
+              You are about to request a withdrawal of {" "}
+              <strong>{formatCurrency(finalAmount)}.</strong>
             </p>
           )}
           <Button
             type="submit"
             size="lg"
             className="w-full font-semibold text-white bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
-            disabled={finalAmount <= 0}
+            disabled={finalAmount <= 0n}
           >
             Submit Request
           </Button>
