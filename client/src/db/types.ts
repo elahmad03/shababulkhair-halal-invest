@@ -31,3 +31,9 @@ export type WithdrawalRequest = InferModel<typeof withdrawalRequests, "select">;
 export type EmergencyWithdrawalRequest = InferModel<typeof emergencyWithdrawalRequests, "select">;
 export type DeceasedUserClaim = InferModel<typeof deceasedUserClaims, "select">;
 export type VerificationTokens= InferModel<typeof verificationTokens, 'select'>;
+
+export interface BusinessVentureWithDetails extends BusinessVenture {
+  managerName: string
+  cycleName: string
+  status: "active" | "completed"
+}

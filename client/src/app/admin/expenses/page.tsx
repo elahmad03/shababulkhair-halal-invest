@@ -1,8 +1,14 @@
+import HeaderBox from '@/components/common/HeaderBox'
+import ResponsiveTable from '@/components/common/ResponsiveTable'
 import React from 'react'
 
 function page() {
   return (
-    <div>expenses page</div>
+    <>
+    <HeaderBox title='expenses management' 
+    subtext='manage organizational expenses'/>
+    <ResponsiveTable />
+    </>
   )
 }
 

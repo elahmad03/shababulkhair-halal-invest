@@ -297,9 +297,45 @@ export const mockBusinessVentures: BusinessVenture[] = [
     cycleId: 1,
     managedBy: 2,
     companyName: "palm oil and foods stuffs",
-    allocatedAmount: 300000000n,
-    expectedProfit: 250000000n,
-    profitRealized: 240000000n,
+    allocatedAmount: 30000000n,
+    expectedProfit: 2500000n,
+    profitRealized: 2400000n,
+  },
+  {
+    id: 2,
+    cycleId: 2,
+    managedBy: 2,
+    companyName: "Ismail ventures",
+    allocatedAmount: 100000000n,
+    expectedProfit: 8000000n,
+    profitRealized: 8000000n,
+  },
+    {
+    id: 3,
+    cycleId: 2,
+    managedBy: 5,
+    companyName: "alh sani ventures",
+    allocatedAmount: 100000000n,
+    expectedProfit: 10000000n,
+    profitRealized: 8000000n,
+  },
+    {
+    id: 4,
+    cycleId: 6,
+    managedBy: 5,
+    companyName: "alh sani ventures",
+    allocatedAmount: 100000000n,
+    expectedProfit: 10000000n,
+    profitRealized: 0n,
+  },
+  {
+    id: 5,
+    cycleId: 7,
+    managedBy: 5,
+    companyName: "alh sani ventures",
+    allocatedAmount: 100000000n,
+    expectedProfit: 10000000n,
+    profitRealized: 0n,
   },
 ];
 
@@ -367,6 +403,8 @@ export const mockDeceasedUserClaims: DeceasedUserClaim[] = [
   },
 ];
 
+// Add more notification examples to your existing mockNotifications array:
+
 export const mockNotifications: Notification[] = [
   {
     id: 1,
@@ -377,7 +415,35 @@ export const mockNotifications: Notification[] = [
     link: "/wallet",
     createdAt: new Date("2025-06-01"),
   },
-];
+  {
+    id: 2,
+    userId: 1,
+    title: "October 2025 Cycle Now Open",
+    message: "The October investment cycle is now open for share purchases. Visit the cycles page to invest.",
+    isRead: true,
+    link: "/user/cycles/6",
+    createdAt: new Date("2025-10-01"),
+  },
+  {
+    id: 3,
+    userId: 2,
+    title: "September Cycle Completed",
+    message: "The September 2025 cycle has been completed. Profit distribution will begin shortly.",
+    isRead: true,
+    link: "/cycles/5",
+    createdAt: new Date("2025-09-30"),
+  },
+  {
+    id: 4,
+    userId: 3,
+    title: "KYC Verification Required",
+    message: "Please complete your KYC verification to continue investing in future cycles.",
+    isRead: false,
+    link: "user/profile/kyc",
+    createdAt: new Date("2025-10-15"),
+  },
+]
+
 
 // --- AGGREGATED EXPORT FOR CONSUMERS (convenience) ---
 export const mockData = {

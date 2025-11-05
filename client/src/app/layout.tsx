@@ -14,7 +14,7 @@ const IBMPlexSerif = localFont({
 // const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Shababulkhair ",
+  title: "Shababulkhair Halal Investment Ltd ",
   description: "no 1 fintech for sharia compliant",
 };
 

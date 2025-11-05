@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { koboToNgn } from '@/lib/utils';
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,43 +21,51 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Plus } from "lucide-react"
-import { mockInvestmentCycles, mockBusinessVentures, mockUsers } from "@/db"
-import type { InvestmentCycle, User, BusinessVenture } from "@/db/types"
+import type { InvestmentCycle, User } from "@/db"
 
-const AddAllocationModal = () => {
+interface AddAllocationModalProps {
+  cycles: InvestmentCycle[]
+  committeeMembers: User[]
+}
+
+const AddAllocationModal = ({ cycles, committeeMembers }: AddAllocationModalProps) => {
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState({
-    investmentCycle: "",
+    cycleId: "",
     companyName: "",
     managedBy: "",
     allocatedAmount: "",
     expectedProfit: "",
-    profitRealized: "",
-
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Convert NGN inputs (strings like "1000.00") to kobo bigint before sending to server
-    const allocatedKobo = BigInt(Math.round(parseFloat(formData.allocatedAmount || '0') * 100));
-    const profitKobo = formData.profitRealized ? BigInt(Math.round(parseFloat(formData.profitRealized) * 100)) : 0n;
+    
+    // Convert amount to Kobo (multiply by 100)
+    const allocatedInKobo = BigInt(Math.round(parseFloat(formData.allocatedAmount) * 100))
+    const expectedInKobo = formData.expectedProfit 
+      ? BigInt(Math.round(parseFloat(formData.expectedProfit) * 100))
+      : 0n
+    
     const payload = {
-      investmentCycle: formData.investmentCycle,
+      cycleId: parseInt(formData.cycleId),
       companyName: formData.companyName,
-      managedBy: formData.managedBy,
-      allocatedAmount: allocatedKobo,
-      expectedProfit: BigInt(Math.round(parseFloat(formData.expectedProfit || '0') * 100)),
-      profitRealized: profitKobo,
-    };
+      managedBy: parseInt(formData.managedBy),
+      allocatedAmount: allocatedInKobo,
+      expectedProfit: expectedInKobo,
+      profitRealized: 0n,
+    }
+    
     console.log("Form submitted:", payload)
     setOpen(false)
+    
+    // Reset form
     setFormData({
-      investmentCycle: "",
+      cycleId: "",
       companyName: "",
       managedBy: "",
       allocatedAmount: "",
       expectedProfit: "",
-      profitRealized: "",
     })
   }
 
@@ -81,34 +88,36 @@ const AddAllocationModal = () => {
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="investmentCycle" className="text-sm font-medium">
+              <Label htmlFor="cycleId" className="text-sm font-medium">
                 Investment Cycle
               </Label>
               <Select
-                value={formData.investmentCycle}
+                value={formData.cycleId}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, investmentCycle: value })
+                  setFormData({ ...formData, cycleId: value })
                 }
               >
-                <SelectTrigger id="investmentCycle" className="w-full">
+                <SelectTrigger id="cycleId" className="w-full">
                   <SelectValue placeholder="Select cycle" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockInvestmentCycles.map((cycle: InvestmentCycle) => (
-                    <SelectItem key={cycle.id} value={String(cycle.id)}>
-                      {cycle.name}
-                    </SelectItem>
-                  ))}
+                  {cycles
+                    .filter((cycle) => cycle.status === "active" || cycle.status === "open_for_investment")
+                    .map((cycle) => (
+                      <SelectItem key={cycle.id} value={cycle.id.toString()}>
+                        {cycle.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="ventureName" className="text-sm font-medium">
+              <Label htmlFor="companyName" className="text-sm font-medium">
                 Venture Name
               </Label>
               <Input
-                id="ventureName"
+                id="companyName"
                 placeholder="e.g., Phone Accessories Import"
                 value={formData.companyName}
                 onChange={(e) =>
@@ -133,11 +142,13 @@ const AddAllocationModal = () => {
                   <SelectValue placeholder="Select committee member" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockUsers.map((member: User) => (
-                    <SelectItem key={member.id} value={String(member.id)}>
-                      {member.fullName}
-                    </SelectItem>
-                  ))}
+                  {committeeMembers
+                    .filter((member) => member.role === "committee")
+                    .map((member) => (
+                      <SelectItem key={member.id} value={member.id.toString()}>
+                        {member.fullName}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -149,6 +160,7 @@ const AddAllocationModal = () => {
               <Input
                 id="allocatedAmount"
                 type="number"
+                step="0.01"
                 placeholder="0.00"
                 value={formData.allocatedAmount}
                 onChange={(e) =>
@@ -161,7 +173,7 @@ const AddAllocationModal = () => {
 
             <div className="grid gap-2">
               <Label htmlFor="expectedProfit" className="text-sm font-medium">
-                expected Profit(₦){" "}
+                Expected Profit (₦){" "}
                 <span className="text-muted-foreground text-xs font-normal">
                   (Optional)
                 </span>
@@ -169,6 +181,7 @@ const AddAllocationModal = () => {
               <Input
                 id="expectedProfit"
                 type="number"
+                step="0.01"
                 placeholder="0.00"
                 value={formData.expectedProfit}
                 onChange={(e) =>

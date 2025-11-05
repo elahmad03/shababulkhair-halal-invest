@@ -1,21 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency } from "@/lib/utils"
 import { TrendingUp, Wallet } from "lucide-react"
+import { formatCurrency } from "@/lib/utils"
 
 interface BusinessStatsCardsProps {
-  totalCapital: number
-  totalProfit: number
+  totalCapital: bigint
+  totalProfit: bigint
 }
 
 const BusinessStatsCards = ({ totalCapital, totalProfit }: BusinessStatsCardsProps) => {
-  // const formatCurrency = (amount: number) => {
-  //   return new Intl.NumberFormat("en-NG", {
-  //     style: "currency",
-  //     currency: "NGN",
-  //     minimumFractionDigits: 0,
-  //   }).format(amount)
-  // }
-
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 mb-6">
       <Card className="border-emerald-100 bg-gradient-to-br from-emerald-50 to-white hover:shadow-lg transition-shadow">

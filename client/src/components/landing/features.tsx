@@ -7,7 +7,7 @@ const features = [
   { icon: FaBook, title: 'Learning & AI Tools', description: 'Unlock knowledge, farming AI, and finance tools with SHABA.' },
 ];
 
-export default function FeatureGrid() {
+export  function FeatureGrid() {
   return (
     <section className="py-16 bg-white dark:bg-zinc-900">
       <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">

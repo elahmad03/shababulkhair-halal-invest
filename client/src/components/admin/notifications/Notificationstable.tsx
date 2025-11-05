@@ -8,6 +8,8 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
+  getSortedRowModel,
+  SortingState,
   useReactTable,
 } from "@tanstack/react-table"
 import {
@@ -20,28 +22,22 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, ChevronLeft, ChevronRight } from "lucide-react"
-import { mockInvestmentCycles } from "@/db"
-import type { InvestmentCycle } from "@/db/types"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
 }
 
-export function BusinessAllocationsTable<TData, TValue>({
+export function NotificationsTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "sentAt", desc: true }, // Sort by date, newest first
+  ])
 
   const table = useReactTable({
     data,
@@ -50,8 +46,11 @@ export function BusinessAllocationsTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
     state: {
       columnFilters,
+      sorting,
     },
     initialState: {
       pagination: {
@@ -63,48 +62,23 @@ export function BusinessAllocationsTable<TData, TValue>({
   return (
     <Card className="shadow-sm">
       <CardHeader className="space-y-4">
-        <CardTitle className="text-xl sm:text-2xl">Business Allocations</CardTitle>
-        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search ventures..."
-              value={(table.getColumn("companyName")?.getFilterValue() as string) ?? ""}
-              onChange={(event) =>
-                table.getColumn("companyName")?.setFilterValue(event.target.value)
-              }
-              className="pl-9 w-full"
-            />
-          </div>
-          <Select
-            value={
-              (table.getColumn("cycleName")?.getFilterValue() as string) ?? "all"
+        <CardTitle className="text-xl sm:text-2xl">Notification History</CardTitle>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by title..."
+            value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
+            onChange={(event) =>
+              table.getColumn("title")?.setFilterValue(event.target.value)
             }
-            onValueChange={(value) =>
-              table
-                .getColumn("cycleName")
-                ?.setFilterValue(value === "all" ? "" : value)
-            }
-          >
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="All Cycles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Cycles</SelectItem>
-              {mockInvestmentCycles.map((cycle: InvestmentCycle) => (
-                <SelectItem key={cycle.id} value={String(cycle.id)}>
-                  {cycle.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            className="pl-9 w-full"
+          />
         </div>
       </CardHeader>
       <CardContent className="p-0 sm:p-6">
-        <div className="rounded-md border">
-          <div className="w-full overflow-x-auto border rounded-md">
-            <div className="min-w-full">
-              <Table>
+        <div className="rounded-md border overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id} className="bg-muted/50">
@@ -148,15 +122,14 @@ export function BusinessAllocationsTable<TData, TValue>({
                       className="h-32 text-center"
                     >
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
-                        <p className="text-sm">No allocations found</p>
-                        <p className="text-xs mt-1">Try adjusting your filters</p>
+                        <p className="text-sm">No notifications sent yet</p>
+                        <p className="text-xs mt-1">Create your first notification above</p>
                       </div>
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
-              </Table>
-            </div>
+            </Table>
           </div>
         </div>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-2 sm:px-0">
@@ -179,7 +152,7 @@ export function BusinessAllocationsTable<TData, TValue>({
             <span className="font-medium">
               {table.getFilteredRowModel().rows.length}
             </span>{" "}
-            entries
+            notifications
           </div>
           <div className="flex items-center gap-2">
             <Button
