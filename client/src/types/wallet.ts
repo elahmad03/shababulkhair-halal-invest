@@ -17,7 +17,7 @@ export interface Transaction {
   status: 'SUCCESS' | 'FAILED' | 'PENDING';
   provider?: string;
   narration?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   createdAt: string;
 }
 

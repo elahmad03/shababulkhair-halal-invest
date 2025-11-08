@@ -1,7 +1,12 @@
 declare module 'jspdf' {
   export class jsPDF {
     constructor(orientation?: string, unit?: string, format?: string | number[])
-    text(text: string, x: number, y: number, options?: any): jsPDF
+    text(text: string, x: number, y: number, options?: {
+      align?: 'left' | 'center' | 'right' | 'justify';
+      baseline?: 'alphabetic' | 'ideographic' | 'bottom' | 'top' | 'middle';
+      maxWidth?: number;
+      renderingMode?: 'fill' | 'stroke' | 'fillThenStroke' | 'invisible';
+    }): jsPDF
     setFontSize(size: number): jsPDF
     setFont(fontName: string, fontStyle: string): jsPDF
     setTextColor(r: number, g: number, b: number): jsPDF

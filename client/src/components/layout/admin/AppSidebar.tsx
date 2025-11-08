@@ -38,6 +38,11 @@ const items = [
 export function AppSidebar() {
   const pathname = usePathname();
 
+  const handleLinkClick = () => {
+    // Close sidebar on mobile when link is clicked
+    setOpenMobile(false);
+  };
+
   return (
     <Sidebar className="w-64 bg-gray-900 dark:bg-gray-900 h-full">
       <SidebarContent>
@@ -50,6 +55,7 @@ export function AppSidebar() {
                   <SidebarMenuItem key={title}>
                     <SidebarMenuButton asChild>
                       <Link
+                      onClick={handleLinkClick}
                         href={url}
                         className={`flex items-center gap-3 px-4 py-2 rounded-md w-full font-medium transition-all
                           ${isActive
@@ -70,4 +76,8 @@ export function AppSidebar() {
       </SidebarContent>
     </Sidebar>
   );
+}
+
+function setOpenMobile(arg0: boolean) {
+  throw new Error("Function not implemented.");
 }

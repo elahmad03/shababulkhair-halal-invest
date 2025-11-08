@@ -6,9 +6,9 @@ import {
   verifyMonnifyFunding,
   verifyPaystackFunding,
   fetchWalletBalance,
-} from '@/src/store/slice/walletSlice';
-import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
-import { Button } from '@/src/components/ui/button';
+} from '@/store/slice/walletSlice';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function FundingVerificationPage() {

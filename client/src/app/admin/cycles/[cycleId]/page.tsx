@@ -6,11 +6,13 @@ import { getStatusColor } from "@/lib/utils/cycle"
 import { CycleMetrics } from "@/components/admin/cycles/CycleMetrics"
 import { CycleTabs } from "@/components/admin/cycles/CycleTabs"
 import { getCycleDetails } from "@/lib/data/data"
-import { koboToNgn } from "@/lib/utils"
-import type { CycleDetails, Investor, BusinessVenture } from "@/lib/types/cycle"
 
-export default async function CycleDetailsPage({ params }: { params: { id: string } }) {
-  const cycleId = Number(params.id)
+type Props = {
+  params: { cycleId: string }
+}
+
+export default function CycleDetailsPage({ params }: Props) {
+  const cycleId = Number(params.cycleId)
 
   const cycleDetails = getCycleDetails(cycleId)
 

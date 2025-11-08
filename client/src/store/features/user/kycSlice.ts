@@ -47,7 +47,7 @@ export const uploadKYC = createAsyncThunk(
       formData.append('selfie', kycData.selfie);
 
       // Debug FormData
-      for (let [key, value] of formData.entries()) {
+      for (const [key, value] of formData.entries()) {
         console.log(`FormData ${key}:`, value);
       }
 

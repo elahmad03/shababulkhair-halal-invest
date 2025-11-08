@@ -2,8 +2,8 @@
 "use client";
 
 import { useForm, FormProvider } from "react-hook-form";
-import { CountrySelect } from "@/src/components/auth/countrySelect"; // Adjust the import path as needed
-import { Button } from "@/src/components/ui/button";
+import { CountrySelect } from "@/components/auth/countrySelect"; // Adjust the import path as needed
+import { Button } from "@/components/ui/button";
 
 export default function FormPage() {
   const methods = useForm();
