@@ -1,4 +1,4 @@
-// src/components/wallet/WalletActions.tsx
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ export const WalletActions = () => {
                      text-white
                      transition-all duration-300 transform hover:scale-[1.02] shadow-md"
         >
-          <Link href="/transactions/deposit">
+          <Link href="wallet/deposit">
             <Plus className="w-4 h-4 md:w-5 md:h-5 mr-2 md:mr-3" />
             <span className="hidden sm:inline">Add Funds</span>
             <span className="sm:hidden">Deposit</span>
@@ -37,7 +37,7 @@ export const WalletActions = () => {
                      hover:bg-emerald-50 dark:hover:bg-gray-800
                      transition-all duration-300 transform hover:scale-[1.02] shadow-sm"
         >
-          <Link href="/transactions/withdraw">
+          <Link href="wallet/withdraw">
             <ArrowUp className="w-4 h-4 md:w-5 md:h-5 mr-2 md:mr-3" />
             <span className="hidden sm:inline">Request Withdrawal</span>
             <span className="sm:hidden">Withdraw</span>

@@ -1,12 +1,12 @@
-'use client';
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
-import { Badge } from '@/src/components/ui/badge';
-import { fetchKYCStatus } from '@/src/store/features/user/kycSlice';
-import { RootState, AppDispatch } from '@/src/store';
-import { FileImage, User } from 'lucide-react';
+"use client";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import Image from "next/image";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { fetchKYCStatus } from "@/store/features/user/kycSlice";
+import { RootState, AppDispatch } from "@/store";
+import { FileImage, User } from "lucide-react";
 
 export default function KYCStatus() {
   const dispatch = useDispatch<AppDispatch>();
@@ -25,29 +25,34 @@ export default function KYCStatus() {
   //   }
   // }, [data]);
 
-  if (loading) return (
-    <div className="flex items-center justify-center p-8">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
-      <span className="ml-2 text-muted-foreground">Loading KYC status...</span>
-    </div>
-  );
+  if (loading)
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+        <span className="ml-2 text-muted-foreground">
+          Loading KYC status...
+        </span>
+      </div>
+    );
 
-  if (error) return (
-    <div className="text-center p-8">
-      <p className="text-red-500">Error: {error}</p>
-    </div>
-  );
+  if (error)
+    return (
+      <div className="text-center p-8">
+        <p className="text-red-500">Error: {error}</p>
+      </div>
+    );
 
-  if (!data) return (
-    <div className="text-center p-8">
-      <p className="text-muted-foreground">No KYC data found</p>
-    </div>
-  );
+  if (!data)
+    return (
+      <div className="text-center p-8">
+        <p className="text-muted-foreground">No KYC data found</p>
+      </div>
+    );
 
   const getStatusBadge = () => {
-    if (data.identity.verified) return 'APPROVED';
-    if (data.identity.hasDocuments) return 'PENDING';
-    return 'UNVERIFIED';
+    if (data.identity.verified) return "APPROVED";
+    if (data.identity.hasDocuments) return "PENDING";
+    return "UNVERIFIED";
   };
 
   const status = getStatusBadge();
@@ -56,25 +61,31 @@ export default function KYCStatus() {
     <div className="max-w-4xl mx-auto p-4 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">KYC Verification Status</CardTitle>
+          <CardTitle className="text-xl font-semibold">
+            KYC Verification Status
+          </CardTitle>
           <Badge
             variant={
-              status === 'APPROVED'
-                ? 'default'
-                : status === 'REJECTED'
-                ? 'destructive'
-                : 'secondary'
+              status === "APPROVED"
+                ? "default"
+                : status === "REJECTED"
+                ? "destructive"
+                : "secondary"
             }
             className="text-sm mt-2"
           >
-            {status === 'UNVERIFIED' ? 'Not Submitted' : status}
+            {status === "UNVERIFIED" ? "Not Submitted" : status}
           </Badge>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* NIN Display */}
           <div className="space-y-2">
-            <p className="font-medium text-sm text-muted-foreground">National Identification Number</p>
-            <p className="text-lg font-mono">{data.identity.nin || 'Not provided'}</p>
+            <p className="font-medium text-sm text-muted-foreground">
+              National Identification Number
+            </p>
+            <p className="text-lg font-mono">
+              {data.identity.nin || "Not provided"}
+            </p>
           </div>
 
           {/* Images Grid */}
@@ -93,7 +104,10 @@ export default function KYCStatus() {
                     fill
                     className="object-cover"
                     onError={(e) => {
-                      console.error('❌ ID Card image failed to load:', data.identity.idCardUrl);
+                      console.error(
+                        "❌ ID Card image failed to load:",
+                        data.identity.idCardUrl
+                      );
                     }}
                   />
                 ) : (
@@ -119,7 +133,10 @@ export default function KYCStatus() {
                     fill
                     className="object-cover"
                     onError={(e) => {
-                      console.error('❌ Selfie image failed to load:', data.identity.selfieUrl);
+                      console.error(
+                        "❌ Selfie image failed to load:",
+                        data.identity.selfieUrl
+                      );
                     }}
                   />
                 ) : (
@@ -134,7 +151,9 @@ export default function KYCStatus() {
 
           {/* Status Information */}
           <div className="space-y-2">
-            <p className="font-medium text-sm text-muted-foreground">Verification Status</p>
+            <p className="font-medium text-sm text-muted-foreground">
+              Verification Status
+            </p>
             <p className="text-lg font-medium">{data.kycStatus}</p>
           </div>
 

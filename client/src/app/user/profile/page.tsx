@@ -1,6 +1,6 @@
 "use client";
 
-import UserProfile from '@/src/components/user/userProfile'
+import UserProfile from '@/components/user/userProfile'
 import React from 'react'
 
 function UserProfilePage() {

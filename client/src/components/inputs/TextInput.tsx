@@ -5,7 +5,7 @@ import { ChangeEvent } from "react";
 interface TextInputProps {
   label: string;
   name: string;
-  value: string;
+  value?: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   type?: string;
@@ -37,7 +37,7 @@ export function TextInput({
         id={name}
         name={name}
         type={type}
-        value={value}
+        value={value || ""}
         onChange={onChange}
         placeholder={placeholder}
         required={required}

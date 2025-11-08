@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { InvestmentCycle, Wallet } from "@/db/schema";
+import { InvestmentCycle, Wallet } from "@/db";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Minus, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";

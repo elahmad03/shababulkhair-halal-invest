@@ -20,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ShareholderInvestment } from "@/schemas/app";
+import { ShareholderInvestment } from "@/db";
 import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
 
 // Define a type for the completed investments prop for clarity
 type CompletedInvestment = ShareholderInvestment & { cycleName: string };
@@ -54,9 +55,9 @@ export function WithdrawalRequestForm({
       return BigInt(kobo);
     }
     if (source === "investment" && selectedInvestment) {
-      if (divestmentType === "profit") return selectedInvestment.profitEarned;
+      if (divestmentType === "profit") return selectedInvestment.profitEarned ?? 0n;
       if (divestmentType === "full")
-        return selectedInvestment.amountInvested + selectedInvestment.profitEarned;
+        return selectedInvestment.amountInvested + (selectedInvestment.profitEarned ?? 0n);
     }
     return 0n;
   };
@@ -74,7 +75,7 @@ export function WithdrawalRequestForm({
     };
     console.log("Submitting withdrawal request:", requestDetails);
     // Here you would typically call an API to submit the request
-    alert(`Request for ${new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(finalAmount)} submitted!`);
+    toast(`Request for ${new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(finalAmount)} submitted!`);
   };
 
   return (
@@ -143,13 +144,13 @@ export function WithdrawalRequestForm({
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="profit" id="profit" />
                         <Label htmlFor="profit">
-                          Profit Only ({formatCurrency(selectedInvestment.profitEarned)})
+                          Profit Only ({formatCurrency(selectedInvestment.profitEarned ?? 0n)})
                         </Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="full" id="full" />
                         <Label htmlFor="full">
-                          Full Divestment (Capital + Profit) ({formatCurrency(selectedInvestment.amountInvested + selectedInvestment.profitEarned)})
+                          Full Divestment (Capital + Profit) ({formatCurrency(selectedInvestment.amountInvested + (selectedInvestment.profitEarned ?? 0n))})
                         </Label>
                       </div>
                     </RadioGroup>

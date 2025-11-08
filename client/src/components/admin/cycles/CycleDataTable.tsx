@@ -47,6 +47,7 @@ export function CyclesDataTable() {
     // Return a new object that includes the original cycle data plus our calculated fields.
     return {
       ...cycle,
+      id: String(cycle.id),
       totalInvested: Number(totalInvested), // Convert the BigInt to a number for the formatCurrency function
       investors: investorsCount,
     };

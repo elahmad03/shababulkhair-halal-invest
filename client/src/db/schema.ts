@@ -124,7 +124,7 @@ export const investmentCycles = pgTable("investment_cycles", {
   pricePerShare: bigint("price_per_share", { mode: "bigint" }).notNull(), // Stored as Kobo
   startDate: date("start_date"),
   endDate: date("end_date"),
-  
+  description: text("description"),
   // --- PROFIT SPLIT & ACCOUNTING FIELDS ---
   totalProfitRealized: bigint("total_profit_realized", { mode: "bigint" }).default(0n), // Total profit from all ventures in this cycle
   investorProfitPool: bigint("investor_profit_pool", { mode: "bigint" }).default(0n),   // Calculated 80% share for investors
@@ -220,6 +220,9 @@ export const withdrawalRequests = pgTable("withdrawal_requests", {
   amount: bigint("amount", { mode: "bigint" }).notNull(), // Stored as Kobo
   withdrawalType: text("withdrawal_type", { enum: ["wallet_balance", "full_divestment", "profit_only"] }).notNull(),
   relatedCycleId: integer("related_cycle_id").references(() => investmentCycles.id),
+  bankName: text("bank_name").notNull(),
+  accountNumber: varchar("account_number", { length: 20 }).notNull(),
+  accountName: text("account_name").notNull(), // Added this field
   status: text("status", { enum: ["pending", "approved", "processed", "rejected"] }).default("pending").notNull(),
   requestedAt: timestamp("requested_at").defaultNow().notNull(),
   approvedBy: integer("approved_by").references(() => users.id),

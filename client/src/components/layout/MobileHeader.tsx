@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { logout } from "@/store/features/auth/authSlice";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -23,7 +23,7 @@ export default function Topbar() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  
+const pathname = usePathname();  
   // In real app, get from auth state
   const currentUserId = 1;
   const isAdmin = true; // Get from auth state
@@ -87,8 +87,15 @@ export default function Topbar() {
           <DropdownMenuContent className="w-48 bg-white dark:bg-gray-900 p-1 rounded-md shadow z-50">
             {isAdmin && (
               <div className="flex items-center px-3 py-2 text-xs text-gray-500 gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                <span className="uppercase font-semibold">Admin</span>
+                
+               
+            <DropdownMenuItem
+              onClick={() => router.push("/admin/dashboard")}
+              className="flex gap-2 items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer"
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              Admin Dashboard
+            </DropdownMenuItem>
               </div>
             )}
 

@@ -1,20 +1,20 @@
 // components/UserProfile.tsx
 import React, { useEffect, useState } from 'react';
-import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { 
   fetchUserProfile, 
   updateUserProfile, 
   uploadProfilePicture,
   clearUserError 
-} from '@/src/store/features/user/userSlice';
-import { Button } from '@/src/components/ui/button';
-import { Input } from '@/src/components/ui/input';
-import { Label } from '@/src/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/src/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from '@/src/components/ui/avatar';
-import { Skeleton } from '@/src/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/src/components/ui/alert';
+} from '@/store/features/user/userSlice';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Camera, Loader2 } from 'lucide-react';
 
 const UserProfile: React.FC = () => {

@@ -6,7 +6,7 @@ interface StatCardProps {
   value: string;
   subtext: string;
   Icon: LucideIcon;
-  color: string; // Tailwind color class, e.g., 'text-amber-500'
+  color: string; 
 }
 
 export const StatCard: React.FC<StatCardProps> = ({ title, value, subtext, Icon, color }) => (

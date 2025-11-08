@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { WithdrawalRequest } from "@/schemas/app";
+import { WithdrawalRequest } from "@/db";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,

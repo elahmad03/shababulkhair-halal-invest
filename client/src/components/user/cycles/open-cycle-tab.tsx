@@ -23,7 +23,7 @@ export function OpenCyclesTab() {
 
   const handleInvestNow = (cycleId: number) => {
     // Navigate to investment page or open a dialog
-    router.push(`/invest/${cycleId}`);
+    router.push(`invest/${cycleId}`);
   };
 
   if (openCycles.length === 0) {
@@ -48,7 +48,7 @@ export function OpenCyclesTab() {
               label: "Investment Window",
               value: formatDateRange(cycle.startDate, cycle.endDate),
             },
-            { label: "Cycle Duration", value: "1 Month" },
+            { label: "Cycle Duration", value: "3 Month" },
             {
               label: "Share Price",
               value: formatCurrency(cycle.pricePerShare),

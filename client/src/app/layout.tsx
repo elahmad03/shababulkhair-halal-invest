@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import StoreProvider from "@/store/storeProvider";
 import { Toaster } from "sonner";
 
-import localFont from 'next/font/local';
-import './globals.css';
+import localFont from "next/font/local";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const IBMPlexSerif = localFont({
-  src: '../../public/fonts/IBMPlexSerif-Regular.ttf',
-  display: 'swap',
+  src: "../../public/fonts/IBMPlexSerif-Regular.ttf",
+  display: "swap",
 });
 
 // import { Inter } from "next/font/google";
@@ -24,9 +25,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={IBMPlexSerif.className}>
-        <StoreProvider> {children}</StoreProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <StoreProvider> {children}</StoreProvider>
+        </ThemeProvider>
         <Toaster />
       </body>
     </html>

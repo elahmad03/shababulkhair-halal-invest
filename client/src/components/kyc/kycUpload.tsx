@@ -1,7 +1,6 @@
-// components/KYCUpload.tsx
 import React, { useState, useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
-import { uploadKYC, fetchKYCStatus, clearKYCError, clearKYCSuccess } from '@/src/store/features/user/kycSlice';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { uploadKYC, fetchKYCStatus, clearKYCError, clearKYCSuccess } from '@/store/features/user/kycSlice';
 
 const KYCUpload: React.FC = () => {
   const dispatch = useAppDispatch();

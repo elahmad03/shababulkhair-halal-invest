@@ -134,6 +134,7 @@ export const mockInvestmentCycles: InvestmentCycle[] = [
     pricePerShare: 1000000n, // 10,000 NGN in kobo
   startDate: "2025-05-01",
   endDate: "2025-05-31",
+  description: "this investments is diversified in many sectors",
     totalProfitRealized: 8500000n,
     investorProfitPool: 6800000n,
     organizationProfitShare: 1700000n,

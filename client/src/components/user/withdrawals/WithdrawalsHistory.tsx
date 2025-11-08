@@ -1,4 +1,4 @@
-import { WithdrawalRequest } from "@/schemas/app";
+import { WithdrawalRequest } from "@/db";
 import { DataTable } from "./DataTable"; 
 import { columns } from "./Columns"; 
 
