@@ -97,7 +97,7 @@ export const mockUserProfiles: UserProfile[] = [
     city: "Abuja",
     state: "FCT",
     country: "Nigeria",
-  dateOfBirth: "12-18-1995",
+    dateOfBirth: new Date("1995-12-18"),
     kycStatus: "verified",
     profilePictureUrl: "https://randomuser.me/api/portraits/men/1.jpg",
     governmentIdType: "national_id",
@@ -107,7 +107,6 @@ export const mockUserProfiles: UserProfile[] = [
     nextOfKinRelationship: "Brother",
     nextOfKinPhoneNumber: "08032223344",
   },
-  
 ];
 
 /* ===============================================================
@@ -123,7 +122,7 @@ export const mockWallets: Wallet[] = [
 ];
 
 /* ===============================================================
-   INVESTMENT CYCLES (May–October)
+   INVESTMENT CYCLES
    =============================================================== */
 
 export const mockInvestmentCycles: InvestmentCycle[] = [
@@ -131,10 +130,10 @@ export const mockInvestmentCycles: InvestmentCycle[] = [
     id: 1,
     name: "May 2025 Cycle",
     status: "completed",
-    pricePerShare: 1000000n, // 10,000 NGN in kobo
-  startDate: "2025-05-01",
-  endDate: "2025-05-31",
-  description: "this investments is diversified in many sectors",
+    pricePerShare: 1000000n,
+    startDate: new Date("2025-05-01"),
+    endDate: new Date("2025-05-31"),
+    description: "this investment is diversified in many sectors",
     totalProfitRealized: 8500000n,
     investorProfitPool: 6800000n,
     organizationProfitShare: 1700000n,
@@ -145,8 +144,9 @@ export const mockInvestmentCycles: InvestmentCycle[] = [
     name: "June 2025 Cycle",
     status: "completed",
     pricePerShare: 1000000n,
-  startDate: "2025-06-01",
-  endDate: "2025-06-30",
+    startDate: new Date("2025-06-01"),
+    endDate: new Date("2025-06-30"),
+    description: "this investment is diversified in many sectors",
     totalProfitRealized: 300000000n,
     investorProfitPool: 240000000n,
     organizationProfitShare: 60000000n,
@@ -157,8 +157,9 @@ export const mockInvestmentCycles: InvestmentCycle[] = [
     name: "July 2025 Cycle",
     status: "completed",
     pricePerShare: 1000000n,
-  startDate: "2025-07-01",
-  endDate: "2025-07-31",
+    startDate: new Date("2025-07-01"),
+    endDate: new Date("2025-07-31"),
+    description: "this investment is diversified in many sectors",
     totalProfitRealized: 350000000n,
     investorProfitPool: 280000000n,
     organizationProfitShare: 70000000n,
@@ -169,8 +170,9 @@ export const mockInvestmentCycles: InvestmentCycle[] = [
     name: "August 2025 Cycle",
     status: "completed",
     pricePerShare: 1000000n,
-  startDate: "2025-08-01",
-  endDate: "2025-08-31",
+    startDate: new Date("2025-08-01"),
+    endDate: new Date("2025-08-31"),
+    description: "this investment is diversified in many sectors",
     totalProfitRealized: 400000000n,
     investorProfitPool: 320000000n,
     organizationProfitShare: 80000000n,
@@ -181,8 +183,9 @@ export const mockInvestmentCycles: InvestmentCycle[] = [
     name: "September 2025 Cycle",
     status: "completed",
     pricePerShare: 1000000n,
-  startDate: "2025-09-01",
-  endDate: "2025-09-30",
+    startDate: new Date("2025-09-01"),
+    endDate: new Date("2025-09-30"),
+    description: "this investment is diversified in many sectors",
     totalProfitRealized: 450000000n,
     investorProfitPool: 360000000n,
     organizationProfitShare: 90000000n,
@@ -193,8 +196,9 @@ export const mockInvestmentCycles: InvestmentCycle[] = [
     name: "October 2025 Cycle",
     status: "active",
     pricePerShare: 1000000n,
-  startDate: "2025-10-01",
-  endDate: "2025-10-31",
+    startDate: new Date("2025-10-01"),
+    endDate: new Date("2025-10-31"),
+    description: "this investment is diversified in many sectors",
     totalProfitRealized: 0n,
     investorProfitPool: 0n,
     organizationProfitShare: 0n,
@@ -205,8 +209,9 @@ export const mockInvestmentCycles: InvestmentCycle[] = [
     name: "November 2025 Cycle",
     status: "open_for_investment",
     pricePerShare: 1000000n,
-  startDate: "2025-11-01",
-  endDate: "2025-11-30",
+    startDate: new Date("2025-11-01"),
+    endDate: new Date("2025-11-30"),
+    description: "this investment is diversified in many sectors",
     totalProfitRealized: 0n,
     investorProfitPool: 0n,
     organizationProfitShare: 0n,
@@ -215,7 +220,7 @@ export const mockInvestmentCycles: InvestmentCycle[] = [
 ];
 
 /* ===============================================================
-   SHAREHOLDER INVESTMENTS (Randomized)
+   SHAREHOLDER INVESTMENTS
    =============================================================== */
 
 export const mockShareholderInvestments: ShareholderInvestment[] = [
@@ -262,7 +267,7 @@ export const mockTransactions: Transaction[] = [
     description: "initial deposit",
     relatedEntityType: "deposit",
     relatedEntityId: 1,
-    createdAt:new Date( "2025-04-25"),
+    createdAt: new Date("2025-04-25"),
   },
   {
     id: 2,
@@ -273,7 +278,7 @@ export const mockTransactions: Transaction[] = [
     description: "10 shares purchased in May Cycle",
     relatedEntityType: "investment",
     relatedEntityId: 1,
-    createdAt:new Date( "2025-05-01"),
+    createdAt: new Date("2025-05-01"),
   },
   {
     id: 3,
@@ -311,7 +316,7 @@ export const mockBusinessVentures: BusinessVenture[] = [
     expectedProfit: 8000000n,
     profitRealized: 8000000n,
   },
-    {
+  {
     id: 3,
     cycleId: 2,
     managedBy: 5,
@@ -320,7 +325,7 @@ export const mockBusinessVentures: BusinessVenture[] = [
     expectedProfit: 10000000n,
     profitRealized: 8000000n,
   },
-    {
+  {
     id: 4,
     cycleId: 6,
     managedBy: 5,
@@ -346,7 +351,7 @@ export const mockOrganizationalLedger: OrganizationalLedger[] = [
     entryType: "income",
     source: "Profit Share from August 2025 Cycle",
     amount: 80000000n,
-    date: "2025-09-01",
+    date: new Date("2025-09-01"),
     relatedCycleId: 4,
     recordedBy: 1,
     createdAt: new Date("2025-09-01"),
@@ -369,11 +374,14 @@ export const mockWithdrawalRequests: WithdrawalRequest[] = [
     amount: 2000000n,
     withdrawalType: "profit_only",
     relatedCycleId: 1,
+    bankName: "First Bank",
+    accountNumber: "1234567890",
+    accountName: "Ahmad Ibrahim",
     status: "processed",
     requestedAt: new Date("2025-06-05"),
     approvedBy: 2,
     processedAt: new Date("2025-06-10"),
-    rejectionReason: "invalid "
+    rejectionReason: "invalid",
   },
 ];
 
@@ -403,8 +411,6 @@ export const mockDeceasedUserClaims: DeceasedUserClaim[] = [
     updatedAt: null,
   },
 ];
-
-// Add more notification examples to your existing mockNotifications array:
 
 export const mockNotifications: Notification[] = [
   {
@@ -440,13 +446,15 @@ export const mockNotifications: Notification[] = [
     title: "KYC Verification Required",
     message: "Please complete your KYC verification to continue investing in future cycles.",
     isRead: false,
-    link: "user/profile/kyc",
+    link: "/user/profile/kyc",
     createdAt: new Date("2025-10-15"),
   },
-]
+];
 
+/* ===============================================================
+   AGGREGATED EXPORT
+   =============================================================== */
 
-// --- AGGREGATED EXPORT FOR CONSUMERS (convenience) ---
 export const mockData = {
   users: mockUsers,
   verificationTokens: mockVerificationTokens,

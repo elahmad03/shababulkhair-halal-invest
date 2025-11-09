@@ -1,38 +1,40 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Calendar, TrendingUp, Clock, Target } from "lucide-react"
-import { format } from "date-fns"
-import { formatCurrency } from "@/lib/utils"
-import type { InvestmentCycle } from "@/db"
-import { useRouter } from "next/navigation"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Calendar, TrendingUp, Clock, Target } from "lucide-react";
+import { format } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
+import type { InvestmentCycle } from "@/db";
+import { useRouter } from "next/navigation";
 
 interface CycleSummaryCardProps {
-  cycle: InvestmentCycle
-  className?: string
+  cycle: InvestmentCycle;
+  className?: string;
 }
 
 const CycleSummaryCard = ({ cycle, className }: CycleSummaryCardProps) => {
-  const router = useRouter()
-  const isOpenForInvestment = cycle.status === "open_for_investment"
+  const router = useRouter();
+  const isOpenForInvestment = cycle.status === "open_for_investment";
 
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "open_for_investment":
-        return { label: "Open for Investment", variant: "default" as const, color: "bg-emerald-500" }
+        return { label: "Open for Investment", variant: "default" as const, color: "bg-emerald-500" };
       case "active":
-        return { label: "Active", variant: "secondary" as const, color: "bg-blue-500" }
+        return { label: "Active", variant: "secondary" as const, color: "bg-blue-500" };
       case "completed":
-        return { label: "Completed", variant: "outline" as const, color: "bg-gray-500" }
+        return { label: "Completed", variant: "outline" as const, color: "bg-gray-500" };
       default:
-        return { label: "Pending", variant: "outline" as const, color: "bg-gray-400" }
+        return { label: "Pending", variant: "outline" as const, color: "bg-gray-400" };
     }
-  }
+  };
 
-  const statusConfig = getStatusConfig(cycle.status)
+  // FIX: Use nullish coalescing (??) to provide a default "pending" value
+  // if cycle.status is null, satisfying the `getStatusConfig(status: string)` signature.
+  const statusConfig = getStatusConfig(cycle.status ?? "pending");
 
   return (
     <Card className={className}>
@@ -54,7 +56,7 @@ const CycleSummaryCard = ({ cycle, className }: CycleSummaryCardProps) => {
         <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950 dark:to-green-950 p-6 rounded-lg border border-emerald-200 dark:border-emerald-800">
           <p className="text-sm text-muted-foreground mb-2">Price Per Share</p>
           <p className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-            {formatCurrency(cycle.pricePerShare)}
+            {formatCurrency(Number(cycle.pricePerShare))}
           </p>
         </div>
 
@@ -125,7 +127,7 @@ const CycleSummaryCard = ({ cycle, className }: CycleSummaryCardProps) => {
         )}
       </CardContent>
     </Card>
-  )
-}
+  );
+};
 
-export default CycleSummaryCard
+export default CycleSummaryCard;

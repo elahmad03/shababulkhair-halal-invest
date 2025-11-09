@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAppDispatch, useAppSelector } from '@/src/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchWalletBalance,
   initializeMonnifyFunding,
@@ -9,11 +9,11 @@ import {
   verifyMonnifyFunding,
   verifyPaystackFunding,
   clearWalletError,
-} from '@/src/store/slice/walletSlice';
+} from '@/store/slice/walletSlice';
 
-import { Button } from '@/src/components/ui/button';
-import { Card, CardContent } from '@/src/components/ui/card';
-import { Input } from '@/src/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 
 const WalletFundingCard = () => {

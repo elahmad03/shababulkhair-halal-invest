@@ -3,7 +3,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CycleDetails } from "@/lib/types/cycle"
-import { InvestorsTable } from "./InvestorsTable"
 import { VenturesTab } from "./VenturesTab"
 import { DistributionTab } from "./DistributionTabs"
 import { InvestorsTab } from "./InvestorsTab"

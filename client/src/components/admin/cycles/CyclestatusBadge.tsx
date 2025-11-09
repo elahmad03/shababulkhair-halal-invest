@@ -1,41 +1,56 @@
-// components/admin/cycles/cycle-status-badge.tsx
 import { Badge } from "@/components/ui/badge";
-import { InvestmentCycle } from "@/db";
+import type { InvestmentCycle } from "@/db/types";
 
-type CycleStatus = InvestmentCycle["status"];
+// FIX: Use NonNullable to remove 'null' from the possible types
+type CycleStatus = NonNullable<InvestmentCycle["status"]>;
+
+const statusConfig: Record<
+  CycleStatus,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
+  pending: {
+    label: "Pending",
+    variant: "secondary",
+  },
+  open_for_investment: {
+    label: "Open for Investment",
+    variant: "default",
+  },
+  active: {
+    label: "Active",
+    variant: "default",
+  },
+  completed: {
+    label: "Completed",
+    variant: "outline",
+  },
+};
 
 interface CycleStatusBadgeProps {
-  status: CycleStatus;
+  // It's okay for the prop to be null, we just have to guard against it
+  status: InvestmentCycle["status"];
 }
 
 export function CycleStatusBadge({ status }: CycleStatusBadgeProps) {
-  const statusConfig = {
-    pending: {
-      label: "Pending",
-      className: "bg-slate-100 text-slate-700 hover:bg-slate-100",
-    },
-    open: {
-      label: "Open for Investment",
-      className: "bg-green-100 text-green-700 hover:bg-green-100",
-    },
-    open_for_investment: {
-      label: "Open for Investment",
-      className: "bg-green-100 text-green-700 hover:bg-green-100",
-    },
-    active: {
-      label: "Active",
-      className: "bg-blue-100 text-blue-700 hover:bg-blue-100",
-    },
-    completed: {
-      label: "Completed",
-      className: "bg-slate-100 text-slate-500 hover:bg-slate-100",
-    },
-  };
+  // Guard clause: if status is null, don't render anything
+  if (!status) return null;
 
-  const config = status != null ? statusConfig[status] : statusConfig.pending;
+  // Now TypeScript knows 'status' here is not null
+  const config = statusConfig[status];
+
+  if (!config) return null;
 
   return (
-    <Badge className={config.className} variant="secondary">
+    <Badge
+      variant={config.variant}
+      className={
+        status === "open_for_investment"
+          ? "bg-green-600 hover:bg-green-700"
+          : status === "active"
+          ? "bg-blue-600 hover:bg-blue-700"
+          : ""
+      }
+    >
       {config.label}
     </Badge>
   );

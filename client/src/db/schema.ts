@@ -64,7 +64,7 @@ export const userProfiles = pgTable("user_profiles", {
   city: text("city"),
   state: text("state"),
   country: varchar("country", { length: 100 }),
-  dateOfBirth: date("date_of_birth"),
+  dateOfBirth: timestamp("date_of_birth"),
   
   // --- KYC & DOCUMENT FIELDS (REVISED) ---
   kycStatus: text("kyc_status", { enum: ["not_submitted", "pending_review", "verified", "rejected"] }).default("not_submitted").notNull(),
@@ -122,8 +122,8 @@ export const investmentCycles = pgTable("investment_cycles", {
   name: text("name").notNull(),
   status: text("status", { enum: ["pending", "open_for_investment", "active", "completed"] }).default("pending"),
   pricePerShare: bigint("price_per_share", { mode: "bigint" }).notNull(), // Stored as Kobo
-  startDate: date("start_date"),
-  endDate: date("end_date"),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),    
   description: text("description"),
   // --- PROFIT SPLIT & ACCOUNTING FIELDS ---
   totalProfitRealized: bigint("total_profit_realized", { mode: "bigint" }).default(0n), // Total profit from all ventures in this cycle
@@ -162,7 +162,7 @@ export const organizationalLedger = pgTable("organizational_ledger", {
     entryType: text("entry_type", { enum: ["income", "expense"] }).notNull(),
     source: text("source").notNull(), // e.g., "Profit Share from August 2025 Cycle", "Office Supplies"
     amount: bigint("amount", { mode: "bigint" }).notNull(), // Stored as Kobo
-    date: date("date").notNull(),
+    date: timestamp("date").notNull(),
     relatedCycleId: integer("related_cycle_id").references(() => investmentCycles.id), // Link income to a cycle
     recordedBy: integer("recorded_by").notNull().references(() => users.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),

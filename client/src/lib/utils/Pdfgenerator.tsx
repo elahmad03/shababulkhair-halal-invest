@@ -11,8 +11,8 @@ interface InvestmentReceiptData {
   amountInvested: bigint
   profitEarned: bigint
   investedAt: Date
-  cycleStartDate: string | null
-  cycleEndDate: string | null
+  cycleStartDate: Date | null
+  cycleEndDate: Date | null
 }
 
 export const generateInvestmentReceiptPDF = async (data: InvestmentReceiptData) => {

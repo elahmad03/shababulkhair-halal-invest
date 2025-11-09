@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation"
 import { format } from "date-fns"
 
 
-interface InvestmentCardProps {
+export interface InvestmentCardProps {
   id: number
   cycleName: string
   cycleStatus: string

@@ -2,7 +2,7 @@
 'use client';
 
 import { useFormStatus } from 'react-dom';
-import { Button } from '@/src/components/ui/button';
+import { Button } from '@/components/ui/button';
 
 interface SubmitButtonProps extends React.ComponentProps<typeof Button> {
   children: React.ReactNode;

@@ -9,6 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,74 +19,84 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 
-interface CreateCycleDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export function CreateCycleDialog({
-  open,
-  onOpenChange,
-}: CreateCycleDialogProps) {
+export function CreateCycleDialog() {
+  const [open, setOpen] = useState(false);
   const [cycleName, setCycleName] = useState("");
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
-  const [duration, setDuration] = useState("");
-  const [sharePrice, setSharePrice] = useState("");
+  const [pricePerShare, setPricePerShare] = useState("");
+  const [description, setDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSave = () => {
-    // TODO: Implement save logic
-    console.log({ cycleName, startDate, endDate, duration, sharePrice });
-    onOpenChange(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    // TODO: Implement API call to create cycle
+    console.log({
+      cycleName,
+      startDate,
+      endDate,
+      pricePerShare: BigInt(Number(pricePerShare) * 100), // Convert to kobo
+      description,
+    });
+
+    // Reset form and close dialog
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setOpen(false);
+      resetForm();
+    }, 1000);
   };
 
-  const handleCancel = () => {
-    // Reset form
+  const resetForm = () => {
     setCycleName("");
     setStartDate(undefined);
     setEndDate(undefined);
-    setDuration("");
-    setSharePrice("");
-    onOpenChange(false);
+    setPricePerShare("");
+    setDescription("");
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">
-            Create New Cycle
-          </DialogTitle>
-          <DialogDescription>
-            Set up a new investment cycle with all the necessary details.
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="lg" className="w-full sm:w-auto">
+          <Plus className="mr-2 h-4 w-4" />
+          Create New Cycle
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Create New Investment Cycle</DialogTitle>
+            <DialogDescription>
+              Define the parameters for a new investment cycle. The cycle will be
+              created in pending status.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="grid gap-6 py-4">
-          {/* Cycle Name */}
-          <div className="grid gap-2">
-            <Label htmlFor="cycle-name">Cycle Name</Label>
-            <Input
-              id="cycle-name"
-              placeholder="e.g., November 2025 Cycle"
-              value={cycleName}
-              onChange={(e) => setCycleName(e.target.value)}
-            />
-          </div>
+          <div className="grid gap-4 py-4">
+            {/* Cycle Name */}
+            <div className="grid gap-2">
+              <Label htmlFor="cycleName">Cycle Name</Label>
+              <Input
+                id="cycleName"
+                placeholder="e.g., November 2025 Cycle"
+                value={cycleName}
+                onChange={(e) => setCycleName(e.target.value)}
+                required
+              />
+            </div>
 
-          {/* Investment Window */}
-          <div className="grid gap-4">
-            <Label>Investment Window</Label>
+            {/* Date Range */}
             <div className="grid grid-cols-2 gap-4">
-              {/* Start Date */}
               <div className="grid gap-2">
-                <Label htmlFor="start-date" className="text-sm text-slate-600">
-                  Start Date
-                </Label>
+                <Label>Start Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -96,7 +107,7 @@ export function CreateCycleDialog({
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "PPP") : "Pick a date"}
+                      {startDate ? format(startDate, "PPP") : "Pick date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -110,11 +121,8 @@ export function CreateCycleDialog({
                 </Popover>
               </div>
 
-              {/* End Date */}
               <div className="grid gap-2">
-                <Label htmlFor="end-date" className="text-sm text-slate-600">
-                  End Date
-                </Label>
+                <Label>End Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -125,7 +133,7 @@ export function CreateCycleDialog({
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "PPP") : "Pick a date"}
+                      {endDate ? format(endDate, "PPP") : "Pick date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -133,49 +141,62 @@ export function CreateCycleDialog({
                       mode="single"
                       selected={endDate}
                       onSelect={setEndDate}
+                      disabled={(date) =>
+                        startDate ? date < startDate : false
+                      }
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
+
+            {/* Price Per Share */}
+            <div className="grid gap-2">
+              <Label htmlFor="pricePerShare">Price Per Share (NGN)</Label>
+              <Input
+                id="pricePerShare"
+                type="number"
+                placeholder="10000"
+                value={pricePerShare}
+                onChange={(e) => setPricePerShare(e.target.value)}
+                required
+                min="0"
+                step="0.01"
+              />
+              {pricePerShare && (
+                <p className="text-xs text-muted-foreground">
+                  Display: {formatCurrency(BigInt(Number(pricePerShare) * 100))}
+                </p>
+              )}
+            </div>
+
+            {/* Description */}
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Input
+                id="description"
+                placeholder="Describe this investment cycle..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
           </div>
 
-          {/* Cycle Duration */}
-          <div className="grid gap-2">
-            <Label htmlFor="duration">Cycle Duration</Label>
-            <Input
-              id="duration"
-              placeholder="e.g., 3 Months"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-            />
-          </div>
-
-          {/* Share Price */}
-          <div className="grid gap-2">
-            <Label htmlFor="share-price">Share Price (₦)</Label>
-            <Input
-              id="share-price"
-              type="number"
-              placeholder="e.g., 10000"
-              value={sharePrice}
-              onChange={(e) => setSharePrice(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={handleCancel}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            className="bg-gradient-to-r from-emerald-600 to-green-500 text-white shadow-md hover:shadow-lg"
-          >
-            Save Draft
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Save Cycle"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

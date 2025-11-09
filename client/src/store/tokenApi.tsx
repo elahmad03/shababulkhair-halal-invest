@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { ReactNode } from 'react';
 
 interface TokenHolder {
   address: string;
@@ -14,6 +15,8 @@ interface TokenHoldersResponse {
 }
 
 interface TokenCounters {
+  transfers_count: ReactNode;
+  token_holders_count: ReactNode;
   holders: number;
   transactions: number;
   transfers: number;

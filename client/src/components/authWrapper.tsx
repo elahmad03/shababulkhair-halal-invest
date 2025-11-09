@@ -2,7 +2,7 @@
 
 import { useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppSelector } from '@/src/store/hooks';
+import { useAppSelector } from '@/store/hooks';
 
 interface AuthWrapperProps {
   children: ReactNode;

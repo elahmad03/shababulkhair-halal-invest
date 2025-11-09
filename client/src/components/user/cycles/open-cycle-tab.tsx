@@ -13,13 +13,13 @@ export function OpenCyclesTab() {
     (cycle) => cycle.status === "open_for_investment"
   );
 
-  const formatDateRange = (start?: string | null, end?: string | null) => {
-    if (!start || !end) return "-";
-    const s = new Date(start);
-    const e = new Date(end);
-    if (isNaN(s.getTime()) || isNaN(e.getTime())) return "-";
-    return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
-  };
+  const formatDateRange = (start?: Date | string | null, end?: Date | string | null) => {
+  if (!start || !end) return "-";
+  const s = start instanceof Date ? start : new Date(start);
+  const e = end instanceof Date ? end : new Date(end);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return "-";
+  return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+};
 
   const handleInvestNow = (cycleId: number) => {
     // Navigate to investment page or open a dialog

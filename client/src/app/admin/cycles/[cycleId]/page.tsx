@@ -3,18 +3,17 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { getStatusColor } from "@/lib/utils/cycle"
-import { CycleMetrics } from "@/components/admin/cycles/CycleMetrics"
-import { CycleTabs } from "@/components/admin/cycles/CycleTabs"
+import { CycleMetrics } from "@/components/admin/cycles/details/CycleMetrics"
+import { CycleTabs } from "@/components/admin/cycles/details/CycleTabs"
 import { getCycleDetails } from "@/lib/data/data"
 
 type Props = {
-  params: { cycleId: string }
+  params: Promise<{ cycleId: string }>
 }
 
-export default function CycleDetailsPage({ params }: Props) {
-  const cycleId = Number(params.cycleId)
-
-  const cycleDetails = getCycleDetails(cycleId)
+export default async function CycleDetailsPage({ params }: Props) {
+  const { cycleId } = await params   // ✅ await the params
+  const cycleDetails = getCycleDetails(Number(cycleId))
 
   if (!cycleDetails) {
     return (
@@ -36,8 +35,14 @@ export default function CycleDetailsPage({ params }: Props) {
         </Link>
 
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Cycle Details: "{cycleDetails.name}"</h1>
-          <Badge className={`${getStatusColor(cycleDetails.status)} text-white text-lg px-4 py-2`}>
+          <h1 className="text-3xl font-bold">
+            Cycle Details: "{cycleDetails.name}"
+          </h1>
+          <Badge
+            className={`${getStatusColor(
+              cycleDetails.status
+            )} text-white text-lg px-4 py-2`}
+          >
             {cycleDetails.status}
           </Badge>
         </div>

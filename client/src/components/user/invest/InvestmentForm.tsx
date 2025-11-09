@@ -42,14 +42,19 @@ async function submitInvestment(data: InvestmentData): Promise<{ success: boolea
 }
 
 export function InvestmentForm({ cycle, wallet }: InvestmentFormProps) {
+  // FIX 1: Convert all incoming 'bigint' values to 'number' once.
+  // This ensures all calculations within the component use the same type.
+  const walletBalance = Number(wallet.balance);
+  const pricePerShare = Number(cycle.pricePerShare ?? 10000);
+
   const [shares, setShares] = useState(0);
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
-  const pricePerShare = cycle.pricePerShare ?? 10000;
+  // FIX 2: All these calculations now use 'number' and are valid.
   const totalCost = shares * pricePerShare;
-  const remainingBalance = wallet.balance - totalCost;
+  const remainingBalance = walletBalance - totalCost;
   const hasSufficientFunds = remainingBalance >= 0;
 
   const isButtonDisabled = shares <= 0 || !hasSufficientFunds || !agreed || isSubmitting;
@@ -59,8 +64,9 @@ export function InvestmentForm({ cycle, wallet }: InvestmentFormProps) {
   };
 
   const handleMaxShares = () => {
+    // FIX 3: This logic now works because all variables are 'number'.
     if (pricePerShare > 0) {
-        const maxAffordableShares = Math.floor(wallet.balance / pricePerShare);
+        const maxAffordableShares = Math.floor(walletBalance / pricePerShare);
         setShares(maxAffordableShares);
     }
   };
@@ -76,7 +82,7 @@ export function InvestmentForm({ cycle, wallet }: InvestmentFormProps) {
       userId: wallet.userId,
       cycleId: cycle.id,
       shares: shares,
-      amountInvested: totalCost,
+      amountInvested: totalCost, // This is now 'number', which matches the 'InvestmentData' type
     };
 
     const result = await submitInvestment(investmentData);
@@ -107,7 +113,8 @@ export function InvestmentForm({ cycle, wallet }: InvestmentFormProps) {
             <CardTitle className="text-base font-normal text-muted-foreground">Your Available Balance</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{formatCurrency(wallet.balance)}</p>
+            {/* FIX 4: Use the 'number' version of the balance */}
+            <p className="text-3xl font-bold">{formatCurrency(walletBalance)}</p>
           </CardContent>
         </Card>
 
@@ -151,6 +158,7 @@ export function InvestmentForm({ cycle, wallet }: InvestmentFormProps) {
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="flex justify-between"><span>Cycle Name</span><span>{cycle.name}</span></div>
+            {/* All 'formatCurrency' calls now use variables that are 'number's */}
             <div className="flex justify-between"><span>Price per Share</span><span>{formatCurrency(pricePerShare)}</span></div>
             <div className="flex justify-between"><span>Selected Shares</span><span>{shares}</span></div>
             <Separator />
@@ -168,4 +176,3 @@ export function InvestmentForm({ cycle, wallet }: InvestmentFormProps) {
     </div>
   );
 }
-

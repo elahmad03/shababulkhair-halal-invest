@@ -61,7 +61,10 @@ export default function TokenHoldersPage() {
     );
   }
 
-  if (error || !holdersData || !Array.isArray(holdersData.items)) {
+  console.log(countersData);
+
+  // FIX 1: Check array status of holdersData directly, not holdersData.items
+  if (error || !holdersData || !Array.isArray(holdersData)) {
     return (
       <p className="text-center text-red-500 mt-10">
         Failed to load token holders.
@@ -69,7 +72,8 @@ export default function TokenHoldersPage() {
     );
   }
 
-  const allHolders = holdersData.items;
+  // FIX 2: Assign holdersData directly
+  const allHolders = holdersData;
 
   const teamOnly = allHolders.filter((holder: any) =>
     teamWallets.has(holder.address.hash.toLowerCase())
@@ -87,9 +91,11 @@ export default function TokenHoldersPage() {
         {countersData && (
           <div className="text-sm text-muted-foreground space-x-4">
             <span>
+              {/* FIX: Reverted to snake_case to match type */}
               <strong>{countersData.token_holders_count}</strong> holders
             </span>
             <span>
+              {/* FIX: Reverted to snake_case to match type */}
               <strong>{countersData.transfers_count}</strong> transfers
             </span>
           </div>

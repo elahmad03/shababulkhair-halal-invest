@@ -2,15 +2,37 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Menu, Phone } from "lucide-react"
+import { LogOut, Menu, Phone, ShieldCheck, User } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Avatar, AvatarImage, AvatarFallback } from "@radix-ui/react-avatar"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { usePathname, useRouter } from "next/navigation";
+import { mockUserProfiles, mockUsers } from "@/db"
 
 // ===== Header =====
 export function Header() {
+   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+    const pathname = usePathname();
+      // Get fake user from mockUsers
+      // Prefer combining user record with profile (profile holds picture URL)
+      const user = mockUsers.find((n) => n.id === 1);
+      const profile = mockUserProfiles.find((p) => p.userId === user?.id);
+      const currentUser = {
+        fullName: user?.fullName ?? "User",
+        profilePicture: profile?.profilePictureUrl ?? "/noImage.png",
+      };
+    
+      // Determine which dashboard links to show
+      const showAdminLink = pathname.startsWith("/user") || pathname === "/";
+      const showUserLink =
+        pathname.startsWith("/admin") || pathname === "/" || pathname === "/about";
+    
+  
 
 
   const menuItems = (
@@ -52,6 +74,75 @@ export function Header() {
           </Button>
           <ModeToggle />
         </div>
+                {/* Avatar Dropdown */}
+        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <Avatar className="border-1 p-2 rounded-full cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all">
+                <AvatarImage src={currentUser.profilePicture} className="w-8 h-8 rounded-full object-cover" />
+                <AvatarFallback>{currentUser.fullName?.[0] ?? "U"}</AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent className="w-48 bg-white dark:bg-gray-900 p-1 rounded-md shadow z-50">
+            <div className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              {currentUser.fullName}
+            </div>
+
+            <DropdownMenuSeparator />
+
+            {/* Conditional dashboard links */}
+            {showAdminLink && (
+              <DropdownMenuItem
+                onClick={() => {
+                  router.push("/admin/dashboard");
+                  setDropdownOpen(false);
+                }}
+                className="flex gap-2 items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                Admin Dashboard
+              </DropdownMenuItem>
+            )}
+
+            {showUserLink && (
+              <DropdownMenuItem
+                onClick={() => {
+                  router.push("/user/dashboard");
+                  setDropdownOpen(false);
+                }}
+                className="flex gap-2 items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer"
+              >
+                <User className="w-4 h-4" />
+                User Dashboard
+              </DropdownMenuItem>
+            )}
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              onClick={() => {
+                router.push("/user/profile");
+                setDropdownOpen(false);
+              }}
+              className="flex gap-2 items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer"
+            >
+              <User className="w-4 h-4" />
+              Profile
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onClick={() => {
+                router.push("/login");
+                setDropdownOpen(false);
+              }}
+              className="flex gap-2 items-center px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 rounded cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
 
         {/* Mobile Menu & Theme Toggle */}
         <div className="md:hidden flex items-center gap-2">

@@ -19,6 +19,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Check, ChevronDown } from "lucide-react";
 
+interface RestCountry {
+  name: { common: string };
+  flag: string;
+  cca2: string;
+  idd: { root: string; suffixes?: string[] };
+  currencies?: Record<string, { name: string; symbol: string }>;
+}
 
 export const CountrySelect = () => {
   const { setValue } = useFormContext();
@@ -35,21 +42,22 @@ export const CountrySelect = () => {
 
         if (!response.ok) throw new Error("Failed to fetch countries");
 
-        const data = await response.json();
-        if (!Array.isArray(data)) throw new Error("Invalid response");
+        const data: RestCountry[] = await response.json();
 
         const formatted: Country[] = data
           .filter((c) => c.name?.common && c.cca2 && c.flag && c.idd?.root)
-          .map((c) => ({
-            name: c.name.common,
-            flag: c.flag,
-            code: c.cca2,
-            dial_code: c.idd.root + (c.idd.suffixes?.[0] || ""),
-            currency: Object.keys(c.currencies || {})[0] || "",
-            currencySymbol: c.currencies
-              ? Object.values(c.currencies)[0]?.symbol || ""
-              : "",
-          }))
+          .map((c) => {
+            const currencyKey = c.currencies ? Object.keys(c.currencies)[0] : "";
+            const currencyData = currencyKey ? c.currencies?.[currencyKey] : undefined;
+            return {
+              name: c.name.common,
+              flag: c.flag,
+              code: c.cca2,
+              dial_code: c.idd.root + (c.idd.suffixes?.[0] || ""),
+              currency: currencyKey || "",
+              currencySymbol: currencyData?.symbol || "",
+            };
+          })
           .sort((a, b) => a.name.localeCompare(b.name));
 
         setCountries(formatted);
