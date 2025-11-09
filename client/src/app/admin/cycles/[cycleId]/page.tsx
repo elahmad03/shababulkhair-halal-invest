@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { notFound } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,15 +13,11 @@ type Props = {
 }
 
 export default async function CycleDetailsPage({ params }: Props) {
-  const { cycleId } = await params   // ✅ await the params
+  const { cycleId } = await params
   const cycleDetails = getCycleDetails(Number(cycleId))
 
   if (!cycleDetails) {
-    return (
-      <div className="container mx-auto py-8 px-4 max-w-7xl">
-        <p>Cycle not found.</p>
-      </div>
-    )
+    notFound() // This triggers Next.js's not-found page
   }
 
   return (
