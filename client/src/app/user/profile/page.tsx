@@ -5,7 +5,10 @@ import React from 'react'
 
 function UserProfilePage() {
   return (
-    <div><UserProfile/></div>
+    <div>
+      {/* <UserProfile/> */}
+      page
+      </div>
   )
 }
 

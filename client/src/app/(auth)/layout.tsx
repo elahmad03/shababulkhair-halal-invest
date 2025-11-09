@@ -1,6 +1,5 @@
 // components/layouts/AuthLayout.tsx (or wherever you keep it)
 import { ReactNode } from 'react';
-import Image from 'next/image'; // Import Next.js Image component for optimization
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (

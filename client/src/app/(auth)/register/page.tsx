@@ -5,7 +5,8 @@ export default function Registerpage() {
 
   return (
     <>
-      <RegisterForm />
+      {/* <RegisterForm /> */}
+      page
     </>
   )
 }

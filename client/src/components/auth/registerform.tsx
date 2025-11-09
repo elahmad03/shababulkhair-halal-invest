@@ -21,12 +21,8 @@ import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/index1";
 import {
-  registerStart,
-  registerSuccess,
-  registerFailure,
   clearAuthError,
 } from "@/store/features/auth/authSlice";
-import axios from 'axios';
 import { api } from "@/lib/api";
 
 const registrationSchema = z.object({
