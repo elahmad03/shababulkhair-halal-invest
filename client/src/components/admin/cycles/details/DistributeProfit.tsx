@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatCurrency } from "@/lib/utils";
 
 interface Cycle {
   id: string;
@@ -44,13 +45,13 @@ export function DistributeProfitDialog({
     setTotalProfit("");
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
+  // const formatCurrency = (amount: number) => {
+  //   return new Intl.NumberFormat("en-NG", {
+  //     style: "currency",
+  //     currency: "NGN",
+  //     minimumFractionDigits: 0,
+  //   }).format(amount);
+  // };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

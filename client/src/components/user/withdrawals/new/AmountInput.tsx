@@ -4,6 +4,7 @@
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { formatCurrency } from '@/lib/utils';
 import { ArrowDown } from 'lucide-react';
 
 interface WalletAmountInputProps {
@@ -13,13 +14,13 @@ interface WalletAmountInputProps {
 }
 
 export function WalletAmountInput({ balance, amount, onChange }: WalletAmountInputProps) {
-  const formatCurrency = (value: bigint) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(Number(value));
-  };
+  // const formatCurrency = (value: bigint) => {
+  //   return new Intl.NumberFormat('en-NG', {
+  //     style: 'currency',
+  //     currency: 'NGN',
+  //     minimumFractionDigits: 0,
+  //   }).format(Number(value));
+  // };
 
   const handleMaxClick = () => {
     onChange(Number(balance).toString());

@@ -1,6 +1,6 @@
-import { mockData } from "@/db";
+import { mockBusinessVentures, mockData, mockInvestmentCycles, mockUsers } from "@/db";
 import type { ActivityItem, KpiData, UserTableType } from "@/lib/types/dashboard";
-import type { InvestmentCycle, ShareholderInvestment, WithdrawalRequest, User, UserProfile, Wallet } from "@/db/types";
+import type { InvestmentCycle, ShareholderInvestment, WithdrawalRequest, User, UserProfile, Wallet, BusinessVentureWithDetails } from "@/db/types";
 
 // Helper: safe conversion of bigint | number | undefined to number (kobo integer)
 const toNumberKobo = (v: bigint | number | undefined | null): number => {
@@ -65,6 +65,7 @@ export async function getCurrentCycleDetails() {
   const investorCount = new Set(investmentsInCycle.map((inv: ShareholderInvestment) => inv.userId)).size;
 
   return {
+    id: activeCycle.id,
     name: activeCycle.name,
     progress,
     daysRemaining,
@@ -139,6 +140,7 @@ export function getPendingWithdrawals(): (WithdrawalRequest & { user: Pick<User,
  * Build detailed cycle information for admin UI, mirroring logic from the admin page.
  */
 export function getCycleDetails(cycleId: number) {
+
   const baseCycle = mockData.investmentCycles.find((c) => c.id === cycleId);
   if (!baseCycle) return null;
 
@@ -173,7 +175,7 @@ export function getCycleDetails(cycleId: number) {
     .filter((v) => v.cycleId === cycleId)
     .map((v) => ({
       id: String(v.id),
-      managedBy: String(v.managedBy),
+      managedBy: mockData.users.find((u) => u.id === v.managedBy)?.fullName || "Unknown",
       ventureName: v.companyName,
       allocatedAmount: v.allocatedAmount,
       expectedProfit: v.expectedProfit,

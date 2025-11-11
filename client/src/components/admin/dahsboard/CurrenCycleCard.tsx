@@ -7,6 +7,7 @@ import Link from "next/link";
 
 type CurrentCycleProps = {
   data: {
+    id: number;
     name: string;
     progress: number;
     daysRemaining: number;
@@ -53,7 +54,7 @@ export function CurrentCycleCard({ data }: CurrentCycleProps) {
       </CardContent>
       <CardFooter>
         <Button asChild variant="outline" className="w-full">
-          <Link href="/admin/cycles/current">View Details</Link>
+          <Link href={`/admin/cycles/${data.id}`}>View Details</Link>
         </Button>
       </CardFooter>
     </Card>

@@ -10,9 +10,10 @@ interface BusinessStatsCardsProps {
 const BusinessStatsCards = ({ totalCapital, totalProfit }: BusinessStatsCardsProps) => {
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 mb-6">
-      <Card className="border-emerald-100 bg-gradient-to-br from-emerald-50 to-white hover:shadow-lg transition-shadow">
+      <Card className="hover:shadow-lg transition-shadow">
+
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-emerald-900">
+          <CardTitle className="text-sm font-medium">
             Total Capital Allocated
           </CardTitle>
           <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -29,9 +30,10 @@ const BusinessStatsCards = ({ totalCapital, totalProfit }: BusinessStatsCardsPro
         </CardContent>
       </Card>
 
-      <Card className="border-green-100 bg-gradient-to-br from-green-50 to-white hover:shadow-lg transition-shadow">
+      <Card className="hover:shadow-lg transition-shadow">
+
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-green-900">
+          <CardTitle className="text-sm font-medium">
             Total Profit Realized
           </CardTitle>
           <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">

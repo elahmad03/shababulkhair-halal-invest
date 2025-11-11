@@ -1,58 +1,103 @@
-"use client";
+// src/app/(admin)/withdrawals/page.tsx
+'use client';
 
-import { useState, useEffect } from "react";
-import { getPendingWithdrawals } from "@/lib/data/data";
-import type { User, WithdrawalRequest } from "@/db/types";
-import HeaderBox from "@/components/common/HeaderBox";
-import { AdminWithdrawalList } from "@/components/admin/withdrawals/WthdrawalList";
-import { AdminWithdrawalTable } from "@/components/admin/withdrawals/WithdrawalsTable";
+import { useState, useMemo } from 'react';
+import { ArrowLeft, Download } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { StatusTabs } from '@/components/admin/withdrawals/StatusTab';
+import { WithdrawalsTable } from '@/components/admin/withdrawals/WithdrawalsTable';
+import { mockData } from '@/db';
+import type { WithdrawalStatus, WithdrawalWithUser } from '@/types/withdrawal';
 
-// Define an enriched type for our component data
-export type PendingWithdrawal = WithdrawalRequest & { user: Pick<User, 'fullName' | 'email'> };
+export default function AdminWithdrawalsPage() {
+  const [activeStatus, setActiveStatus] = useState<WithdrawalStatus>('pending');
+  const [refreshKey, setRefreshKey] = useState(0);
 
-// A simple hook to detect screen size for responsive rendering
-const useMediaQuery = (query: string) => {
-  const [matches, setMatches] = useState(false);
-  useEffect(() => {
-    const media = window.matchMedia(query);
-    if (media.matches !== matches) {
-      setMatches(media.matches);
-    }
-    const listener = () => setMatches(media.matches);
-    window.addEventListener("resize", listener);
-    return () => window.removeEventListener("resize", listener);
-  }, [matches, query]);
-  return matches;
-};
+  // Combine withdrawal requests with user data
+  const withdrawalsWithUsers: WithdrawalWithUser[] = useMemo(() => {
+    return mockData.withdrawalRequests.map((request) => {
+      const user = mockData.users.find((u) => u.id === request.userId);
+      const wallet = mockData.wallets.find((w) => w.userId === request.userId);
 
-// Use centralized data helper so we can swap out the source later
-// getPendingWithdrawals returns PendingWithdrawal[]
+      return {
+        ...request,
+        userName: user?.fullName || 'Unknown User',
+        userEmail: user?.email || '',
+        walletBalance: wallet?.balance,
+      };
+    });
+  }, [refreshKey]);
 
-export default function AdminPendingWithdrawalsPage() {
-  const pendingWithdrawals = getPendingWithdrawals();
-  const isDesktop = useMediaQuery("(min-width: 768px)");
+  // Filter by status
+  const filteredWithdrawals = withdrawalsWithUsers.filter(
+    (w) => w.status === activeStatus
+  );
 
-  // A handler function to optimistically update the UI after an action
-  const handleAction = (requestId: number) => {
-    // In a real app, you would re-fetch data or update the state
-    console.log(`Action taken on request ${requestId}. Refreshing list...`);
-    // For this mock, we'll just log it. A real implementation would filter the list.
+  // Calculate counts for each status
+  const statusCounts: Record<WithdrawalStatus, number> = {
+    pending: withdrawalsWithUsers.filter((w) => w.status === 'pending').length,
+    approved: withdrawalsWithUsers.filter((w) => w.status === 'approved').length,
+    processed: withdrawalsWithUsers.filter((w) => w.status === 'processed').length,
+    rejected: withdrawalsWithUsers.filter((w) => w.status === 'rejected').length,
+  };
+
+  const handleUpdate = () => {
+    // Trigger a refresh by changing the key
+    setRefreshKey((prev) => prev + 1);
+  };
+
+  const handleExport = () => {
+    // In production, this would generate a CSV/Excel file
+    console.log('Exporting withdrawal data...', filteredWithdrawals);
   };
 
   return (
-    <section className="flex flex-col gap-8 p-4 md:p-6">
-      <HeaderBox
-        title="Pending Withdrawals"
-        subtext={`Review and process all outstanding withdrawal requests. There are ${pendingWithdrawals.length} pending requests.`}
-      />
-      
-      <div className="w-full">
-        {isDesktop ? (
-          <AdminWithdrawalTable data={pendingWithdrawals} onAction={handleAction} />
-        ) : (
-          <AdminWithdrawalList data={pendingWithdrawals} onAction={handleAction} />
-        )}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Header */}
+        <div className="mb-8">
+          <Link href="/admin/dashboard">
+            <Button variant="ghost" className="mb-4 -ml-2">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </Link>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                Withdrawal Requests
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">
+                Review and manage user payout requests
+              </p>
+            </div>
+            <Button
+              onClick={handleExport}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export Data
+            </Button>
+          </div>
+        </div>
+
+        {/* Status Tabs */}
+        <div className="mb-6">
+          <StatusTabs
+            activeStatus={activeStatus}
+            onChange={setActiveStatus}
+            counts={statusCounts}
+          />
+        </div>
+
+        {/* Withdrawals Table */}
+        <WithdrawalsTable
+          withdrawals={filteredWithdrawals}
+          onUpdate={handleUpdate}
+        />
       </div>
-    </section>
+    </div>
   );
 }

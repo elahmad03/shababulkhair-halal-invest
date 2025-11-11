@@ -3,6 +3,7 @@
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { formatCurrency, koboToNgn } from '@/lib/utils';
 import { ArrowDown } from 'lucide-react';
 
 interface WalletAmountInputProps {
@@ -12,16 +13,31 @@ interface WalletAmountInputProps {
 }
 
 export function WalletAmountInput({ balance, amount, onChange }: WalletAmountInputProps) {
-  const formatCurrency = (value: bigint) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(Number(value));
+  const handleMaxClick = () => {
+    onChange(koboToNgn(balance).toString());
   };
 
-  const handleMaxClick = () => {
-    onChange(Number(balance).toString());
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Get the raw value without formatting
+    const value = e.target.value.replace(/,/g, '');
+    
+    // Allow empty string or numeric input
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      onChange(value);
+    }
+  };
+
+  const formatDisplayValue = (val: string): string => {
+    if (!val) return '';
+    
+    const num = parseFloat(val);
+    if (isNaN(num) || num === 0) return '';
+    
+    // Format with thousand separators
+    return new Intl.NumberFormat('en-NG', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(num);
   };
 
   return (
@@ -59,10 +75,11 @@ export function WalletAmountInput({ balance, amount, onChange }: WalletAmountInp
             </span>
             <Input
               id="amount"
-              type="number"
+              type="text"
+              inputMode="decimal"
               placeholder="0"
-              value={amount}
-              onChange={(e) => onChange(e.target.value)}
+              value={formatDisplayValue(amount)}
+              onChange={handleAmountChange}
               className="pl-8 text-lg font-semibold h-14 border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500"
             />
           </div>

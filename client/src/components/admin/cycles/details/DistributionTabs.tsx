@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CycleDetails } from "@/lib/types/cycle"
-
+import { toast } from "sonner"
+import {formatCurrency} from '@/lib/utils'
 interface DistributionTabProps {
   cycleData: CycleDetails
 }
@@ -33,6 +34,7 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
   const handleCloseCycle = async () => {
     // TODO: Implement backend API call
     console.log("Closing cycle with profit:", totalProfit)
+    toast.success("Cycle closed and profits distributed successfully.")
   }
 
   if (cycleData.status === "Active") {
@@ -119,7 +121,7 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
                 Total Profit Realized
               </Label>
               <p className="text-xl font-bold">
-                ₦{cycleData.profitRealized?.toLocaleString()}
+                {formatCurrency(cycleData.profitRealized)}
               </p>
             </div>
             <div>
@@ -127,7 +129,7 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
                 Investor Pool (80%)
               </Label>
               <p className="text-xl font-bold">
-                ₦{cycleData.investorPool?.toLocaleString()}
+                {formatCurrency(cycleData.investorPool)}
               </p>
             </div>
             <div>
@@ -135,7 +137,7 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
                 Organizational Share (20%)
               </Label>
               <p className="text-xl font-bold">
-                ₦{cycleData.organizationalShare?.toLocaleString()}
+                ₦{formatCurrency(cycleData.organizationalShare)}
               </p>
             </div>
           </div>

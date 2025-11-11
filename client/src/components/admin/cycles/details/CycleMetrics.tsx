@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CycleDetails } from "@/lib/types/cycle"
+import { formatCurrency } from "@/lib/utils"
 
 interface CycleMetricsProps {
   cycleData: CycleDetails
@@ -18,7 +19,7 @@ export function CycleMetrics({ cycleData }: CycleMetricsProps) {
         </CardHeader>
         <CardContent>
           <p className="text-2xl font-bold">
-            ₦{cycleData.totalCapitalInvested.toLocaleString()}
+            {formatCurrency(cycleData.totalCapitalInvested)}
           </p>
         </CardContent>
       </Card>
@@ -56,7 +57,7 @@ export function CycleMetrics({ cycleData }: CycleMetricsProps) {
         <CardContent>
           <p className="text-2xl font-bold">
             {cycleData.profitRealized
-              ? `₦${cycleData.profitRealized.toLocaleString()}`
+              ? `${formatCurrency(cycleData.profitRealized)}`
               : "N/A"}
           </p>
         </CardContent>
@@ -65,13 +66,13 @@ export function CycleMetrics({ cycleData }: CycleMetricsProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Investor Pool (80%)
+            Investor Pool 
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-2xl font-bold">
             {cycleData.investorPool
-              ? `₦${cycleData.investorPool.toLocaleString()}`
+              ? `${formatCurrency(cycleData.investorPool)}`
               : "N/A"}
           </p>
         </CardContent>
@@ -80,13 +81,13 @@ export function CycleMetrics({ cycleData }: CycleMetricsProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Organizational Share (20%)
+            Organizational Share 
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-2xl font-bold">
             {cycleData.organizationalShare
-              ? `₦${cycleData.organizationalShare.toLocaleString()}`
+              ? `${formatCurrency(cycleData.organizationalShare)}`
               : "N/A"}
           </p>
         </CardContent>

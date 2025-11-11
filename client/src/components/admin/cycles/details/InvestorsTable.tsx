@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Investor } from "@/lib/types/cycle";
+import { formatCurrency } from "@/lib/utils";
 
 const columns: ColumnDef<Investor>[] = [
   {
@@ -37,7 +38,7 @@ const columns: ColumnDef<Investor>[] = [
   {
     accessorKey: "amountInvested",
     header: "Amount Invested",
-    cell: ({ row }) => `₦${row.original.amountInvested.toLocaleString()}`,
+    cell: ({ row }) => `${formatCurrency(row.original.amountInvested)}`,
   },
   {
     accessorKey: "sharePercentage",
@@ -49,7 +50,7 @@ const columns: ColumnDef<Investor>[] = [
     header: "Profit Earned",
     cell: ({ row }) =>
       row.original.profitEarned
-        ? `₦${row.original.profitEarned.toLocaleString()}`
+        ? `${formatCurrency(row.original.profitEarned)}`
         : "N/A",
   },
   {
@@ -57,7 +58,7 @@ const columns: ColumnDef<Investor>[] = [
     header: "Amount with Profit",
     cell: ({ row }) =>
       row.original.amountWithProfit
-        ? `₦${row.original.amountWithProfit.toLocaleString()}`
+        ? `${formatCurrency(row.original.amountWithProfit)}`
         : "N/A",
   },
 ];

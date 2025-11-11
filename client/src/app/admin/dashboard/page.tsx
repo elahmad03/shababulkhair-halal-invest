@@ -12,7 +12,6 @@ import {
 } from "@/lib/data/data";
 import { formatCurrency } from "@/lib/utils";
 import { Banknote, Users, TrendingUp, AlertTriangle } from "lucide-react";
-import { ProfitChart } from "@/components/user/dashboard/charts";
 
 // This makes the page automatically refresh its data periodically
 export const revalidate = 60; // Revalidate every 60 seconds

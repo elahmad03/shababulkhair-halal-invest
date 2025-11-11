@@ -9,10 +9,15 @@ import { SourceSelector } from '@/components/user/withdrawals/new/SourceSelector
 import { WalletAmountInput } from '@/components/user/withdrawals/new/WalletAmountInput';
 import { CycleDivestSelector } from '@/components/user/withdrawals/new/CycleDiveSelector';
 import { BankDetailsForm } from '@/components/user/withdrawals/new/BankDetailsForm';
-import { SmartSubmitButton } from '@/components/user/withdrawals/new/SmartButton';
+import { SmartSubmitButton } from '@/components/user/withdrawals/new/SmartButton'; // Using the one from the previous fix
 import { WithdrawalHistory } from '@/components/user/withdrawals/new/WithdrawalHistory';
-import { mockData } from '@/db/';
-import type { WithdrawalFormData, WithdrawalSource, DivestmentType } from '@/types/withdrawal';
+import { mockData } from '@/db';
+import { formatCurrency } from '@/lib/utils';
+import type {
+  WithdrawalFormData,
+  WithdrawalSource,
+  DivestmentType,
+} from '@/types/withdrawal';
 import { toast } from 'sonner';
 
 export default function WithdrawPage() {
@@ -26,7 +31,7 @@ export default function WithdrawPage() {
   });
 
   // Mock current user ID (in production, get from auth session)
-  const currentUserId = 2;
+  const currentUserId = 1;
 
   // Get user's wallet
   const userWallet = mockData.wallets.find((w) => w.userId === currentUserId);
@@ -36,14 +41,14 @@ export default function WithdrawPage() {
   const userInvestments = mockData.shareholderInvestments.filter(
     (inv) => inv.userId === currentUserId
   );
-  
+
   const completedCycles = mockData.investmentCycles
     .filter((cycle) => cycle.status === 'completed')
     .map((cycle) => ({
       ...cycle,
       investment: userInvestments.find((inv) => inv.cycleId === cycle.id),
     }))
-    .filter((cycle) => cycle.investment);
+    .filter((cycle) => !!cycle.investment); // Ensure we only have cycles with an investment
 
   // Get withdrawal history
   const withdrawalHistory = mockData.withdrawalRequests.filter(
@@ -73,9 +78,16 @@ export default function WithdrawPage() {
     if (!formData.accountName.trim()) return false;
 
     if (formData.source === 'wallet') {
-      const amount = parseFloat(formData.amount);
-      if (isNaN(amount) || amount <= 0) return false;
-      if (BigInt(amount) > walletBalance) return false;
+      // Use parseFloat for validation, but compare against bigint
+      const amountFloat = parseFloat(formData.amount);
+      if (isNaN(amountFloat) || amountFloat <= 0) return false;
+      // Note: This comparison might be tricky if amount is a large float.
+      // Assuming amounts are integers for wallet.
+      try {
+        if (BigInt(Math.floor(amountFloat)) > walletBalance) return false;
+      } catch (e) {
+        return false; // Handle invalid BigInt conversion
+      }
     } else {
       if (!formData.cycleId || !formData.divestmentType) return false;
     }
@@ -87,12 +99,38 @@ export default function WithdrawPage() {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    
+
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
+    // Get withdrawal amount for toast message
+    let withdrawalAmount: string | bigint = '0';
+    if (formData.source === 'wallet') {
+      withdrawalAmount = formData.amount;
+    } else if (formData.cycleId && formData.divestmentType) {
+      const selectedCycle = completedCycles.find(
+        (c) => c.id === formData.cycleId
+      );
+      const investment = selectedCycle?.investment;
+      if (investment) {
+        // --- THIS IS THE FIX ---
+        // Handle potential null profit, defaulting to 0n (bigint zero)
+        const profit = investment.profitEarned ?? 0n;
+
+        const amount =
+          formData.divestmentType === 'profit_only'
+            ? profit
+            : investment.amountInvested + profit;
+        // --- END FIX ---
+            
+        withdrawalAmount = amount; // Keep it as bigint for formatCurrency
+      }
+    }
+
     toast.success('Withdrawal request submitted successfully!', {
-      description: 'Your request will be processed within 24-48 hours.',
+      description: `Your request for ${formatCurrency(
+        withdrawalAmount
+      )} will be processed within 24 hours.`,
     });
 
     // Reset form
@@ -130,7 +168,10 @@ export default function WithdrawPage() {
           {/* Main Form - Left/Top */}
           <div className="lg:col-span-2 space-y-6">
             {/* Step 1: Source */}
-            <SourceSelector value={formData.source} onChange={handleSourceChange} />
+            <SourceSelector
+              value={formData.source}
+              onChange={handleSourceChange}
+            />
 
             {/* Step 2: Amount */}
             {formData.source === 'wallet' ? (
@@ -145,7 +186,9 @@ export default function WithdrawPage() {
                 selectedCycleId={formData.cycleId}
                 divestmentType={formData.divestmentType}
                 onCycleChange={(cycleId) => handleFieldChange('cycleId', cycleId)}
-                onDivestmentTypeChange={(type) => handleFieldChange('divestmentType', type)}
+                onDivestmentTypeChange={(type) =>
+                  handleFieldChange('divestmentType', type)
+                }
               />
             )}
 
@@ -163,6 +206,7 @@ export default function WithdrawPage() {
               isValid={validateForm()}
               isSubmitting={isSubmitting}
               onSubmit={handleSubmit}
+              completedCycles={completedCycles}
             />
           </div>
 

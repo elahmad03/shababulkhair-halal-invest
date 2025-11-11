@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { BusinessVenture, CycleStatus } from "@/lib/types/cycle"
+import { formatCurrency } from "@/lib/utils"
 
 interface VenturesTabProps {
   ventures: BusinessVenture[]
@@ -70,11 +71,11 @@ export function VenturesTab({ ventures, status }: VenturesTabProps) {
                     <TableCell>{venture.managedBy}</TableCell>
                     <TableCell>{venture.ventureName}</TableCell>
                     <TableCell>
-                      ₦{venture.allocatedAmount.toLocaleString()}
+                      {formatCurrency(venture.allocatedAmount)}
                     </TableCell>
                     <TableCell>
                       {venture.profitRealized
-                        ? `₦${venture.profitRealized.toLocaleString()}`
+                        ? `${formatCurrency(venture.profitRealized)}`
                         : "N/A"}
                     </TableCell>
                   </TableRow>
