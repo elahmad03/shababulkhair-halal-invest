@@ -1,255 +1,432 @@
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
 }
 
-model User {
-  id             String     @id @default(auto()) @map("_id") @db.ObjectId
-  email          String     @unique
-  phone          String     @unique
-  password       String
-  firstName      String
-  lastName       String
-  gender         String?
-  dateOfBirth    DateTime?
-  currency       String?
-  occupation     String?
-  profilePicture String?
-  address        Address
-  identity       Identity
-  nextOfKin      NextOfKin
-  role           Role       @default(USER)
-  status         UserStatus @default(PENDING)
-  tier           Int        @default(0)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+// ====================================================================================
+// NATIVE POSTGRES ENUMS
+// ====================================================================================
 
-  // Relations
-  wallet              Wallet?
-  cryptoWallet        CryptoWallet?
-  userShares          UserShare[]
-  withdrawals         WithdrawalRequest[]
-  emergencies         EmergencyRequest[]
-  businessInvestments BusinessInvestor[] // ✅ fixed reverse relation
-}
-
-type Address {
-  country     String
-  countryCode String
-  state       String
-  city        String
-  street      String
-  postalCode  String?
-}
-
-type Identity {
-  nin       String
-  idCardUrl String
-  selfieUrl String
-  verified  Boolean @default(false)
-}
-
-type NextOfKin {
-  name         String
-  relationship String
-  phone        String
-}
-
-enum WalletType {
-  INTERNAL
-  VIRTUAL
-}
-
-model Wallet {
-  id                String              @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String              @unique @db.ObjectId
-  user              User                @relation(fields: [userId], references: [id])
-  internalWalletId  String              @unique
-  bankName          String?
-  bankAccountNumber String?
-  balance           Float               @default(0)
-  tier              Int                 @default(1)
-  type              WalletType          @default(INTERNAL) // 👈
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  transactions      WalletTransaction[]
-}
-
-model WalletTransaction {
-  id        String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String            @db.ObjectId
-  walletId  String            @db.ObjectId
-  wallet    Wallet            @relation(fields: [walletId], references: [id])
-  amount    Float
-  type      TransactionType
-  reference String            @unique
-  status    TransactionStatus
-  provider  String?
-  narration String?
-  metadata  Json?
-  createdAt DateTime          @default(now())
-}
-
-model CryptoWallet {
-  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId              String   @unique @db.ObjectId
-  user                User     @relation(fields: [userId], references: [id])
-  address             String
-  encryptedPrivateKey String
-  network             String
-  createdAt           DateTime @default(now())
-}
-
-model Cycle {
-  id         String      @id @default(auto()) @map("_id") @db.ObjectId
-  name       String
-  startDate  DateTime
-  endDate    DateTime
-  isOpen     Boolean     @default(true)
-  createdAt  DateTime    @default(now())
-  userShares UserShare[]
-  businesses Business[]
-}
-
-model UserShare {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId          String   @db.ObjectId
-  cycleId         String   @db.ObjectId
-  user            User     @relation(fields: [userId], references: [id])
-  cycle           Cycle    @relation(fields: [cycleId], references: [id])
-  shares          Float
-  remainingShares Float
-  lockedUntil     DateTime
-  createdAt       DateTime @default(now())
-
-  // IMPORTANT: Give your composite unique constraint a name
-  @@unique([userId, cycleId], name: "User_Cycle_Unique") // <--- ADD THIS NAME
-}
-
-model Business {
-  id              String              @id @default(auto()) @map("_id") @db.ObjectId
-  cycleId         String              @db.ObjectId
-  name            String
-  amountAllocated Float
-  status          BusinessStatus
-  investors       BusinessInvestor[]
-  profitLogs      BusinessProfitLog[] // Added reverse relation
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  cycle           Cycle               @relation(fields: [cycleId], references: [id])
-}
-
-model BusinessInvestor {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId     String   @db.ObjectId
-  businessId String   @db.ObjectId
-  amount     Float
-  sharesUsed Float
-  user       User     @relation(fields: [userId], references: [id])
-  business   Business @relation(fields: [businessId], references: [id])
-}
-
-model BusinessProfitLog {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  businessId  String   @db.ObjectId
-  business    Business @relation(fields: [businessId], references: [id])
-  amount      Float
-  notedBy     String // Admin name or ID
-  distributed Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
-  ProfitDistributionLog ProfitDistributionLog[]
-}
-
-// Add this new model to your schema.prisma file
-model ProfitDistributionLog {
-  id            String            @id @default(auto()) @map("_id") @db.ObjectId
-  profitLogId   String            @unique @db.ObjectId // Make unique if each BusinessProfitLog has only one distribution log
-  profitLog     BusinessProfitLog @relation(fields: [profitLogId], references: [id]) // Relation to BusinessProfitLog
-  reserveAmount Float
-  userAmount    Float
-  createdAt     DateTime          @default(now())
-}
-
-model WithdrawalRequest {
-  id          String           @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String           @db.ObjectId
-  user        User             @relation(fields: [userId], references: [id])
-  amount      Float
-  type        WithdrawalType
-  status      WithdrawalStatus
-  approvedBy  String?
-  createdAt   DateTime         @default(now())
-  processedAt DateTime?
-}
-
-model EmergencyRequest {
-  id          String          @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String          @db.ObjectId
-  user        User            @relation(fields: [userId], references: [id])
-  reason      String
-  amount      Float
-  status      EmergencyStatus @default(PENDING)
-  createdAt   DateTime        @default(now())
-  processedAt DateTime?
-}
-
-enum Role {
-  USER
+enum UserRole {
+  MEMBER
+  COMMITTEE
   ADMIN
-  SUPERADMIN
+  @@map("user_role")
 }
 
-enum UserStatus {
+enum AccountStatus {
   ACTIVE
-  PENDING
-  BANNED
+  SUSPENDED
   DECEASED
+  @@map("account_status")
+}
+
+enum KycStatus {
+  NOT_SUBMITTED
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
+  @@map("kyc_status")
 }
 
 enum TransactionType {
-  CREDIT
-  DEBIT
-  TRANSFER
-  WITHDRAWAL
   DEPOSIT
+  SHARE_PURCHASE
+  CAPITAL_RETURN
   PROFIT_DISTRIBUTION
-  BUSINESS_INVESTMENT
+  WITHDRAWAL
+  SERVICE_PAYMENT
   EMERGENCY_WITHDRAWAL
-  REFUND
-  FUNDING
+  @@map("transaction_type")
 }
 
 enum TransactionStatus {
-  SUCCESS
-  FAILED
   PENDING
+  COMPLETED
+  FAILED
+  @@map("transaction_status")
 }
 
-enum BusinessStatus {
+enum CycleStatus {
+  PENDING
+  OPEN_FOR_INVESTMENT
   ACTIVE
   COMPLETED
-  CANCELLED
+  @@map("cycle_status")
 }
 
-enum WithdrawalType {
-  PROFIT
-  SHARE
-}
-
-enum WithdrawalStatus {
+enum DistributionStatus {
   PENDING
-  APPROVED
-  DECLINED
-  PROCESSED
+  COMPLETED
+  @@map("distribution_status")
 }
 
-enum EmergencyStatus {
-  PENDING
-  APPROVED
+enum LedgerEntryType {
+  INCOME
+  EXPENSE
+  @@map("ledger_entry_type")
+}
+
+enum DisbursementType {
+  WALLET_BALANCE
+  FULL_DIVESTMENT
+  PROFIT_ONLY
+  @@map("disbursement_type")
+}
+
+enum ClaimStatus {
+  PENDING_REVIEW
+  DOCUMENTS_REQUESTED
+  APPROVED_FOR_PAYOUT
+  COMPLETED
   REJECTED
+  @@map("claim_status")
+}
+
+// ====================================================================================
+// SECTION 1: USER & IDENTITY MANAGEMENT
+// ====================================================================================
+
+model User {
+  id                  String        @id @default(uuid()) @db.Uuid
+  firstName           String        @map("first_name")
+  lastName            String        @map("last_name")
+  email               String        @unique @db.VarChar(255) 
+  password        String        @map("password_hash")
+  phoneNumber         String?       @unique @db.VarChar(20) @map("phone_number")
+  role                UserRole      @default(MEMBER)
+  status              AccountStatus @default(ACTIVE) 
+  
+  isEmailVerified     Boolean       @default(false) @map("is_email_verified")
+  emailVerifiedAt     DateTime?     @map("email_verified_at") @db.Timestamptz()
+  
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  kycProfiles KycProfile[]
+  wallet              Wallet?
+  preferences         UserPreference?
+  notifications       Notification[]
+  transactions        Transaction[]
+  investments         ShareholderInvestment[]
+  idempotencyKeys     IdempotencyKey[] 
+
+  @@index([email])
+  @@map("users")
+  // Ventures they manage
+  managedVentures         BusinessVenture[] 
+  
+  // Ledgers they recorded
+  recordedLedgers         OrganizationalLedger[] 
+  
+  // Withdrawals they requested
+  disbursementRequests    DisbursementRequest[] 
+  
+  // Withdrawals they approved (Admin/Committee only)
+  approvedDisbursements   DisbursementRequest[] @relation("ApprovedDisbursements")
+  emergencyDisbursementRequests EmergencyDisbursementRequest[]
+  
+  deceasedClaim           DeceasedUserClaim?      @relation("DeceasedUserClaim")
+  
+  processedClaims         DeceasedUserClaim[]     @relation("ProcessedClaims")
+  approvedKycs KycProfile[] @relation("KycApprovedBy")
+  kycAuditLogs KycAuditLog[]
+}
+
+model VerificationToken {
+  id          String   @id @default(uuid()) @db.Uuid
+  identifier  String   
+  token       String   @unique 
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz()
+
+  @@index([identifier])
+  @@map("verification_tokens")
+}
+model KycProfile {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid @map("user_id")
+
+  version   Int      @default(1)
+  isActive  Boolean  @default(true)
+
+  streetAddress String? @map("street_address")
+  city          String? @map("city")
+  stateRegion   String? @map("state_region")
+  countryCode   String? @map("country_code")
+  dateOfBirth   DateTime? @map("date_of_birth") @db.Date
+
+  avatarUrl        String? @map("avatar_url")
+  governmentIdType String? @map("government_id_type")
+  idCardFrontUrl   String? @map("id_card_front_url")
+  idCardBackUrl    String? @map("id_card_back_url")
+
+  nextOfKinName         String @map("next_of_kin_name")
+  nextOfKinRelationship String @map("next_of_kin_relationship")
+  nextOfKinPhone        String @map("next_of_kin_phone")
+
+  kycStatus KycStatus @default(NOT_SUBMITTED) @map("kyc_status")
+
+  // 🔥 Audit
+  submittedAt   DateTime?
+  reviewedAt    DateTime?
+  approvedById  String?   @db.Uuid
+  rejectedReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy User? @relation("KycApprovedBy", fields: [approvedById], references: [id])
+  auditLogs  KycAuditLog[]
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@map("kyc_profiles")
+}
+
+model KycAuditLog {
+  id        String    @id @default(uuid()) @db.Uuid @map("id")
+  action    String    @map("action")
+  actorId   String    @db.Uuid @map("actor_id")
+  kycId     String?   @db.Uuid @map("kyc_id")
+  meta      String?   @map("meta")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  actor     User         @relation(fields: [actorId], references: [id])
+  kyc       KycProfile?  @relation(fields: [kycId], references: [id])
+
+  @@index([actorId])
+  @@index([kycId])
+  @@index([createdAt])
+  @@map("kyc_audit_logs")
+}
+// ====================================================================================
+// SECTION 2: CORE FINANCIAL INFRASTRUCTURE
+// ====================================================================================
+
+model Wallet {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @unique @db.Uuid @map("user_id")
+  
+  balanceKobo      BigInt   @default(0) @map("balance_kobo") 
+  lockedBalanceKobo BigInt  @default(0) @map("locked_balance_kobo") // 🔥 Integrated your brilliant feature
+
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("wallets")
+}
+
+model Transaction {
+  id                  String            @id @default(uuid()) @db.Uuid
+  transactionRef      String            @unique @default(uuid()) @db.Uuid @map("transaction_ref") // Prevents double insertion
+  userId              String            @db.Uuid @map("user_id")
+  
+  transactionType     TransactionType   @map("transaction_type")
+  amountKobo          BigInt            @map("amount_kobo")
+  transactionStatus   TransactionStatus @map("transaction_status")
+  
+  narration           String?           @map("narration")
+  relatedEntityType   String?           @map("related_entity_type")
+  relatedEntityId     String?           @db.Uuid @map("related_entity_id")
+  
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([transactionRef])
+  @@map("transactions")
+}
+
+model InvestmentCycle {
+  id                       String             @id @default(uuid()) @db.Uuid
+  cycleName                String             @map("cycle_name")
+  status                   CycleStatus        @default(PENDING) 
+  pricePerShareKobo        BigInt             @map("price_per_share_kobo")
+  startDate                DateTime?          @map("start_date") @db.Timestamptz()
+  endDate                  DateTime?          @map("end_date") @db.Timestamptz()
+  description              String?            
+  
+  totalProfitRealizedKobo  BigInt             @default(0) @map("total_profit_realized_kobo")
+  investorProfitPoolKobo   BigInt             @default(0) @map("investor_profit_pool_kobo")
+  orgProfitShareKobo       BigInt             @default(0) @map("org_profit_share_kobo")
+  profitDistributionStatus DistributionStatus @default(PENDING) @map("profit_distribution_status")
+  
+  createdAt                DateTime           @default(now()) @map("created_at") @db.Timestamptz()
+
+  investments         ShareholderInvestment[]
+  organizationalLedgers OrganizationalLedger[]
+  businessVentures    BusinessVenture[]
+  disbursementReqs    DisbursementRequest[]
+
+  @@map("investment_cycles")
+}
+
+model ShareholderInvestment {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @db.Uuid @map("user_id")
+  cycleId             String   @db.Uuid @map("cycle_id")
+  sharesAllocated     BigInt   @map("shares_allocated")
+  amountInvestedKobo  BigInt   @map("amount_invested_kobo")
+  profitEarnedKobo    BigInt   @default(0) @map("profit_earned_kobo")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  cycle InvestmentCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, cycleId])
+  @@map("shareholder_investments")
+}
+
+// ====================================================================================
+// SECTION 3: ORGANIZATIONAL & BUSINESS MANAGEMENT
+// ====================================================================================
+
+model OrganizationalLedger {
+  id              String          @id @default(uuid()) @db.Uuid
+  entryType       LedgerEntryType @map("entry_type")
+  source          String          
+  amountKobo      BigInt          @map("amount_kobo")
+  date            DateTime        @db.Timestamptz()
+  relatedCycleId  String?         @db.Uuid @map("related_cycle_id")
+  recordedById    String          @db.Uuid @map("recorded_by_id")
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+
+  cycle      InvestmentCycle? @relation(fields: [relatedCycleId], references: [id])
+  recordedBy User             @relation(fields: [recordedById], references: [id])
+
+  @@map("organizational_ledgers")
+}
+
+model BusinessVenture {
+  id                   String   @id @default(uuid()) @db.Uuid
+  cycleId              String   @db.Uuid @map("cycle_id")
+  managedById          String   @db.Uuid @map("managed_by_id")
+  companyName          String   @map("company_name")
+  allocatedAmountKobo  BigInt   @map("allocated_amount_kobo")
+  expectedProfitKobo   BigInt   @map("expected_profit_kobo")
+  profitRealizedKobo   BigInt   @default(0) @map("profit_realized_kobo")
+
+  cycle     InvestmentCycle @relation(fields: [cycleId], references: [id])
+  managedBy User            @relation(fields: [managedById], references: [id])
+
+  @@map("business_ventures")
+}
+
+// ====================================================================================
+// SECTION 4: OPERATIONAL WORKFLOWS
+// ====================================================================================
+
+model Notification {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid @map("user_id")
+  title       String
+  message     String
+  isRead      Boolean  @default(false) @map("is_read")
+  link        String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+model UserPreference {
+  id           String  @id @default(uuid()) @db.Uuid
+  userId       String  @unique @db.Uuid @map("user_id")
+  autoReinvest Boolean @default(false) @map("auto_reinvest")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model DisbursementRequest {
+  id                    String            @id @default(uuid()) @db.Uuid
+  userId                String            @db.Uuid @map("user_id")
+  amountKobo            BigInt            @map("amount_kobo")
+  disbursementType      DisbursementType  @map("disbursement_type")
+  relatedCycleId        String?           @db.Uuid @map("related_cycle_id")
+  
+  bankName              String            @map("bank_name")
+  accountNumber         String            @db.VarChar(20) @map("account_number")
+  accountName           String            @map("account_name")
+  
+  status                TransactionStatus @default(PENDING) 
+  requestedAt           DateTime          @default(now()) @map("requested_at") @db.Timestamptz()
+  approvedById          String?           @db.Uuid @map("approved_by_id")
+  processedAt           DateTime?         @map("processed_at") @db.Timestamptz()
+  rejectionReason       String?           @map("rejection_reason")
+
+  user       User             @relation(fields: [userId], references: [id])
+  cycle      InvestmentCycle? @relation(fields: [relatedCycleId], references: [id])
+  approvedBy User?            @relation("ApprovedDisbursements", fields: [approvedById], references: [id])
+
+  @@map("disbursement_requests")
+}
+
+model EmergencyDisbursementRequest {
+  id                  String            @id @default(uuid()) @db.Uuid
+  userId              String            @db.Uuid @map("user_id")
+  reason              String            
+  amountKobo          BigInt            @map("amount_kobo")
+  status              TransactionStatus @default(PENDING) 
+  requestedAt         DateTime          @default(now()) @map("requested_at") @db.Timestamptz()
+  processedAt         DateTime?         @map("processed_at") @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("emergency_disbursement_requests")
+}
+
+model DeceasedUserClaim {
+  id                    String      @id @default(uuid()) @db.Uuid
+  deceasedUserId        String      @unique @db.Uuid @map("deceased_user_id")
+  claimantName          String      @map("claimant_name")
+  claimantContact       String      @map("claimant_contact")
+  status                ClaimStatus @default(PENDING_REVIEW) 
+  deathCertificateUrl   String?     @map("death_certificate_url")
+  adminNotes            String?     @map("admin_notes")
+  processedById         String?     @db.Uuid @map("processed_by_id")
+  createdAt             DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt             DateTime    @updatedAt @map("updated_at") @db.Timestamptz()
+
+  deceasedUser User  @relation("DeceasedUserClaim", fields: [deceasedUserId], references: [id])
+  processedBy  User? @relation("ProcessedClaims", fields: [processedById], references: [id])
+
+  @@map("deceased_user_claims")
+}
+
+// ====================================================================================
+// SECTION 5: IDEMPOTENCY ENGINE
+// ====================================================================================
+
+model IdempotencyKey {
+  id              String    @id @default(uuid()) @db.Uuid
+  key             String    @unique @db.VarChar(100) 
+  userId          String?   @db.Uuid @map("user_id") 
+  requestMethod   String    @db.VarChar(10) @map("request_method") 
+  requestPath     String    @db.VarChar(255) @map("request_path") 
+  
+  recoveryPoint   String    @default("STARTED") @map("recovery_point") 
+  lockedAt        DateTime? @map("locked_at") @db.Timestamptz() 
+  
+  responseCode    Int?      @map("response_code")
+  responseBody    Json?     @map("response_body") 
+
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([key])
+  @@map("idempotency_keys")
 }

@@ -11,7 +11,6 @@ export interface WithdrawalFormData {
   accountName: string;
 }
 
-// src/types/admin-withdrawal.ts
 export type WithdrawalStatus = 'pending' | 'approved' | 'processed' | 'rejected';
 
 export interface WithdrawalWithUser {

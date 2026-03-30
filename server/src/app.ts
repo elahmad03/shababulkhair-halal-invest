@@ -1,97 +1,110 @@
 import express from "express";
-import cors from "cors";
+import { Request, Response, NextFunction } from "express";
 import helmet from "helmet";
-import dotenv from "dotenv";
-dotenv.config();
-import moniepointWebhook from "./webhook/moniepoint";
-import authRoutes from "./routes/auth.routes";
-import walletRoutes from "./routes/wallet.routes";
-import cycleRoutes from "./routes/cycle.routes";
-import investmentRoutes from "./routes/investment.routes";
-import businessRoutes from "./routes/business.routes";
-import profitRoutes from "./routes/profit.routes";
-import profilePictureRoutes from "./routes/user.routes";
-import uploadKycRoutes from "./routes/kycUpload.routes";
-import userRoutes from "./routes/user.routes";
-// app.ts
-import cron from "node-cron";
-import { cleanupOrphanedImages } from "./scripts/cloudinaryCleanup";
+import cors from "cors";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
+import compression from "compression";
+import { errorHandler } from "./common/middleware/errorHandler";
+import { env } from "./config";
+import cookieParser from "cookie-parser";
+import redis from "./config/redis";
+import authRoutes from "./modules/auth/auth.routes";
+import kycRoutes from "./modules/kyc/kyc.routes";
 
-// Run cleanup every Sunday at 2 AM
-cron.schedule("0 2 * * 0", () => {
-  console.log("🕐 Running scheduled Cloudinary cleanup...");
-  cleanupOrphanedImages().catch(console.error);
+// Rate limiter – protects against brute-force & basic DDoS
+const limiter = rateLimit({
+  windowMs: env.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000,
+  max: env.RATE_LIMIT_MAX,
+  message: { error: "Too many requests from this IP, please try again later." },
+  standardHeaders: true, 
+  legacyHeaders: false,
 });
 
+// Create Express app
 const app = express();
-// --- CORS Configuration ---
-const allowedOrigins = [
-  "http://localhost:3000", // Your Next.js frontend in development
-  // Ensure this is present and uncommented:
-  "https://*.ngrok-free.app", // For free ngrok domains (less secure for prod, but necessary for dynamic ngrok URLs)
-  // When you deploy, add your production frontend domain(s) here:
-  // 'https://your-production-frontend.com',
-];
+
+// 1. Security headers – FIRST thing
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+
+
+// 2. CORS – handle preflight early
+const allowedOrigins = env.CLIENT_ORIGIN.split(",").map((origin: string) => origin.trim());
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g., direct API calls from tools like Postman)
-      if (!origin) {
-        return callback(null, true);
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
       }
-
-      // Check if the origin is an exact match
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      // Check for ngrok wildcard match
-      const isNgrokWildcardAllowed = allowedOrigins.some(
-        (allowed) =>
-          allowed === "https://*.ngrok-free.app" &&
-          origin.endsWith(".ngrok-free.app")
-      );
-
-      if (isNgrokWildcardAllowed) {
-        return callback(null, true);
-      }
-
-      // If none of the above, block the origin
-      console.log(`CORS blocked request from origin: ${origin}`); // Log this for debugging
-      callback(new Error("Not allowed by CORS"));
     },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allowed HTTP methods
-    credentials: true, // Allow cookies, authorization headers, etc.
-    optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+    credentials: true, 
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-// --- End CORS Configuration ---
 
-app.use(helmet());
-app.use(express.json());
+// 3. Trust proxy (important behind Nginx, Render, Vercel, Cloudflare, etc.)
+app.set("trust proxy", 1);
 
-// ✅ Correct: Using the Router, not a controller directly
-app.use("/api/auth", authRoutes);
-app.use("/api/wallet", walletRoutes);
+// 4. Rate limiting – early to reject bad traffic cheap
+app.use(limiter);
 
-// investments logics
+// 5. Compression – gzip/brotli responses (huge bandwidth saver)
+app.use(compression());
 
-app.use("/api/cycles", cycleRoutes);
-// investments routes
-app.use("/api/shares", investmentRoutes);
+// 6. Body parsers
+app.use(express.json({ limit: "10mb" })); // Adjust limit as needed
+app.use(express.urlencoded({ extended: false }));
 
-app.use("/api/businesses", businessRoutes);
-app.use("/api/profit", profitRoutes);
-app.use("/api/upload", profilePictureRoutes);
-app.use("/api/users", userRoutes);
+// 7. Cookie parser
+app.use(cookieParser());
+// 8. Logging – use 'dev' in development, 'combined' in production
+const logFormat = env.NODE_ENV === "production" ? "combined" : "dev";
+app.use(morgan(logFormat));
 
-app.use("/api/kyc", uploadKycRoutes);
-
-app.use("/api/webhook", moniepointWebhook);
-
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.get("/", (_req: Request, res: Response) => {
+  res.send(
+    "Welcome to shababukhair API - Version 1.0.0. Visit /api/v1 for endpoints."
+  );
 });
+export async function initializeApp() :Promise<boolean>{
+  try {
+    await redis.ping();
+    console.log("✅ Redis connected successfully");
+    return true;
+  } catch (err) {
+    console.error("❌ Redis connection failed:", err);
+    return false;
+    
+  }
+}
+
+
+
+// Health checks
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    environment: env.NODE_ENV,
+  });
+});
+const api="/api/v1/"
+// API routes – versioned & modular
+app.use("/api/v1/auth", authRoutes);
+app.use(api+"kyc",kycRoutes)
+
+
+// Global error handler – ALWAYS last
+app.use(errorHandler);
+
+export default app;
