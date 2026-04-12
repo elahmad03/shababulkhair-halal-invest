@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import StoreProvider from "@/store/storeProvider";
 import { Toaster } from "sonner";
 
 import localFont from "next/font/local";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { StoreProvider } from "@/store/storeProvider";
 
 const IBMPlexSerif = localFont({
   src: "../../public/fonts/IBMPlexSerif-Regular.ttf",

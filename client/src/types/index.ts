@@ -1,19 +1,122 @@
-// src/types/db.ts
-// =======================================================
-// FRONTEND TYPES (aligned with your Drizzle schema)
-// =======================================================
+// ============================================================
+// BASE API WRAPPER — matches successResponse / errorResponse helpers
+// ============================================================
 
-export interface User {
-  id: number;
-  fullName: string;
-  email: string;
-  passwordHash: string;
-  phoneNumber?: string;
-  role: "member" | "committee" | "admin";
-  status: "active" | "suspended" | "deceased";
-  emailVerified?: string | null;
-  createdAt: string;
+export type Role = "USER" | "MEMBER" | "COMMITEE" | "ADMIN";
+
+export type OtpPurpose = "EMAIL_VERIFICATION" | "PASSWORD_RESET";
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
 }
+
+export interface ApiErrorResponse {
+  success: false;
+  message: string;
+  errors?: Record<string, string[]> | { stack?: string };
+}
+export interface ApiError {
+  status?: number | string;
+  data?: {
+    message?: string;
+    // You can uncomment or add other fields if your API returns them:
+    // success?: boolean;
+    // errors?: Record<string, string[]>; // For validation errors
+  };
+}
+// ============================================================
+// USER
+// ============================================================
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  role: Role;
+  isEmailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Returned from login / verifyOtp — subset of User
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  isEmailVerified: boolean;
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+export interface RegisterRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phoneNumber: string;
+}
+
+export interface RegisterResponse {
+  message: string;
+  userId: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+// Login returns either full auth or needs verification
+export type LoginResponse =
+  | {
+      message: string;
+      user: AuthUser;
+      accessToken: string;
+      refreshToken: string;
+    }
+  | {
+      message: string;
+      needVerification: true;
+      userId: string;
+    };
+
+export interface OtpVerifyRequest {
+  userId: string;
+  otp: string;
+  purpose?: OtpPurpose;
+}
+
+export interface OtpVerifyResponse {
+  message: string;
+  user: AuthUser;
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface ResendOtpRequest {
+  email: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  userId: string;
+  otp: string;
+  newPassword: string;
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: AuthUser;
+}
+
 
 export interface VerificationToken {
   identifier: string;

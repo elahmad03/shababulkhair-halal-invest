@@ -3,9 +3,11 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/admin/AppSidebar";
 import Topbar from "@/components/layout/MobileHeader";
+import { AuthGuard } from "@/components/shared/AuthGuard";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
+    <AuthGuard allowedRoles={["ADMIN"]}>
     <SidebarProvider>
       <div className="flex min-h-screen w-full overflow-hidden">
         {/* Sidebar: show on md+ */}
@@ -20,5 +22,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </SidebarProvider>
+    </AuthGuard>
   );
 }

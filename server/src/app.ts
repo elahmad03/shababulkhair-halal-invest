@@ -11,7 +11,8 @@ import cookieParser from "cookie-parser";
 import redis from "./config/redis";
 import authRoutes from "./modules/auth/auth.routes";
 import kycRoutes from "./modules/kyc/kyc.routes";
-
+import paystackWebhookRoutes from "./modules/wallet/wallet.routes";
+import walletRoutes from "./modules/wallet/wallet.routes";
 // Rate limiter – protects against brute-force & basic DDoS
 const limiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000,
@@ -102,6 +103,8 @@ const api="/api/v1/"
 // API routes – versioned & modular
 app.use("/api/v1/auth", authRoutes);
 app.use(api+"kyc",kycRoutes)
+app.use(api+"webhook", paystackWebhookRoutes)
+app.use(api+"wallet", walletRoutes);
 
 
 // Global error handler – ALWAYS last
