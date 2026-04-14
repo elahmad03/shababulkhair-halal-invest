@@ -1,8 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
+import Image from "next/image";
+import { useSelector } from "react-redux";
+
+// UI Components
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Menu, LogOut, User, Sun, Moon, ShieldCheck } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@radix-ui/react-avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,91 +15,130 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { usePathname, useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
-import Image from "next/image";
+import { Avatar, AvatarImage, AvatarFallback } from "@radix-ui/react-avatar";
+import { Menu, LogOut, User, Sun, Moon, ShieldCheck, Loader2 } from "lucide-react";
 import NotificationDropdown from "@/components/user/notifications/NotificalDropdown";
-import { mockNotifications, mockUserProfiles, mockUsers } from "@/db";
+
+// API & Store
+import { useLogoutMutation } from "@/store/modules/auth/authApi"; // Adjust path if needed
+// import type { RootState } from "@/store"; // Uncomment and adjust path for strict typing
 
 export default function Topbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { theme, setTheme } = useTheme();
+  
+  // Hydration state to prevent Next.js mismatch errors with next-themes
   const [mounted, setMounted] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const pathname = usePathname();
 
-  useEffect(() => setMounted(true), []);
+  // Auth & State Integration
+  // Replace `any` with `RootState` once imported
+  const user = useSelector((state: any) => state.auth.user); 
+  const [logoutUser, { isLoading: isLoggingOut }] = useLogoutMutation();
 
-  // Get fake user from mockUsers
-  // Prefer combining user record with profile (profile holds picture URL)
-  const user = mockUsers.find((n) => n.id === 1);
-  const profile = mockUserProfiles.find((p) => p.userId === user?.id);
-  const currentUser = {
-    fullName: user?.fullName ?? "User",
-    profilePicture: profile?.profilePictureUrl ?? "/noImage.png",
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Secure Logout Handler
+  const handleLogout = async () => {
+    try {
+      // The actual token clearing happens instantly via onQueryStarted in your API slice
+      await logoutUser().unwrap();
+      setDropdownOpen(false);
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout failed to process on server, but local state was cleared.", error);
+      // Failsafe: push to login anyway since local credentials are gone
+      router.push("/login"); 
+    }
   };
 
-  // Determine which dashboard links to show
+  // Determine dashboard routing context
   const showAdminLink = pathname.startsWith("/user") || pathname === "/";
-  const showUserLink =
-    pathname.startsWith("/admin") || pathname === "/" || pathname === "/about";
+  const showUserLink = pathname.startsWith("/admin") || pathname === "/" || pathname === "/about";
+
+  // Fallback generation for Avatar
+  const getInitials = (name?: string) => {
+    if (!name) return "U";
+    return name.substring(0, 2).toUpperCase();
+  };
 
   return (
-    <header className="relative px-4 py-4 border-b bg-white dark:bg-gray-900 flex items-center justify-between">
-      {/* Left: Logo and toggle */}
+    <header className="relative px-4 py-4 border-b bg-white dark:bg-gray-900 flex items-center justify-between z-40">
+      {/* Left: Brand & Mobile Toggle */}
       <div className="flex items-center gap-4">
         <div className="md:hidden">
-          <SidebarTrigger>
-            <Menu className="w-6 h-6 text-gray-800 dark:text-white" />
+          <SidebarTrigger aria-label="Toggle Sidebar">
+            <Menu className="w-6 h-6 text-gray-800 dark:text-white transition-colors hover:text-emerald-500" />
           </SidebarTrigger>
         </div>
-        <span className="text-xl font-bold text-emerald-600 flex items-center gap-2">
-          <Image src="/logo.png" width={32} height={32} alt="shababulkhair" />
-          <span className="hidden sm:inline">Shababulkhair</span>
+        <span className="text-xl font-bold text-emerald-600 flex items-center gap-2 select-none">
+          <Image src="/logo.png" width={32} height={32} alt="Shababulkhair Logo" priority />
+          <span className="hidden sm:inline tracking-tight">Shababulkhair</span>
         </span>
       </div>
 
-      {/* Right: Icons and Avatar */}
+      {/* Right: Actions & Profile */}
       <div className="flex items-center gap-2 sm:gap-4">
-        {/* Notifications */}
-        <NotificationDropdown notifications={mockNotifications} userId={1} />
+        {/* Notifications (Mocked until API is ready) */}
+        <NotificationDropdown notifications={[]} userId={user?.id || 0} />
 
-        {/* Dark/Light Toggle */}
-        {mounted && (
+        {/* Theme Toggle */}
+        {mounted ? (
           <button
             aria-label="Toggle Theme"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="border-1 p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-emerald-500 transition-colors"
+            className="border p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:text-emerald-500 hover:border-emerald-500 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
           >
             {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
+        ) : (
+          // Placeholder to prevent layout shift during hydration
+          <div className="w-9 h-9 border rounded-xl" /> 
         )}
 
-        {/* Avatar Dropdown */}
+        {/* User Profile Dropdown */}
         <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <Avatar className="border-1 p-2 rounded-full cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all">
-                <AvatarImage src={currentUser.profilePicture} className="w-8 h-8 rounded-full object-cover" />
-                <AvatarFallback>{currentUser.fullName?.[0] ?? "U"}</AvatarFallback>
+            <Avatar 
+              className="border p-1 rounded-full cursor-pointer hover:ring-2 hover:ring-emerald-500 transition-all focus:outline-none bg-gray-50 dark:bg-gray-800"
+              aria-label="User menu"
+            >
+              <AvatarImage 
+                src={user?.profilePictureUrl || "/noImage.png"} 
+                alt={`${user?.fullName || 'User'} profile picture`}
+                className="w-8 h-8 rounded-full object-cover" 
+              />
+              <AvatarFallback className="w-8 h-8 flex items-center justify-center rounded-full bg-emerald-100 text-emerald-700 font-semibold text-sm">
+                {getInitials(user?.fullName)}
+              </AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent className="w-48 bg-white dark:bg-gray-900 p-1 rounded-md shadow z-50">
-            <div className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-              {currentUser.fullName}
+          <DropdownMenuContent 
+            align="end" 
+            className="w-56 bg-white dark:bg-gray-900 p-1 rounded-xl shadow-lg border dark:border-gray-800 z-50"
+          >
+            <div className="px-3 py-2 flex flex-col gap-0.5">
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                {user?.fullName || "Ahmad"}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {user?.email || "User Account"}
+              </span>
             </div>
 
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-gray-100 dark:bg-gray-800 my-1" />
 
-            {/* Conditional dashboard links */}
             {showAdminLink && (
               <DropdownMenuItem
                 onClick={() => {
                   router.push("/admin/dashboard");
                   setDropdownOpen(false);
                 }}
-                className="flex gap-2 items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer"
+                className="flex gap-2 items-center px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-colors focus:bg-gray-100 dark:focus:bg-gray-800"
               >
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
                 Admin Dashboard
@@ -107,35 +151,40 @@ export default function Topbar() {
                   router.push("/user/dashboard");
                   setDropdownOpen(false);
                 }}
-                className="flex gap-2 items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer"
+                className="flex gap-2 items-center px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-colors focus:bg-gray-100 dark:focus:bg-gray-800"
               >
-                <User className="w-4 h-4" />
+                <User className="w-4 h-4 text-gray-500" />
                 User Dashboard
               </DropdownMenuItem>
             )}
 
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-gray-100 dark:bg-gray-800 my-1" />
 
             <DropdownMenuItem
               onClick={() => {
                 router.push("/user/profile");
                 setDropdownOpen(false);
               }}
-              className="flex gap-2 items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer"
+              className="flex gap-2 items-center px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-colors focus:bg-gray-100 dark:focus:bg-gray-800"
             >
-              <User className="w-4 h-4" />
-              Profile
+              <User className="w-4 h-4 text-gray-500" />
+              Profile Settings
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              onClick={() => {
-                router.push("/login");
-                setDropdownOpen(false);
+              onClick={(e) => {
+                e.preventDefault(); // Prevent menu from closing immediately so loading spinner shows
+                handleLogout();
               }}
-              className="flex gap-2 items-center px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 rounded cursor-pointer"
+              disabled={isLoggingOut}
+              className="flex gap-2 items-center px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg cursor-pointer transition-colors focus:bg-red-50 dark:focus:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed mt-1"
             >
-              <LogOut className="w-4 h-4" />
-              Logout
+              {isLoggingOut ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <LogOut className="w-4 h-4" />
+              )}
+              {isLoggingOut ? "Signing out..." : "Sign out"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

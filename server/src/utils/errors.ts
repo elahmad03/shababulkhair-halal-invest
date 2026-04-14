@@ -38,3 +38,28 @@ export class NotFoundError extends AppError {
     super(message, 404);
   }
 }
+export class ValidationError extends AppError {
+  constructor(message = "Validation Error") {
+    super(message, 422);
+  }
+}
+
+export class ConflictError extends AppError {
+  constructor(message = "Conflict") {
+    super(message, 409);
+  }
+}
+
+export class WalletErrors {
+  static keyMismatch(): ConflictError {
+    return new ConflictError(
+      "Idempotency key was previously used for a different endpoint. Generate a new UUID v4 for each unique operation.",
+    );
+  }
+
+  static requestInFlight(): ConflictError {
+    return new ConflictError(
+      "A request with this idempotency key is already being processed. Retry after 1–3 seconds.",
+    );
+  }
+}

@@ -9,7 +9,7 @@ import cloudinary from "../../config/cloudinary";
 
 const ALLOWED_FORMATS = ["jpg", "jpeg", "png", "pdf"] as const;
 const SIGNATURE_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-const SIGNATURE_RATE_LIMIT_MAX = 5;
+const SIGNATURE_RATE_LIMIT_MAX = 15;
 
 // In-memory rate limit store — replace with Redis in production
 const signatureRateLimitMap = new Map<string, { count: number; windowStart: number }>();
@@ -24,8 +24,32 @@ const signatureRateLimitMap = new Map<string, { count: number; windowStart: numb
  */
 function validateKycUrl(url: string, userId: string, type: "front" | "back" | "avatar"): boolean {
   const cloudName = cloudinary.config().cloud_name;
-  const expected = `https://res.cloudinary.com/${cloudName}/image/authenticated/kyc/${userId}/${type}/`;
-  return url.startsWith(expected);
+
+  try {
+    const parsed = new URL(url);
+
+    // Must be res.cloudinary.com
+    if (parsed.hostname !== "res.cloudinary.com") return false;
+
+    // Cloudinary path structure:
+    // /{cloudName}/image/authenticated/s--TOKEN--/v{version}/kyc/{userId}/{type}/{filename}
+    // OR without token:
+    // /{cloudName}/image/authenticated/v{version}/kyc/{userId}/{type}/{filename}
+    const segments = parsed.pathname.split("/").filter(Boolean);
+
+    if (segments[0] !== cloudName)       return false;
+    if (segments[1] !== "image")         return false;
+    if (segments[2] !== "authenticated") return false;
+
+    // Everything after /authenticated/ may contain s--TOKEN-- and v{version}
+    // before the actual folder — so we just check the path contains the folder
+    const remainingPath = segments.slice(3).join("/");
+    const expectedFolder = `kyc/${userId}/${type}/`;
+
+    return remainingPath.includes(expectedFolder);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -67,7 +91,6 @@ async function destroyOldKycAssets(userId: string): Promise<void> {
 
 /**
  * Writes an audit log entry to the KycAuditLog table.
- * Ensures every admin action (view, approve, reject) is traceable.
  */
 async function writeAuditLog(
   action: "VIEW_PENDING" | "VIEW_DETAIL" | "APPROVE" | "REJECT",
@@ -81,7 +104,6 @@ async function writeAuditLog(
       actorId,
       kycId: kycId ?? null,
       meta: meta ? JSON.stringify(meta) : null,
-      createdAt: new Date(),
     },
   });
 }
@@ -91,25 +113,19 @@ async function writeAuditLog(
 export class KycService {
   /**
    * 🔐 Generate a Cloudinary upload signature for the client to upload directly.
-   *
-   * Fixes applied:
-   *  - Rate limited per userId (max 5/hr)
-   *  - Restricts upload to allowed image/pdf formats only
-   *  - Forces `type: authenticated` so uploaded assets are private
    */
   static getUploadSignature(userId: string, type: "front" | "back" | "avatar") {
-    // Fix #7 — rate limit signature generation
     enforceSignatureRateLimit(userId);
 
     const timestamp = Math.round(Date.now() / 1000);
     const folder = `kyc/${userId}/${type}`;
 
+    // ⚠️ Only include params in paramsToSign that you ALSO send in the upload
+    // request. allowed_formats was here before but wasn't being sent to
+    // Cloudinary in the upload, causing the signature mismatch.
     const paramsToSign = {
       timestamp,
       folder,
-      // Fix #3 — restrict to safe file formats
-      allowed_formats: ALLOWED_FORMATS.join(","),
-      // Fix #1 — force private/authenticated delivery
       type: "authenticated",
     };
 
@@ -122,7 +138,7 @@ export class KycService {
       signature,
       timestamp,
       folder,
-      allowed_formats: ALLOWED_FORMATS,
+      allowed_formats: ALLOWED_FORMATS, // sent to client for UI hints only, not signed
       type: "authenticated",
       cloud_name: cloudinary.config().cloud_name,
       api_key: cloudinary.config().api_key,
@@ -131,13 +147,10 @@ export class KycService {
 
   /**
    * 🚀 Submit KYC — versioned + transactional.
-   *
-   * Fixes applied:
-   *  - Fix #2: Validates all submitted image URLs belong to this user's Cloudinary folder
-   *  - Fix #4: Destroys old Cloudinary assets when user re-submits
+   * Field names aligned with schema: idCardFrontUrl, idCardBackUrl, avatarUrl
    */
   static async submitKyc(userId: string, dto: KycDto) {
-    // Fix #2 — validate URL ownership before persisting anything
+    // Validate URL ownership — aligned with schema field names
     const urlFields: Array<{ field: keyof KycDto; type: "front" | "back" | "avatar" }> = [
       { field: "idCardFrontUrl", type: "front" },
       { field: "idCardBackUrl", type: "back" },
@@ -162,7 +175,6 @@ export class KycService {
       }
 
       if (existing) {
-        // Fix #4 — delete old ID card assets from Cloudinary before deactivating
         await destroyOldKycAssets(userId);
 
         await tx.kycProfile.update({
@@ -198,13 +210,10 @@ export class KycService {
 
   /**
    * 🧑‍⚖️ Admin: list all pending KYC submissions.
-   *
-   * Fixes applied:
-   *  - Fix #6: Audit log written on every admin list access
-   *  - Fix #6: Image URLs are NOT returned in list view — admins must open the detail view
+   * Requires adminId for audit logging — pass req.user.id from the controller.
+   * Image URLs deliberately excluded from list view.
    */
   static async getPending(adminId: string) {
-    // Fix #6 — audit every admin access
     await writeAuditLog("VIEW_PENDING", adminId);
 
     return prisma.kycProfile.findMany({
@@ -215,9 +224,7 @@ export class KycService {
         version: true,
         kycStatus: true,
         createdAt: true,
-        // Fix #6 — deliberately exclude image URLs from list view
-        // frontImageUrl: false  ← omitted intentionally
-        // backImageUrl: false   ← omitted intentionally
+        // idCardFrontUrl, idCardBackUrl, avatarUrl deliberately omitted
         user: {
           select: {
             id: true,
@@ -231,60 +238,69 @@ export class KycService {
   }
 
   /**
-   * 🔍 Admin: get full KYC detail including signed (short-lived) image URLs.
-   *
-   * Fixes applied:
-   *  - Fix #1: Image URLs re-generated as signed, expiring Cloudinary URLs
-   *  - Fix #6: Audit log written on every detail view
+   * 🔍 Admin: get full KYC detail with short-lived signed image URLs.
+   * Uses schema-correct field names: idCardFrontUrl, idCardBackUrl, avatarUrl
    */
-  static async getKycDetail(kycId: string, adminId: string) {
-    const kyc = await prisma.kycProfile.findUnique({
-      where: { id: kycId },
+ static async getKycDetail(kycId: string, adminId: string) {
+  // Include user so admin sees applicant name + email
+  const kyc = await prisma.kycProfile.findUnique({
+    where: { id: kycId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+  });
+
+  if (!kyc || !kyc.isActive) throw new NotFoundError("KYC not found");
+
+  await writeAuditLog("VIEW_DETAIL", adminId, kycId);
+
+  // cloudinary.url() expects a public_id NOT a full URL.
+  // The stored URL looks like:
+  //   https://res.cloudinary.com/{cloud}/image/authenticated/s--TOKEN--/v123456/kyc/userId/front/file.jpg
+  // We extract everything after the version segment as the public_id.
+  const extractPublicId = (url: string): string | null => {
+    try {
+      const segments = new URL(url).pathname.split("/").filter(Boolean);
+      const vIdx = segments.findIndex((s) => /^v\d+$/.test(s));
+      if (vIdx === -1) return null;
+      return segments.slice(vIdx + 1).join("/");
+    } catch {
+      return null;
+    }
+  };
+
+  const expiresAt = Math.round(Date.now() / 1000) + 60 * 15; // 15 min
+
+  const signUrl = (storedUrl: string | null): string | null => {
+    if (!storedUrl) return null;
+    const publicId = extractPublicId(storedUrl);
+    if (!publicId) return storedUrl; // fallback — don't break if parsing fails
+    return cloudinary.url(publicId, {
+      type: "authenticated",
+      sign_url: true,
+      expires_at: expiresAt,
+      resource_type: "image",
     });
+  };
 
-    if (!kyc || !kyc.isActive) throw new NotFoundError("KYC not found");
-
-    // Fix #6 — audit the detail view
-    await writeAuditLog("VIEW_DETAIL", adminId, kycId);
-
-    // Fix #1 — generate short-lived signed URLs instead of returning raw stored URLs
-    const signedUrls = {
-      frontImageUrl: kyc.idCardFrontUrl
-        ? cloudinary.url(kyc.idCardFrontUrl, {
-            type: "authenticated",
-            sign_url: true,
-            expires_at: Math.round(Date.now() / 1000) + 60 * 15, // 15 min expiry
-          })
-        : null,
-      backImageUrl: kyc.idCardBackUrl
-        ? cloudinary.url(kyc.idCardBackUrl, {
-            type: "authenticated",
-            sign_url: true,
-            expires_at: Math.round(Date.now() / 1000) + 60 * 15,
-          })
-        : null,
-      avatarUrl: kyc.avatarUrl
-        ? cloudinary.url(kyc.avatarUrl, {
-            type: "authenticated",
-            sign_url: true,
-            expires_at: Math.round(Date.now() / 1000) + 60 * 15,
-          })
-        : null,
-    };
-
-    return { ...kyc, ...signedUrls };
-  }
-
-  /**
+  return {
+    ...kyc,
+    avatarUrl:      signUrl(kyc.avatarUrl),
+    idCardFrontUrl: signUrl(kyc.idCardFrontUrl),
+    idCardBackUrl:  signUrl(kyc.idCardBackUrl),
+  };
+}
+ /**
    * ✅ Approve a KYC submission.
-   *
-   * Fixes applied:
-   *  - Fix #5: Guards against approving an inactive/stale record
-   *  - Fix #5: Guards against approving a non-pending record
-   *  - Fix #6: Audit log written on approval
    */
   static async approve(kycId: string, adminId: string) {
-    // Fix #5 — check isActive to prevent acting on stale versions
     const kyc = await prisma.kycProfile.findUnique({ where: { id: kycId } });
     if (!kyc || !kyc.isActive) throw new NotFoundError("KYC not found");
 
@@ -301,7 +317,6 @@ export class KycService {
       },
     });
 
-    // Fix #6 — audit the approval
     await writeAuditLog("APPROVE", adminId, kycId);
 
     return updated;
@@ -309,16 +324,10 @@ export class KycService {
 
   /**
    * ❌ Reject a KYC submission.
-   *
-   * Fixes applied:
-   *  - Fix #5: Guards against rejecting an inactive/stale record
-   *  - Fix #5: Guards against rejecting a non-pending record
-   *  - Fix #6: Audit log written on rejection with reason
    */
   static async reject(kycId: string, reason: string, adminId: string) {
     if (!reason?.trim()) throw new AppError("Rejection reason required", 400);
 
-    // Fix #5 — check isActive to prevent acting on stale versions
     const kyc = await prisma.kycProfile.findUnique({ where: { id: kycId } });
     if (!kyc || !kyc.isActive) throw new NotFoundError("KYC not found");
 
@@ -336,7 +345,6 @@ export class KycService {
       },
     });
 
-    // Fix #6 — audit the rejection with reason
     await writeAuditLog("REJECT", adminId, kycId, { reason });
 
     return updated;

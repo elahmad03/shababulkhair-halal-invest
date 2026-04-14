@@ -1,21 +1,16 @@
-// import KYCForm from '@/components/kyc/kycForm';
-// import KYCStatus from '@/components/kyc/kycStatus';
+import { KycForm } from "@/components/user/kyc/kycForm";
 
-// export default function KYCPage() {
-//   return (
-//     <main className="py-8">
-//       <h1 className="text-xl font-semibold text-center mb-6">KYC Verification</h1>
-//       <KYCForm />
-//       <KYCStatus/>
-//     </main>
-//   );
-// }
-import React from 'react'
+export const metadata = {
+  title: "Identity Verification ",
+  description: "Complete your KYC to unlock full account features.",
+};
 
-function page() {
+export default function KycPage() {
   return (
-    <div>page</div>
-  )
+    <main className="min-h-screen bg-background">
+      <div className="max-w-lg mx-auto px-4 py-10">
+        <KycForm />
+      </div>
+    </main>
+  );
 }
-
-export default page
