@@ -23,8 +23,11 @@ import { CalendarIcon, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
+import { useCreateCycleMutation } from "@/store/modules/cycle/cycleApi";
 
 export function CreateCycleDialog() {
+  const [createCycle, { isLoading }] = useCreateCycleMutation();
+
   const [open, setOpen] = useState(false);
   const [cycleName, setCycleName] = useState("");
   const [startDate, setStartDate] = useState<Date>();
@@ -36,15 +39,34 @@ export function CreateCycleDialog() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    e.preventDefault();
+
+  try {
+    await createCycle({
+      cycleName,
+      pricePerShareNaira: Number(pricePerShare),
+
+      // 👇 convert to ISO (VERY IMPORTANT)
+      startDate: startDate ? startDate.toISOString() : undefined,
+      endDate: endDate ? endDate.toISOString() : undefined,
+
+      description: description || undefined,
+    }).unwrap();
+
+    setOpen(false);
+    resetForm();
+  } catch (err) {
+    console.error("Create cycle failed:", err);
+  } 
 
     // TODO: Implement API call to create cycle
-    console.log({
-      cycleName,
-      startDate,
-      endDate,
-      pricePerShare: BigInt(Number(pricePerShare) * 100), // Convert to kobo
-      description,
-    });
+    // console.log({
+    //   cycleName,
+    //   startDate,
+    //   endDate,
+    //   pricePerShare: BigInt(Number(pricePerShare) * 100), // Convert to kobo
+    //   description,
+    // });
 
     // Reset form and close dialog
     setTimeout(() => {

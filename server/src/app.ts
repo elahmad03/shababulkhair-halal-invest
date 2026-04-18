@@ -13,6 +13,7 @@ import authRoutes from "./modules/auth/auth.routes";
 import kycRoutes from "./modules/kyc/kyc.routes";
 import paystackWebhookRoutes from "./modules/wallet/wallet.routes";
 import walletRoutes from "./modules/wallet/wallet.routes";
+import cycleRoutes from "./modules/investment/cycle.routes";
 // Rate limiter – protects against brute-force & basic DDoS
 const limiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000,
@@ -60,7 +61,9 @@ app.use(limiter);
 
 // 5. Compression – gzip/brotli responses (huge bandwidth saver)
 app.use(compression());
-
+app.use("/api/v1/webhook", paystackWebhookRoutes,
+  express.raw({ type: "application/json" })
+)
 // 6. Body parsers
 app.use(express.json({ limit: "10mb" })); // Adjust limit as needed
 app.use(express.urlencoded({ extended: false }));
@@ -103,9 +106,9 @@ const api="/api/v1/"
 // API routes – versioned & modular
 app.use("/api/v1/auth", authRoutes);
 app.use(api+"kyc",kycRoutes)
-app.use(api+"webhook", paystackWebhookRoutes)
-app.use(api+"wallet", walletRoutes);
 
+app.use(api+"wallet", walletRoutes);
+app.use(api+"cycles", cycleRoutes);
 
 // Global error handler – ALWAYS last
 app.use(errorHandler);

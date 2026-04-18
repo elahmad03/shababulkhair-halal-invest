@@ -7,7 +7,7 @@ import {
 } from "./wallet.validators";
 import { catchAsync } from "../../utils/catchAsync";
 import { errorResponse, successResponse } from "../../utils/response";
-import { AuthenticatedRequest } from "../../common/middleware/auth.middlware";
+import { AuthenticatedRequest } from "../../common/middleware/auth.middleware";
 
 export const getWalletSummary = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
@@ -18,8 +18,9 @@ export const getWalletSummary = catchAsync(async (req: AuthenticatedRequest, res
 export const initializeDeposit = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { amount } = initializeDepositSchema.parse(req.body);
   const userId = req.user!.userId; // AuthenticatedRequest guarantees this
+  const userEmail = req.user!.email; // Assuming email is also in the token payload for Paystack
 
-  const data = await WalletService.initializeDeposit(userId, amount);
+  const data = await WalletService.initializeDeposit(userId, amount, userEmail);
   res.status(200).json(successResponse(data, "Deposit initialized successfully"));
 });
 

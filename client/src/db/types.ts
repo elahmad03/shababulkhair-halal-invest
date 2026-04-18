@@ -8,11 +8,9 @@ import {
   shareholderInvestments,
   businessVentures,
   organizationalLedger,
-  userPreferences,
   withdrawalRequests,
   emergencyWithdrawalRequests,
   deceasedUserClaims,
-  notifications,
   verificationTokens,
 } from "@/db/schema"; 
 

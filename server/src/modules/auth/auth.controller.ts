@@ -3,7 +3,7 @@ import { catchAsync } from "../../utils/catchAsync";
 import { successResponse } from "../../utils/response";
 import * as authService from "./auth.services";
 import { env } from "../../config";
-import { AuthenticatedRequest } from "../../common/middleware/auth.middlware";
+import { AuthenticatedRequest } from "../../common/middleware/auth.middleware";
 import { validateLogin } from "./auth.validation";
 
 const isProduction = env.NODE_ENV === "production";

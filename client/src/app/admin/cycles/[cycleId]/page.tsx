@@ -1,24 +1,33 @@
-import Link from "next/link"
-import { notFound } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { getStatusColor } from "@/lib/utils/cycle"
-import { CycleMetrics } from "@/components/admin/cycles/details/CycleMetrics"
-import { CycleTabs } from "@/components/admin/cycles/details/CycleTabs"
-import { getCycleDetails } from "@/lib/data/data"
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
+import { getStatusColor } from "@/lib/utils/cycle";
+import { CycleMetrics } from "@/components/admin/cycles/details/CycleMetrics";
+import { CycleTabs } from "@/components/admin/cycles/details/CycleTabs";
+
+import { getCycleDetailsApi } from "@/lib/api/cycle";
+import { mapCycleDetailsToUI } from "@/lib/adpater/cycleDetails.adapters";
 
 type Props = {
-  params: Promise<{ cycleId: string }>
-}
+  params: { cycleId: string };
+};
 
 export default async function CycleDetailsPage({ params }: Props) {
-  const { cycleId } = await params
-  const cycleDetails = getCycleDetails(Number(cycleId))
+  const { cycleId } = params;
 
-  if (!cycleDetails) {
-    notFound() // This triggers Next.js's not-found page
+  // ✅ fetch from backend
+  const rawCycle = await getCycleDetailsApi(cycleId);
+
+  if (!rawCycle) {
+    notFound();
   }
+
+  // ✅ normalize data
+  const cycleDetails = mapCycleDetailsToUI(rawCycle);
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
@@ -35,6 +44,7 @@ export default async function CycleDetailsPage({ params }: Props) {
           <h1 className="text-3xl font-bold">
             Cycle Details: "{cycleDetails.name}"
           </h1>
+
           <Badge
             className={`${getStatusColor(
               cycleDetails.status
@@ -45,11 +55,11 @@ export default async function CycleDetailsPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Key Metrics */}
+      {/* Metrics */}
       <CycleMetrics cycleData={cycleDetails} />
 
-      {/* Tabbed Interface */}
+      {/* Tabs */}
       <CycleTabs cycleData={cycleDetails} />
     </div>
-  )
+  );
 }

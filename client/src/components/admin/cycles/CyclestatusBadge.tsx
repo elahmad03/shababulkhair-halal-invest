@@ -1,41 +1,39 @@
 import { Badge } from "@/components/ui/badge";
-import type { InvestmentCycle } from "@/db/types";
 
-// FIX: Use NonNullable to remove 'null' from the possible types
-type CycleStatus = NonNullable<InvestmentCycle["status"]>;
+// Backend enum
+type ApiStatus =
+  | "PENDING"
+  | "OPEN_FOR_INVESTMENT"
+  | "ACTIVE"
+  | "COMPLETED";
 
-const statusConfig: Record<
-  CycleStatus,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
-> = {
-  pending: {
+// UI config (clean + consistent)
+const statusConfig = {
+  PENDING: {
     label: "Pending",
     variant: "secondary",
   },
-  open_for_investment: {
+  OPEN_FOR_INVESTMENT: {
     label: "Open for Investment",
     variant: "default",
   },
-  active: {
+  ACTIVE: {
     label: "Active",
     variant: "default",
   },
-  completed: {
+  COMPLETED: {
     label: "Completed",
     variant: "outline",
   },
-};
+} as const;
 
 interface CycleStatusBadgeProps {
-  // It's okay for the prop to be null, we just have to guard against it
-  status: InvestmentCycle["status"];
+  status: ApiStatus | null;
 }
 
 export function CycleStatusBadge({ status }: CycleStatusBadgeProps) {
-  // Guard clause: if status is null, don't render anything
   if (!status) return null;
 
-  // Now TypeScript knows 'status' here is not null
   const config = statusConfig[status];
 
   if (!config) return null;
@@ -44,9 +42,9 @@ export function CycleStatusBadge({ status }: CycleStatusBadgeProps) {
     <Badge
       variant={config.variant}
       className={
-        status === "open_for_investment"
+        status === "OPEN_FOR_INVESTMENT"
           ? "bg-green-600 hover:bg-green-700"
-          : status === "active"
+          : status === "ACTIVE"
           ? "bg-blue-600 hover:bg-blue-700"
           : ""
       }

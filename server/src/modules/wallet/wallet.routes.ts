@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware, authorizeRoles } from "../../common/middleware/auth.middlware"; // Update path as needed
+import { authMiddleware, authorizeRoles } from "../../common/middleware/auth.middleware"; // Update path as needed
 import * as WalletController from "./wallet.controller";
 
 const router = Router();

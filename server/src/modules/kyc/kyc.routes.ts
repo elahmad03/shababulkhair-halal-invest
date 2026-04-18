@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { KycController } from "./kyc.controller";
-import { authMiddleware, authorizeRoles } from "../../common/middleware/auth.middlware";
+import { authMiddleware, authorizeRoles } from "../../common/middleware/auth.middleware";
 
 const router = Router();
 

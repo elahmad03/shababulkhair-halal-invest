@@ -20,33 +20,43 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { columns, type CycleWithStats } from "./Columns";
-import { mockInvestmentCycles, mockShareholderInvestments } from "@/db/mockData";
+import { useListCyclesQuery } from "@/store/modules/cycle/cycleApi";
 
 export function CyclesDataTable() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
-  // Calculate stats for each cycle
+  const { data, isLoading, isError } = useListCyclesQuery({
+    page: 1,
+    limit: 10,
+  });
+
+  // 🔥 Safe transformation
   const cyclesWithStats = useMemo<CycleWithStats[]>(() => {
-    return mockInvestmentCycles.map((cycle) => {
-      const cycleInvestments = mockShareholderInvestments.filter(
-        (inv) => inv.cycleId === cycle.id
-      );
+    const cycles = data?.data?.data;
 
-      const totalInvested = cycleInvestments.reduce(
-        (sum, inv) => sum + inv.amountInvested,
-        0n
-      );
+    if (!cycles || !Array.isArray(cycles)) return [];
 
-      const investorCount = cycleInvestments.length;
+    return cycles.map((cycle) => ({
+      id: cycle.id,
 
-      return {
-        ...cycle,
-        totalInvested,
-        investorCount,
-      };
-    });
-  }, []);
+      // Match your columns
+      name: cycle.cycleName,
+      status: cycle.status,
+
+      // 🧠 Safe BigInt conversion
+      pricePerShare: BigInt(cycle.PricePerShareKobo ?? 0),
+
+      // Placeholder until backend provides
+      totalInvested: BigInt(0),
+      investorCount: 0,
+
+      // Dates
+      startDate: cycle.startDate ?? null,
+      endDate: cycle.endDate ?? null,
+      createdAt: cycle.createdAt,
+    }));
+  }, [data]);
 
   const table = useReactTable({
     data: cyclesWithStats,
@@ -62,9 +72,23 @@ export function CyclesDataTable() {
     },
   });
 
+  // ✅ Loading state
+  if (isLoading) {
+    return <div className="p-6 text-sm">Loading cycles...</div>;
+  }
+
+  // ✅ Error state
+  if (isError) {
+    return (
+      <div className="p-6 text-sm text-red-500">
+        Failed to load cycles. Try again.
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
-      {/* Search Filter */}
+      {/* Search */}
       <div className="p-4 border-b">
         <Input
           placeholder="Search cycles..."
@@ -95,13 +119,11 @@ export function CyclesDataTable() {
               </TableRow>
             ))}
           </TableHeader>
+
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
+                <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="whitespace-nowrap">
                       {flexRender(
@@ -116,7 +138,7 @@ export function CyclesDataTable() {
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center"
+                  className="h-24 text-center text-muted-foreground"
                 >
                   No cycles found.
                 </TableCell>
