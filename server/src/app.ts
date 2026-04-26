@@ -14,6 +14,7 @@ import kycRoutes from "./modules/kyc/kyc.routes";
 import paystackWebhookRoutes from "./modules/wallet/wallet.routes";
 import walletRoutes from "./modules/wallet/wallet.routes";
 import cycleRoutes from "./modules/investment/cycle.routes";
+import ventureRoutes from "./modules/venture/venture.routes";
 // Rate limiter – protects against brute-force & basic DDoS
 const limiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000,
@@ -109,7 +110,7 @@ app.use(api+"kyc",kycRoutes)
 
 app.use(api+"wallet", walletRoutes);
 app.use(api+"cycles", cycleRoutes);
-
+app.use(api+"ventures", ventureRoutes);
 // Global error handler – ALWAYS last
 app.use(errorHandler);
 

@@ -86,6 +86,12 @@ enum ClaimStatus {
   REJECTED
   @@map("claim_status")
 }
+enum VentureStatus {
+  FUNDED
+  OPERATING
+  LIQUIDATED
+  @@map("venture_status")
+}
 
 // ====================================================================================
 // SECTION 1: USER & IDENTITY MANAGEMENT
@@ -258,7 +264,7 @@ model InvestmentCycle {
   investorProfitPoolKobo   BigInt             @default(0) @map("investor_profit_pool_kobo")
   orgProfitShareKobo       BigInt             @default(0) @map("org_profit_share_kobo")
   profitDistributionStatus DistributionStatus @default(PENDING) @map("profit_distribution_status")
-  
+  investorProfitPercentage Decimal            @default(0) @map("investor_profit_percentage") // New field to track profit percentage for investors
   createdAt                DateTime           @default(now()) @map("created_at") @db.Timestamptz()
 
   investments         ShareholderInvestment[]
@@ -316,6 +322,7 @@ model BusinessVenture {
 
   cycle     InvestmentCycle @relation(fields: [cycleId], references: [id])
   managedBy User            @relation(fields: [managedById], references: [id])
+  status  VentureStatus @default(FUNDED) @map("venture_status")
 
   @@map("business_ventures")
 }

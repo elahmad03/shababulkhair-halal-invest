@@ -1,37 +1,19 @@
+import { Suspense, use } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-
-import { getStatusColor } from "@/lib/utils/cycle";
-import { CycleMetrics } from "@/components/admin/cycles/details/CycleMetrics";
-import { CycleTabs } from "@/components/admin/cycles/details/CycleTabs";
-
-import { getCycleDetailsApi } from "@/lib/api/cycle";
-import { mapCycleDetailsToUI } from "@/lib/adpater/cycleDetails.adapters";
+import CycleDetailsContent from "@/components/admin/cycles/details/CycleDetailsContent";
+import CycleDetailsLoading from "@/components/admin/cycles/details/CycleDetailsloading";
 
 type Props = {
-  params: { cycleId: string };
+  params: Promise<{ cycleId: string }>;
 };
 
-export default async function CycleDetailsPage({ params }: Props) {
-  const { cycleId } = params;
-
-  // ✅ fetch from backend
-  const rawCycle = await getCycleDetailsApi(cycleId);
-
-  if (!rawCycle) {
-    notFound();
-  }
-
-  // ✅ normalize data
-  const cycleDetails = mapCycleDetailsToUI(rawCycle);
+export default function CycleDetailsPage({ params }: Props) {
+  const { cycleId } = use(params);
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {/* Header */}
       <div className="mb-8">
         <Link href="/admin/cycles">
           <Button variant="ghost" className="mb-4">
@@ -40,26 +22,12 @@ export default async function CycleDetailsPage({ params }: Props) {
           </Button>
         </Link>
 
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">
-            Cycle Details: "{cycleDetails.name}"
-          </h1>
-
-          <Badge
-            className={`${getStatusColor(
-              cycleDetails.status
-            )} text-white text-lg px-4 py-2`}
-          >
-            {cycleDetails.status}
-          </Badge>
-        </div>
+        <h1 className="text-3xl font-bold">Cycle Details</h1>
       </div>
 
-      {/* Metrics */}
-      <CycleMetrics cycleData={cycleDetails} />
-
-      {/* Tabs */}
-      <CycleTabs cycleData={cycleDetails} />
+      <Suspense fallback={<CycleDetailsLoading />}>
+        <CycleDetailsContent cycleId={cycleId} />
+      </Suspense>
     </div>
   );
 }

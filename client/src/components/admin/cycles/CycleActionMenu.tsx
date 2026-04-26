@@ -75,15 +75,15 @@ export function CycleActionsDropdown({ cycle }: CycleActionsDropdownProps) {
   };
 
   const handleViewDetails = () => {
-    router.push(`/cycles/${cycle.id}`);
+    router.push(`cycles/${cycle.id}`);
   };
 
   const handleEdit = () => {
-    router.push(`/cycles/${cycle.id}/edit`);
+    router.push(`cycles/${cycle.id}/edit`);
   };
 
   const handleViewReport = () => {
-    router.push(`/cycles/${cycle.id}`);
+    router.push(`cycles/${cycle.id}`);
   };
 
   // ─────────────────────────────────────────────

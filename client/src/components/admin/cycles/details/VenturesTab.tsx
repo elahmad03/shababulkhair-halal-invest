@@ -42,7 +42,7 @@ export function VenturesTab({ ventures, status }: VenturesTabProps) {
               Capital allocation and venture performance
             </CardDescription>
           </div>
-          {status === "Active" && (
+          {status === "active" && (
             <Button
               onClick={handleAddAllocation}
               className="bg-gradient-to-r from-emerald-600 to-green-500 text-white hover:opacity-90"

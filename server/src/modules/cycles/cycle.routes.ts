@@ -19,6 +19,13 @@ router.use(authMiddleware);
 router.get("/", CycleController.listCycles);
 
 /**
+ * GET /cycles/my-history
+ * All cycles the authenticated member has invested in
+ * ⚠️ MUST come BEFORE /:id route to avoid being caught by parameterized route
+ */
+router.get("/my-history", CycleController.getMemberInvestmentHistory);
+
+/**
  * GET /cycles/:id
  * Full detail of a single cycle — members see investor list and ventures
  */
@@ -29,12 +36,6 @@ router.get("/:id", CycleController.getCycleById);
  * A member's own shareholding in this cycle
  */
 router.get("/:id/my-position", CycleController.getMemberPosition);
-
-/**
- * GET /cycles/my-history
- * All cycles the authenticated member has invested in
- */
-router.get("/my-history", CycleController.getMemberInvestmentHistory);
 
 /**
  * POST /cycles/:id/shares/purchase
