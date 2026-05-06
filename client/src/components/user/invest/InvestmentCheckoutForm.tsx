@@ -9,12 +9,13 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Wallet as WalletIcon, Loader2 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { toast } from "sonner"
-import type { InvestmentCycle, Wallet } from "@/db/types"
+import type { Cycle } from "@/store/modules/cycle/cycle.types"
+import type { Wallet } from "@/store/modules/wallet/wallet.types"
 import ShareCounter from "./ShareCounter"
 import InvestmentSummaryCard from "./InvestmentSummaryCard"
 
 interface InvestmentCheckoutFormProps {
-  cycle: InvestmentCycle
+  cycle: Cycle
   wallet: Wallet
 }
 
@@ -24,9 +25,11 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const totalInvestment = cycle.pricePerShare * BigInt(shares)
-  const remainingBalance = wallet.balance - totalInvestment
-  const hasSufficientFunds = remainingBalance >= 0n
+  const pricePerShareNaira = Number(cycle.pricePerShareKobo) / 100
+  const totalInvestment = pricePerShareNaira * shares
+  const walletBalanceNaira = Number(wallet.balance) / 100
+  const remainingBalance = walletBalanceNaira - totalInvestment
+  const hasSufficientFunds = remainingBalance >= 0
   const canSubmit = shares > 0 && hasSufficientFunds && termsAccepted && !isSubmitting
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,32 +40,26 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
     setIsSubmitting(true)
 
     try {
-      // Simulate API call
+      // TODO: Replace with real API call to create investment
+      // const response = await createInvestmentMutation({
+      //   cycleId: cycle.id,
+      //   shares,
+      //   amount: Math.round(totalInvestment * 100), // Convert back to Kobo
+      // }).unwrap()
+
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      // In real app, this would be an API call:
-      // const response = await fetch('/api/investments', {
-      //   method: 'POST',
-      //   body: JSON.stringify({
-      //     cycleId: cycle.id,
-      //     shares,
-      //     amount: totalInvestment.toString(),
-      //   }),
-      // })
-
       console.log("Investment payload:", {
-        userId: wallet.userId,
         cycleId: cycle.id,
         shares,
-        amountInvested: totalInvestment.toString(),
+        amountInvestedNaira: totalInvestment,
+        amountInvestedKobo: Math.round(totalInvestment * 100),
       })
 
-      // Success!
       toast.success("🎉 Investment Successful!", {
-        description: `You've invested ${formatCurrency(totalInvestment)} in ${cycle.name}`,
+        description: `You've invested ₦${totalInvestment.toLocaleString()} in ${cycle.cycleName}`,
       })
 
-      // Redirect to dashboard or investment details
       router.push("/user/dashboard")
     } catch (error) {
       toast.error("Investment Failed", {
@@ -79,7 +76,7 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
       <Button
         variant="ghost"
         onClick={() => router.back()}
-        className="mb-6 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+        className="mb-6 hover:bg-muted"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Cycle Details
@@ -88,10 +85,10 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold mb-2">
-          Invest in {cycle.name}
+          Invest in {cycle.cycleName}
         </h1>
         <p className="text-muted-foreground">
-          Secure your shares at {formatCurrency(cycle.pricePerShare)} per share
+          Secure your shares at ₦{pricePerShareNaira.toLocaleString()} per share
         </p>
       </div>
 
@@ -101,19 +98,19 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
           {/* Left Column - Input Section */}
           <div className="lg:col-span-7 space-y-6">
             {/* Wallet Context Card */}
-            <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950 dark:to-green-950">
+            <Card className="border-primary/20 bg-primary/5">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-emerald-500 flex items-center justify-center">
-                      <WalletIcon className="h-6 w-6 text-white" />
+                    <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center">
+                      <WalletIcon className="h-6 w-6 text-primary-foreground" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">
                         Available to Invest
                       </p>
-                      <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                        {formatCurrency(wallet.balance)}
+                      <p className="text-2xl font-bold text-primary">
+                        ₦{walletBalanceNaira.toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -128,7 +125,7 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
                   How many shares?
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {formatCurrency(cycle.pricePerShare)} per share
+                  ₦{pricePerShareNaira.toLocaleString()} per share
                 </p>
               </CardHeader>
               <CardContent className="pt-8 pb-10">
@@ -139,9 +136,9 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
             {/* Mobile Summary (shown only on mobile) */}
             <div className="lg:hidden">
               <InvestmentSummaryCard
-                pricePerShare={cycle.pricePerShare}
+                pricePerShareNaira={pricePerShareNaira}
                 shares={shares}
-                walletBalance={wallet.balance}
+                walletBalanceNaira={walletBalanceNaira}
               />
             </div>
 
@@ -177,11 +174,11 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
             </Card>
 
             {/* Submit Button (Mobile) */}
-            <div className="lg:hidden sticky bottom-0 bg-white dark:bg-gray-900 pt-4 pb-6 -mx-4 px-4 border-t">
+            <div className="lg:hidden sticky bottom-0 bg-background dark:bg-background pt-4 pb-6 -mx-4 px-4 border-t border-border">
               <Button
                 type="submit"
                 disabled={!canSubmit}
-                className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <>
@@ -191,12 +188,12 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
                 ) : (
                   <>
                     CONFIRM INVESTMENT
-                    {shares > 0 && ` (${formatCurrency(totalInvestment)})`}
+                    {shares > 0 && ` (₦${totalInvestment.toLocaleString()})`}
                   </>
                 )}
               </Button>
               {!canSubmit && shares > 0 && (
-                <p className="text-xs text-center text-red-600 dark:text-red-400 mt-2">
+                <p className="text-xs text-center text-destructive dark:text-destructive mt-2">
                   {!hasSufficientFunds
                     ? "Insufficient funds in wallet"
                     : !termsAccepted
@@ -211,15 +208,15 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
           <div className="hidden lg:block lg:col-span-5">
             <div className="sticky top-6 space-y-6">
               <InvestmentSummaryCard
-                pricePerShare={cycle.pricePerShare}
+                pricePerShareNaira={pricePerShareNaira}
                 shares={shares}
-                walletBalance={wallet.balance}
+                walletBalanceNaira={walletBalanceNaira}
               />
 
               <Button
                 type="submit"
                 disabled={!canSubmit}
-                className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 {isSubmitting ? (
                   <>
@@ -229,13 +226,13 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
                 ) : (
                   <>
                     CONFIRM INVESTMENT
-                    {shares > 0 && ` (${formatCurrency(totalInvestment)})`}
+                    {shares > 0 && ` (₦${totalInvestment.toLocaleString()})`}
                   </>
                 )}
               </Button>
 
               {!canSubmit && shares > 0 && (
-                <p className="text-xs text-center text-red-600 dark:text-red-400">
+                <p className="text-xs text-center text-destructive dark:text-destructive">
                   {!hasSufficientFunds
                     ? "Insufficient funds in wallet"
                     : !termsAccepted

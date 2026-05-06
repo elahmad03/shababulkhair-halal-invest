@@ -7,22 +7,22 @@ import { AlertCircle, CheckCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface InvestmentSummaryCardProps {
-  pricePerShare: bigint
+  pricePerShareNaira: number
   shares: number
-  walletBalance: bigint
+  walletBalanceNaira: number
   className?: string
 }
 
 const InvestmentSummaryCard = ({
-  pricePerShare,
+  pricePerShareNaira,
   shares,
-  walletBalance,
+  walletBalanceNaira,
   className,
 }: InvestmentSummaryCardProps) => {
-  const totalInvestment = pricePerShare * BigInt(shares)
-  const remainingBalance = walletBalance - totalInvestment
-  const hasSufficientFunds = remainingBalance >= 0n
-  const fees = 0n // No fees for now
+  const totalInvestment = pricePerShareNaira * shares
+  const remainingBalance = walletBalanceNaira - totalInvestment
+  const hasSufficientFunds = remainingBalance >= 0
+  const fees = 0 // No fees for now
 
   return (
     <Card className={cn("shadow-lg", className)}>
@@ -39,7 +39,7 @@ const InvestmentSummaryCard = ({
         {/* Price per share */}
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">Price per Share</span>
-          <span className="font-semibold">{formatCurrency(pricePerShare)}</span>
+          <span className="font-semibold">{formatCurrency(pricePerShareNaira)}</span>
         </div>
 
         <Separator />
@@ -53,7 +53,7 @@ const InvestmentSummaryCard = ({
         {/* Fees */}
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">Transaction Fees</span>
-          <span className="font-semibold text-emerald-600">{formatCurrency(fees)}</span>
+          <span className="font-semibold text-primary">{formatCurrency(fees)}</span>
         </div>
 
         <Separator />
@@ -61,7 +61,7 @@ const InvestmentSummaryCard = ({
         {/* Total */}
         <div className="flex justify-between items-center">
           <span className="font-semibold">Total Investment</span>
-          <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+          <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent">
             {formatCurrency(totalInvestment)}
           </span>
         </div>
@@ -72,7 +72,7 @@ const InvestmentSummaryCard = ({
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Current Balance</span>
-            <span className="font-semibold">{formatCurrency(walletBalance)}</span>
+            <span className="font-semibold">{formatCurrency(walletBalanceNaira)}</span>
           </div>
 
           {/* Remaining Balance */}
@@ -82,8 +82,8 @@ const InvestmentSummaryCard = ({
               className={cn(
                 "font-bold text-lg",
                 hasSufficientFunds
-                  ? "text-emerald-600"
-                  : "text-red-600 dark:text-red-500"
+                  ? "text-primary"
+                  : "text-destructive"
               )}
             >
               {formatCurrency(remainingBalance)}
@@ -96,8 +96,8 @@ const InvestmentSummaryCard = ({
               className={cn(
                 "flex items-center gap-2 p-3 rounded-lg",
                 hasSufficientFunds
-                  ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400"
-                  : "bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400"
+                  ? "bg-muted/50 text-primary"
+                  : "bg-destructive/10 text-destructive"
               )}
             >
               {hasSufficientFunds ? (

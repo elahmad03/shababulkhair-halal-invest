@@ -45,7 +45,7 @@ export function CyclesDataTable() {
       status: cycle.status,
 
       // 🧠 Safe BigInt conversion
-      pricePerShare: BigInt(cycle.PricePerShareKobo ?? 0),
+      pricePerShare: BigInt(cycle.pricePerShareKobo ?? 0),
 
       // Placeholder until backend provides
       totalInvested: BigInt(0),

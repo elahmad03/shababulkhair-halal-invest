@@ -1,6 +1,5 @@
 import HeaderBox from '@/components/common/HeaderBox'
 import { InvestmentCyclesPage } from '@/components/user/cycles/cycles-page'
-import React from 'react'
 
 function page() {
   return (

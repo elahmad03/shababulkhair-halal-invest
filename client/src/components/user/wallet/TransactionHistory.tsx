@@ -98,7 +98,7 @@ export default function TransactionHistory({ transactions }: { transactions: Tra
                 <div className="flex flex-col items-end gap-1.5">
                   <span className={`font-semibold ${isCredit(tx.transactionType) ? "text-emerald-600" : ""}`}>
                     {isCredit(tx.transactionType) ? "+" : "-"}
-                    ₦{(Number(tx.amountKobo) / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                    ₦{(Number(tx.amountKobo)/100).toLocaleString("en-NG", { minimumFractionDigits: 2 })}
                   </span>
                   <Badge variant="outline" className={`text-[10px] px-1.5 py-0 border ${getStatusColor(tx.transactionStatus)}`}>
                     {getStatusIcon(tx.transactionStatus)}

@@ -7,23 +7,27 @@ type ApiStatus =
   | "ACTIVE"
   | "COMPLETED";
 
-// UI config (clean + consistent)
+// UI config with semantic colors
 const statusConfig = {
   PENDING: {
     label: "Pending",
-    variant: "secondary",
+    variant: "secondary" as const,
+    className: "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200",
   },
   OPEN_FOR_INVESTMENT: {
     label: "Open for Investment",
-    variant: "default",
+    variant: "default" as const,
+    className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200",
   },
   ACTIVE: {
     label: "Active",
-    variant: "default",
+    variant: "default" as const,
+    className: "bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200",
   },
   COMPLETED: {
     label: "Completed",
-    variant: "outline",
+    variant: "outline" as const,
+    className: "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200",
   },
 } as const;
 
@@ -41,13 +45,7 @@ export function CycleStatusBadge({ status }: CycleStatusBadgeProps) {
   return (
     <Badge
       variant={config.variant}
-      className={
-        status === "OPEN_FOR_INVESTMENT"
-          ? "bg-green-600 hover:bg-green-700"
-          : status === "ACTIVE"
-          ? "bg-blue-600 hover:bg-blue-700"
-          : ""
-      }
+      className={config.className}
     >
       {config.label}
     </Badge>

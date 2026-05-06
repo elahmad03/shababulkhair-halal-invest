@@ -33,19 +33,19 @@ export function VenturesTab({ ventures, status }: VenturesTabProps) {
   }
 
   return (
-    <Card>
+    <Card className="border-amber-100 bg-amber-50">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Business Ventures</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-amber-900">Business Ventures</CardTitle>
+            <CardDescription className="text-amber-700">
               Capital allocation and venture performance
             </CardDescription>
           </div>
           {status === "active" && (
             <Button
               onClick={handleAddAllocation}
-              className="bg-gradient-to-r from-emerald-600 to-green-500 text-white hover:opacity-90"
+              className="bg-amber-600 hover:bg-amber-700 text-white border-0"
             >
               <Plus className="mr-2 h-4 w-4" />
               Add Allocation

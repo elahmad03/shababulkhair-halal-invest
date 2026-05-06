@@ -6,11 +6,17 @@ export interface Cycle {
   id: string;
   cycleName: string;
   status: string;
-  totalShares: number;
-  PricePerShareKobo: string;
+  pricePerShareKobo: string;
   createdAt: string;
   startDate: string | null;
   endDate: string | null;
+  description?: string | null;
+  totalProfitRealizedKobo?: string;
+  profitDistributionStatus?: string;
+  _count?: {
+    investments: number;
+    businessVentures: number;
+  };
 }
 
 // Pagination

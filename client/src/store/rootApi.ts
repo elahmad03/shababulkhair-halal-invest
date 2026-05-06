@@ -95,7 +95,29 @@ export const rootApi = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithReauth,
   tagTypes: [
-    "Auth","Kyc","Transactions","UserProfile","Notifications","Wallet","Cycles"
+    // Auth & User
+    "Auth",
+    "UserProfile",
+    "Notifications",
+    
+    // KYC
+    "Kyc",
+    
+    // Wallet & Transactions
+    "Wallet",
+    "Transactions",
+    "Ledger",
+    "Transaction",
+    
+    // Cycles
+    "Cycles",
+    
+    // Ventures
+    "Ventures",
+    "Venture",
+    
+    // Organizational Ledger
+    "OrgLedger",
   ],
   endpoints: () => ({}),
 });

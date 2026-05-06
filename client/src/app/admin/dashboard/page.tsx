@@ -4,12 +4,7 @@ import { KpiCard } from "@/components/admin/dahsboard/KpiCard";
 import { CurrentCycleCard } from "@/components/admin/dahsboard/CurrenCycleCard";
 import { RecentActivityFeed } from "@/components/admin/dahsboard/RecenActivity";
 import { PendingTasksCard } from "@/components/admin/dahsboard/pendingCard";
-import {
-  getKpiData,
-  getCurrentCycleDetails,
-  getRecentActivity,
-  getPendingTasks,
-} from "@/lib/data/data";
+
 import { formatCurrency } from "@/lib/utils";
 import { Banknote, Users, TrendingUp, AlertTriangle } from "lucide-react";
 

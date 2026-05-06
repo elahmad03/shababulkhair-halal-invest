@@ -1,4 +1,3 @@
-// app/(app)/dashboard/page.tsx (Final UI)
 import {
   mockInvestmentCycles,
   mockShareholderInvestments,
