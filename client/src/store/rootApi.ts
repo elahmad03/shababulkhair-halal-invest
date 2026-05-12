@@ -98,6 +98,7 @@ export const rootApi = createApi({
     // Auth & User
     "Auth",
     "UserProfile",
+    "Users",
     "Notifications",
     
     // KYC
@@ -118,6 +119,8 @@ export const rootApi = createApi({
     
     // Organizational Ledger
     "OrgLedger",
+    "Dashboard",
+    "Withdrawals"
   ],
   endpoints: () => ({}),
 });

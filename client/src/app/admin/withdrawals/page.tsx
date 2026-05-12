@@ -1,55 +1,76 @@
 // src/app/(admin)/withdrawals/page.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { StatusTabs } from '@/components/admin/withdrawals/StatusTab';
 import { WithdrawalsTable } from '@/components/admin/withdrawals/WithdrawalsTable';
-import { mockData } from '@/db';
-import type { WithdrawalStatus, WithdrawalWithUser } from '@/types/withdrawal';
+import { useListWithdrawalsQuery } from '@/store/modules/wallet/walletApi';
+import type { WithdrawalRecord } from '@/store/modules/wallet/walletApi';
+import { Card, CardContent } from '@/components/ui/card';
+
+// Map from API status to local status type
+const statusMap: Record<string, "pending" | "approved" | "processed" | "rejected"> = {
+  PENDING: "pending",
+  APPROVED: "approved",
+  PROCESSED: "processed",
+  REJECTED: "rejected",
+};
+
+const reverseStatusMap: Record<"pending" | "approved" | "processed" | "rejected", string> = {
+  pending: "PENDING",
+  approved: "APPROVED",
+  processed: "PROCESSED",
+  rejected: "REJECTED",
+};
+
+type WithdrawalStatus = "pending" | "approved" | "processed" | "rejected";
 
 export default function AdminWithdrawalsPage() {
   const [activeStatus, setActiveStatus] = useState<WithdrawalStatus>('pending');
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
-  // Combine withdrawal requests with user data
-  const withdrawalsWithUsers: WithdrawalWithUser[] = useMemo(() => {
-    return mockData.withdrawalRequests.map((request) => {
-      const user = mockData.users.find((u) => u.id === request.userId);
-      const wallet = mockData.wallets.find((w) => w.userId === request.userId);
+  // Fetch withdrawals from server based on status
+  const { data: response, isLoading, error } = useListWithdrawalsQuery({
+    status: reverseStatusMap[activeStatus],
+    page,
+    limit,
+  });
 
-      return {
-        ...request,
-        userName: user?.fullName || 'Unknown User',
-        userEmail: user?.email || '',
-        walletBalance: wallet?.balance,
-      };
-    });
-  }, [refreshKey]);
-
-  // Filter by status
-  const filteredWithdrawals = withdrawalsWithUsers.filter(
-    (w) => w.status === activeStatus
-  );
+  const withdrawals = response?.data?.data || [];
+  const pagination = response?.data?.pagination;
 
   // Calculate counts for each status
-  const statusCounts: Record<WithdrawalStatus, number> = {
-    pending: withdrawalsWithUsers.filter((w) => w.status === 'pending').length,
-    approved: withdrawalsWithUsers.filter((w) => w.status === 'approved').length,
-    processed: withdrawalsWithUsers.filter((w) => w.status === 'processed').length,
-    rejected: withdrawalsWithUsers.filter((w) => w.status === 'rejected').length,
-  };
-
-  const handleUpdate = () => {
-    // Trigger a refresh by changing the key
-    setRefreshKey((prev) => prev + 1);
+  const statusCounts = {
+    pending: 0, // Will be populated from API if available
+    approved: 0,
+    processed: 0,
+    rejected: 0,
   };
 
   const handleExport = () => {
     // In production, this would generate a CSV/Excel file
-    console.log('Exporting withdrawal data...', filteredWithdrawals);
+    const csv = withdrawals
+      .map(
+        (w) =>
+          `${w.userName},${w.userEmail},${parseInt(w.amountKobo) / 100},${w.status},${w.bankName},${w.accountNumber}`
+      )
+      .join('\n');
+
+    const header = 'Name,Email,Amount,Status,Bank,Account\n';
+    const element = document.createElement('a');
+    element.setAttribute(
+      'href',
+      'data:text/csv;charset=utf-8,' + encodeURIComponent(header + csv)
+    );
+    element.setAttribute('download', `withdrawals-${new Date().toISOString()}.csv`);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
   };
 
   return (
@@ -76,12 +97,22 @@ export default function AdminWithdrawalsPage() {
               onClick={handleExport}
               variant="outline"
               className="flex items-center gap-2"
+              disabled={withdrawals.length === 0}
             >
               <Download className="h-4 w-4" />
               Export Data
             </Button>
           </div>
         </div>
+
+        {/* Error State */}
+        {error && (
+          <Card className="mb-6 border-red-500/50 bg-red-500/5">
+            <CardContent className="pt-6 text-red-500">
+              Failed to load withdrawals. Please try again.
+            </CardContent>
+          </Card>
+        )}
 
         {/* Status Tabs */}
         <div className="mb-6">
@@ -94,8 +125,10 @@ export default function AdminWithdrawalsPage() {
 
         {/* Withdrawals Table */}
         <WithdrawalsTable
-          withdrawals={filteredWithdrawals}
-          onUpdate={handleUpdate}
+          withdrawals={withdrawals}
+          isLoading={isLoading}
+          pagination={pagination}
+          onPageChange={setPage}
         />
       </div>
     </div>

@@ -39,6 +39,26 @@ export interface WalletSummary {
   }>;
 }
 
+export interface WithdrawalRecord {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  amountKobo: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  status: "PENDING" | "APPROVED" | "PROCESSED" | "REJECTED";
+  rejectionReason?: string;
+  requestedAt: string;
+  processedAt?: string;
+}
+
+export interface ResolveWithdrawalRequest {
+  status: "APPROVED" | "REJECTED";
+  rejectionReason?: string;
+}
+
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 export const walletApi = rootApi.injectEndpoints({
@@ -68,6 +88,46 @@ export const walletApi = rootApi.injectEndpoints({
       query: () => ({ url: "/wallet/summary" }),
       providesTags: ["Wallet"],
     }),
+
+    // ─── ADMIN ENDPOINTS ────────────────────────────────────────────────────
+    
+    // GET /admin/withdrawals - List all withdrawal requests with optional filtering
+    listWithdrawals: build.query<
+      ApiResponse<{
+        data: WithdrawalRecord[];
+        pagination: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      }>,
+      { status?: string; page?: number; limit?: number }
+    >({
+      query: ({ status, page = 1, limit = 10 }) => {
+        const params = new URLSearchParams();
+        if (status) params.append("status", status);
+        params.append("page", page.toString());
+        params.append("limit", limit.toString());
+        return {
+          url: `/admin/withdrawals?${params.toString()}`,
+        };
+      },
+      providesTags: ["Withdrawals"],
+    }),
+
+    // PATCH /admin/withdrawals/:id/resolve - Approve or reject a withdrawal
+    resolveWithdrawal: build.mutation<
+      ApiResponse<WithdrawalRecord>,
+      { id: string; body: ResolveWithdrawalRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/admin/withdrawals/${id}/resolve`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Withdrawals", "Dashboard"],
+    }),
   }),
   overrideExisting: process.env.NODE_ENV !== "production",
 });
@@ -76,4 +136,6 @@ export const {
   useInitializeDepositMutation,
   useRequestWithdrawalMutation,
   useGetWalletSummaryQuery,
+  useListWithdrawalsQuery,
+  useResolveWithdrawalMutation,
 } = walletApi;

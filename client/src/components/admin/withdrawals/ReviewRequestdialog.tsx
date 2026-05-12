@@ -21,33 +21,32 @@ import {
   DollarSign,
   Building2,
   CreditCard,
-  Wallet,
   AlertCircle,
   CheckCircle2,
   XCircle,
+  Loader2,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
-import type { WithdrawalWithUser } from '@/types/withdrawal';
+import { useResolveWithdrawalMutation } from '@/store/modules/wallet/walletApi';
+import type { WithdrawalRecord } from '@/store/modules/wallet/walletApi';
 
 interface ReviewRequestDialogProps {
-  withdrawal: WithdrawalWithUser;
-  open: boolean;
+  withdrawal: WithdrawalRecord;
+  isOpen: boolean;
   onClose: () => void;
-  onUpdate: () => void;
 }
 
 export function ReviewRequestDialog({
   withdrawal,
-  open,
+  isOpen,
   onClose,
-  onUpdate,
 }: ReviewRequestDialogProps) {
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [resolveWithdrawal, { isLoading: isResolving }] = useResolveWithdrawalMutation();
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: string) => {
     return new Intl.DateTimeFormat('en-NG', {
       year: 'numeric',
       month: 'long',
@@ -58,18 +57,24 @@ export function ReviewRequestDialog({
   };
 
   const handleApprove = async () => {
-    setIsProcessing(true);
-    
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      await resolveWithdrawal({
+        id: withdrawal.id,
+        body: {
+          status: 'APPROVED',
+        },
+      }).unwrap();
 
-    toast.success('Withdrawal request approved!', {
-      description: `${withdrawal.userName}'s request for ${formatCurrency(withdrawal.amount)} has been approved.`,
-    });
+      toast.success('Withdrawal request approved!', {
+        description: `${withdrawal.userName}'s request for ${formatCurrency(parseInt(withdrawal.amountKobo) / 100)} has been approved.`,
+      });
 
-    setIsProcessing(false);
-    onUpdate();
-    onClose();
+      onClose();
+    } catch (error) {
+      toast.error('Failed to approve withdrawal', {
+        description: error instanceof Error ? error.message : 'Please try again',
+      });
+    }
   };
 
   const handleReject = async () => {
@@ -78,35 +83,27 @@ export function ReviewRequestDialog({
       return;
     }
 
-    setIsProcessing(true);
-    
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      await resolveWithdrawal({
+        id: withdrawal.id,
+        body: {
+          status: 'REJECTED',
+          rejectionReason: rejectionReason.trim(),
+        },
+      }).unwrap();
 
-    toast.success('Withdrawal request rejected', {
-      description: `${withdrawal.userName} will be notified of the rejection.`,
-    });
+      toast.success('Withdrawal request rejected', {
+        description: `${withdrawal.userName} will be notified of the rejection.`,
+      });
 
-    setIsProcessing(false);
-    setShowRejectForm(false);
-    setRejectionReason('');
-    onUpdate();
-    onClose();
-  };
-
-  const handleMarkAsProcessed = async () => {
-    setIsProcessing(true);
-    
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    toast.success('Marked as processed!', {
-      description: `${formatCurrency(withdrawal.amount)} has been sent to ${withdrawal.bankName}.`,
-    });
-
-    setIsProcessing(false);
-    onUpdate();
-    onClose();
+      setShowRejectForm(false);
+      setRejectionReason('');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to reject withdrawal', {
+        description: error instanceof Error ? error.message : 'Please try again',
+      });
+    }
   };
 
   return (
@@ -147,7 +144,7 @@ export function ReviewRequestDialog({
               <div className="flex items-center justify-between">
                 <span className="font-medium text-gray-600 dark:text-gray-400">Amount</span>
                 <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-                  {formatCurrency(withdrawal.amount)}
+                  {formatCurrency(parseInt(withdrawal.amountKobo) / 100)}
                 </span>
               </div>
 
@@ -261,11 +258,12 @@ export function ReviewRequestDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          {withdrawal.status === 'pending' && !showRejectForm && (
+          {withdrawal.status === 'PENDING' && !showRejectForm && (
             <>
               <Button
                 variant="outline"
                 onClick={() => setShowRejectForm(true)}
+                disabled={isResolving}
                 className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20"
               >
                 <XCircle className="h-4 w-4 mr-2" />
@@ -273,11 +271,14 @@ export function ReviewRequestDialog({
               </Button>
               <Button
                 onClick={handleApprove}
-                disabled={isProcessing}
+                disabled={isResolving}
                 className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
               >
-                {isProcessing ? (
-                  'Processing...'
+                {isResolving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -290,33 +291,57 @@ export function ReviewRequestDialog({
 
           {showRejectForm && (
             <>
-              <Button variant="outline" onClick={() => setShowRejectForm(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowRejectForm(false)}
+                disabled={isResolving}
+              >
                 Cancel
               </Button>
               <Button
                 onClick={handleReject}
-                disabled={isProcessing || !rejectionReason.trim()}
+                disabled={isResolving || !rejectionReason.trim()}
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
-                {isProcessing ? 'Processing...' : 'Confirm Rejection'}
+                {isResolving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Rejection'
+                )}
               </Button>
             </>
           )}
 
-          {withdrawal.status === 'approved' && (
+          {withdrawal.status === 'APPROVED' && (
             <Button
-              onClick={handleMarkAsProcessed}
-              disabled={isProcessing}
-              className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+              disabled={true}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              {isProcessing ? (
-                'Processing...'
-              ) : (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Mark as Processed
-                </>
-              )}
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Approved
+            </Button>
+          )}
+
+          {withdrawal.status === 'PROCESSED' && (
+            <Button
+              disabled={true}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Processed
+            </Button>
+          )}
+
+          {withdrawal.status === 'REJECTED' && (
+            <Button
+              disabled={true}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Rejected
             </Button>
           )}
         </DialogFooter>
