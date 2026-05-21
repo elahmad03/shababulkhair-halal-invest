@@ -1,27 +1,45 @@
-// store/provider.tsx
-'use client'; // <-- CRITICAL: This must be at the very top
+"use client";
 
-import React from 'react';
-import { Provider } from 'react-redux';
-import { PersistGate } from 'redux-persist/integration/react'; // For loading state
+import { useRef, useEffect } from "react";
+import { Provider } from "react-redux";
+import { store } from "@/store";
+import { setInitialized } from "@/store/modules/auth/authSlice";
+import { useRefreshTokenMutation } from "@/store/modules/auth/authApi";
 
-// Import the store and persistor directly from your store/index.ts
-import { getClientStore, persistor } from '@/store/index1'; // <-- Import persistor here!
+// -------------------------
+// Silent refresh on app load
+// Attempts to get new access token using httpOnly refresh cookie
+// If cookie is valid — user stays logged in seamlessly
+// If cookie is expired/missing — user gets cleared, redirect to login
+// -------------------------
+function AuthInitializer({ children }: { children: React.ReactNode }) {
+  const [refreshToken] = useRefreshTokenMutation();
+  const attempted = useRef(false);
 
-interface StoreProviderProps {
-  children: React.ReactNode;
+  useEffect(() => {
+    if (attempted.current) return;
+    attempted.current = true;
+
+    refreshToken()
+      .unwrap()
+      .catch(() => {
+        // Refresh failed — user not logged in, clearCredentials already called in mutation
+      })
+      .finally(() => {
+        store.dispatch(setInitialized());
+      });
+  }, [refreshToken]);
+
+  return <>{children}</>;
 }
 
-export default function StoreProvider({ children }: StoreProviderProps) {
-  // Get the single client-side store instance
-  const store = getClientStore();
-
+// -------------------------
+// Root provider — wraps entire app
+// -------------------------
+export function StoreProvider({ children }: { children: React.ReactNode }) {
   return (
     <Provider store={store}>
-      {/* PersistGate delays rendering your app's UI until state is rehydrated */}
-      <PersistGate loading={null} persistor={persistor}>
-        {children}
-      </PersistGate>
+      <AuthInitializer>{children}</AuthInitializer>
     </Provider>
   );
 }

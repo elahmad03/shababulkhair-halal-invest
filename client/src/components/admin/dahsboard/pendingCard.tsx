@@ -1,15 +1,30 @@
 // /components/admin/dashboard/pending-tasks-card.tsx
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 type PendingTasksProps = {
   withdrawalCount: number;
   kycCount: number;
+  isError?: boolean;
 };
 
-export function PendingTasksCard({ withdrawalCount, kycCount }: PendingTasksProps) {
+export function PendingTasksCard({ withdrawalCount, kycCount, isError = false }: PendingTasksProps) {
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Pending Tasks</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center gap-2 text-sm text-red-500">
+          <AlertCircle className="h-4 w-4" />
+          Failed to load pending tasks
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>

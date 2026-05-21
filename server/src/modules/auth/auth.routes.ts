@@ -1,7 +1,7 @@
 import { Router } from "express";
 import * as authController from "./auth.controller";
 import * as otpController from "./otp.controller";
-import { authMiddleware } from "../../common/middleware/auth.middlware";
+import { authMiddleware } from "../../common/middleware/auth.middleware";
 import { rateLimit } from "../../common/middleware/rateLimit";
 
 const router = Router();

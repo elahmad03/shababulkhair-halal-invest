@@ -24,6 +24,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -119,13 +120,13 @@ export default function SignInPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
           >
-            <CardDescription className="text-base">
-              Sign in to access your bookings and services.
+            <CardDescription className="text-base text-muted-foreground">
+              Sign in to access your account and manage your portfolio.
             </CardDescription>
           </motion.div>
         </CardHeader>
 
-        <CardContent className="space-y-6 pt-4">
+        <CardContent className="space-y-6">
           <AnimatePresence mode="wait">
             {serverError && (
               <motion.div
@@ -134,7 +135,7 @@ export default function SignInPage() {
                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                 className="overflow-hidden"
               >
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{serverError}</AlertDescription>
                 </Alert>
@@ -158,9 +159,10 @@ export default function SignInPage() {
                       <FormControl>
                         <Input 
                           type="email" 
-                          placeholder="yourname@example.com" 
+                          placeholder="name@example.com" 
                           disabled={isLoading}
                           autoFocus
+                          autoComplete="email"
                           {...field} 
                         />
                       </FormControl>
@@ -184,8 +186,8 @@ export default function SignInPage() {
                         <FormLabel>Password</FormLabel>
                         <Link
                           href="/forgot-password"
-                          className="text-xs text-primary hover:underline underline-offset-4 font-medium"
-                          tabIndex={-1} // Keeps form flow clean
+                          className="text-xs text-primary hover:underline underline-offset-4 font-semibold"
+                          tabIndex={-1}
                         >
                           Forgot password?
                         </Link>
@@ -197,6 +199,7 @@ export default function SignInPage() {
                             placeholder="Enter your password"
                             className="pr-10"
                             disabled={isLoading}
+                            autoComplete="current-password"
                             {...field}
                           />
                           <button
@@ -244,6 +247,16 @@ export default function SignInPage() {
             </form>
           </Form>
         </CardContent>
+
+        <CardFooter className="flex flex-wrap justify-center gap-1 border-t bg-muted/30 py-6 px-6 sm:rounded-b-lg">
+          <span className="text-sm text-muted-foreground">Don&apos;t have an account?</span>
+          <Link
+            href="/sign-up"
+            className="text-sm font-semibold text-primary hover:underline underline-offset-4"
+          >
+            Create an account
+          </Link>
+        </CardFooter>
       </Card>
 
       {/* OTP Modal */}

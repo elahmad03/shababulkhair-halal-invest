@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { koboToNgn, formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -10,9 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {  mockInvestmentCycles, mockShareholderInvestments } from '@/db'; 
-
-const CURRENT_USER_ID = 3; // Replace with actual auth context
+import { useGetMemberInvestmentHistoryQuery, useListCyclesQuery } from '@/store/hooks';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 type SortField = 'cycleName' | 'amountInvested' | 'profitEarned' | 'totalReturn' | 'completedOn';
 type SortDirection = 'asc' | 'desc';
@@ -21,30 +21,31 @@ export function HistoryTab() {
   const [sortField, setSortField] = useState<SortField>('completedOn');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
+  const { data: historyResponse, isLoading: historyLoading, isError: historyError, error: historyErrorData } = useGetMemberInvestmentHistoryQuery();
+  const { data: cyclesResponse, isLoading: cyclesLoading } = useListCyclesQuery({ page: 1, limit: 50 });
 
-  // Get completed investments for the current user
-  const completedInvestments = mockShareholderInvestments
-    .filter((investment) => {
-      const cycle = mockInvestmentCycles.find(
-        (c) => c.id === investment.cycleId && c.status === 'completed'
-      );
-      return investment.userId === CURRENT_USER_ID && cycle;
-    })
+  const isLoading = historyLoading || cyclesLoading;
+  const isError = historyError;
+  const error = historyErrorData;
+
+  const userInvestments = historyResponse?.data ?? [];
+  const allCycles = cyclesResponse?.data?.data ?? [];
+
+  // Get completed investments
+  const completedInvestments = userInvestments
+    .filter(inv => inv.status === 'COMPLETED')
     .map((investment) => {
-      const cycle = mockInvestmentCycles.find(
-        (c) => c.id === investment.cycleId
-      );
-  // Convert stored kobo values (bigint | string) to NGN numbers safely for calculation/sorting
-  const amountInvested = koboToNgn(investment.amountInvested as any);
-  const profitEarned = koboToNgn(investment.profitEarned as any);
+      const cycle = allCycles.find(c => c.id === investment.cycleId);
+      const amountInvested = Number(investment.totalInvestedKobo) / 100;
+      const profitEarned = 0; // TODO: Get actual profit from API response
       
       return {
-        id: investment.id,
-        cycleName: cycle?.name || 'Unknown Cycle',
+        cycleId: investment.cycleId,
+        cycleName: cycle?.cycleName || 'Unknown Cycle',
         amountInvested,
         profitEarned,
         totalReturn: amountInvested + profitEarned,
-        completedOn: new Date('2025-08-31'), // Mock date - replace with actual
+        completedOn: cycle?.endDate ? new Date(cycle.endDate) : new Date(),
       };
     });
 
@@ -66,6 +67,36 @@ export function HistoryTab() {
     return 0;
   });
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-green-600" />
+          <p className="text-muted-foreground">Loading investment history...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    const errorMessage = 
+      error && 'data' in error && typeof error.data === 'object' && error.data !== null && 'message' in error.data
+        ? (error.data as { message: string }).message
+        : "Failed to load investment history. Please try again.";
+    
+    return (
+      <Alert variant="destructive" className="border-red-200 bg-red-50">
+        <AlertCircle className="h-4 w-4 text-red-600" />
+        <AlertDescription className="text-red-800">
+          {errorMessage}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Empty state
   if (completedInvestments.length === 0) {
     return (
       <div className="text-center py-12">
@@ -81,57 +112,82 @@ export function HistoryTab() {
       <div className="overflow-x-auto w-full">
         <div className="min-w-full">
           <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => handleSort('cycleName')}
-            >
-              Cycle Name {sortField === 'cycleName' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </TableHead>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => handleSort('amountInvested')}
-            >
-              Amount Invested {sortField === 'amountInvested' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </TableHead>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => handleSort('profitEarned')}
-            >
-              Profit Earned {sortField === 'profitEarned' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </TableHead>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => handleSort('totalReturn')}
-            >
-              Total Return {sortField === 'totalReturn' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </TableHead>
-            <TableHead
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => handleSort('completedOn')}
-            >
-              Completed On {sortField === 'completedOn' && (sortDirection === 'asc' ? '↑' : '↓')}
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedInvestments.map((investment) => (
-            <TableRow key={investment.id}>
-              <TableCell className="font-medium">{investment.cycleName}</TableCell>
-              <TableCell>{formatCurrency(investment.amountInvested)}</TableCell>
-              <TableCell className="text-green-400 font-semibold">+{formatCurrency(investment.profitEarned)}</TableCell>
-              <TableCell className="font-semibold">{formatCurrency(investment.totalReturn)}</TableCell>
-              <TableCell>
-                {investment.completedOn.toLocaleDateString('en-NG', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('cycleName')}
+                >
+                  <div className="flex items-center gap-2">
+                    Cycle Name
+                    {sortField === 'cycleName' && (
+                      <span className="text-sm">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('amountInvested')}
+                >
+                  <div className="flex items-center gap-2">
+                    Amount Invested
+                    {sortField === 'amountInvested' && (
+                      <span className="text-sm">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('profitEarned')}
+                >
+                  <div className="flex items-center gap-2">
+                    Profit Earned
+                    {sortField === 'profitEarned' && (
+                      <span className="text-sm">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('totalReturn')}
+                >
+                  <div className="flex items-center gap-2">
+                    Total Return
+                    {sortField === 'totalReturn' && (
+                      <span className="text-sm">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSort('completedOn')}
+                >
+                  <div className="flex items-center gap-2">
+                    Completed On
+                    {sortField === 'completedOn' && (
+                      <span className="text-sm">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </div>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedInvestments.map((investment) => (
+                <TableRow key={investment.cycleId} className="hover:bg-muted/50">
+                  <TableCell className="font-medium text-foreground">{investment.cycleName}</TableCell>
+                  <TableCell className="text-blue-700 font-semibold">{formatCurrency(investment.amountInvested)}</TableCell>
+                  <TableCell className="text-green-600 font-semibold">+{formatCurrency(investment.profitEarned)}</TableCell>
+                  <TableCell className="text-emerald-700 font-semibold">{formatCurrency(investment.totalReturn)}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {investment.completedOn.toLocaleDateString('en-NG', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
           </Table>
         </div>
       </div>

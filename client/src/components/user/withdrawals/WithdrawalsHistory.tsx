@@ -1,18 +1,27 @@
-import { WithdrawalRequest } from "@/db";
-import { DataTable } from "./DataTable"; 
-import { columns } from "./Columns"; 
+// import { WithdrawalRequest } from "@/db";
+// import { DataTable } from "./DataTable"; 
+// import { columns } from "./Columns"; 
 
-interface WithdrawalHistoryProps {
-  history: WithdrawalRequest[];
-}
+// interface WithdrawalHistoryProps {
+//   history: WithdrawalRequest[];
+// }
 
-export function WithdrawalHistory({ history }: WithdrawalHistoryProps) {
+// export function WithdrawalHistory({ history }: WithdrawalHistoryProps) {
+//   return (
+//     <div className="w-full space-y-4">
+//       <h2 className="text-2xl font-bold">Withdrawal History</h2>
+//       <div className="overflow-x-auto">
+//         <DataTable columns={columns} data={history} />
+//       </div>
+//     </div>
+//   );
+// }
+import React from 'react'
+
+function WithdrawalsHistory() {
   return (
-    <div className="w-full space-y-4">
-      <h2 className="text-2xl font-bold">Withdrawal History</h2>
-      <div className="overflow-x-auto">
-        <DataTable columns={columns} data={history} />
-      </div>
-    </div>
-  );
+    <div>WithdrawalsHistory</div>
+  )
 }
+
+export default WithdrawalsHistory

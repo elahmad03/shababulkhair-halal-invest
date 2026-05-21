@@ -6,6 +6,7 @@ import { env } from "../config";
 // Extending JwtPayload ensures we include standard claims like 'exp' and 'iat' automatically.
 export interface ITokenPayload extends JwtPayload {
   userId: string;
+  email: string;
   role: string;
   jti?: string; // JTI (JWT ID) is optional but critical for token rotation and invalidation.
 }

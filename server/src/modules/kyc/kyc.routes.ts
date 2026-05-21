@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { KycController } from "./kyc.controller";
-import { authMiddleware, authorizeRoles } from "../../common/middleware/auth.middlware";
+import { authMiddleware, authorizeRoles } from "../../common/middleware/auth.middleware";
 
 const router = Router();
 
@@ -9,7 +9,7 @@ router.get("/signature", authMiddleware, KycController.getUploadSignature);
 router.post("/",         authMiddleware, KycController.submit);
 router.get("/me",        authMiddleware, KycController.me);
 
-// ── Admin routes — authMiddleware MUST come before authorizeRoles ─────────────
+// ── Admin routes ─────────────
 router.get("/pending",           authMiddleware, authorizeRoles("ADMIN"), KycController.pending);
 router.get("/:kycId",            authMiddleware, authorizeRoles("ADMIN"), KycController.detail);   // ← was missing
 router.patch("/approve/:kycId",  authMiddleware, authorizeRoles("ADMIN"), KycController.approve);

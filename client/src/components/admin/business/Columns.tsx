@@ -1,21 +1,11 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import type { BusinessVentureWithDetails } from "@/db/types"
+import type { Venture, VentureStatus } from "@/store/modules/venture/venture.types"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Edit, Eye, CheckCircle } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
-export const columns: ColumnDef<BusinessVentureWithDetails>[] = [
+export const columns: ColumnDef<Venture>[] = [
   {
     accessorKey: "companyName",
     header: "Venture Name",
@@ -25,65 +15,72 @@ export const columns: ColumnDef<BusinessVentureWithDetails>[] = [
           {row.getValue("companyName")}
         </div>
         <div className="text-xs text-muted-foreground sm:hidden mt-1">
-          {row.original.managerName}
+          {row.original.managedBy.firstName} {row.original.managedBy.lastName}
         </div>
       </div>
     ),
   },
   {
-    accessorKey: "managerName",
+    accessorKey: "managedBy",
     header: "Managed By",
-    cell: ({ row }) => (
-      <div className="text-sm hidden sm:table-cell">{row.getValue("managerName")}</div>
-    ),
+    cell: ({ row }) => {
+      const manager = row.original.managedBy
+      return (
+        <div className="text-sm hidden sm:table-cell min-w-[140px]">
+          {manager.firstName} {manager.lastName}
+        </div>
+      )
+    },
   },
   {
-    accessorKey: "cycleName",
+    accessorKey: "cycle",
     header: "Investment Cycle",
-    cell: ({ row }) => (
-      <div className="text-sm text-muted-foreground hidden lg:table-cell min-w-[140px]">
-        {row.getValue("cycleName")}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const cycle = row.original.cycle
+      return (
+        <div className="text-sm text-muted-foreground hidden lg:table-cell min-w-[140px]">
+          {cycle.cycleName}
+        </div>
+      )
+    },
   },
   {
-    accessorKey: "allocatedAmount",
+    accessorKey: "allocatedAmountKobo",
     header: "Allocated",
     cell: ({ row }) => {
-      const amount = row.getValue("allocatedAmount") as bigint
+      const amount = Number(row.getValue("allocatedAmountKobo"))
       return (
         <div className="min-w-[100px]">
-          <div className="font-medium text-sm text-emerald-700">
+          <div className="font-medium text-sm text-primary">
             {formatCurrency(amount)}
           </div>
           <div className="text-xs text-muted-foreground lg:hidden mt-1">
-            Profit: {formatCurrency(row.original.profitRealized)}
+            Realized: {formatCurrency(Number(row.original.profitRealizedKobo))}
           </div>
         </div>
       )
     },
   },
   {
-    accessorKey: "expectedProfit",
+    accessorKey: "expectedProfitKobo",
     header: "Expected Profit",
     cell: ({ row }) => {
-      const expprofit = row.getValue("expectedProfit") as bigint
+      const profit = Number(row.getValue("expectedProfitKobo"))
       return (
-        <div className="font-medium text-sm text-green-700 hidden lg:table-cell min-w-[100px]">
-          {expprofit === 0n ? "-" : formatCurrency(expprofit)}
+        <div className="font-medium text-sm text-primary hidden lg:table-cell min-w-[100px]">
+          {profit === 0 ? "-" : formatCurrency(profit)}
         </div>
       )
     },
   },
-  
   {
-    accessorKey: "profitRealized",
-    header: "Profit",
+    accessorKey: "profitRealizedKobo",
+    header: "Realized Profit",
     cell: ({ row }) => {
-      const profit = row.getValue("profitRealized") as bigint
+      const profit = Number(row.getValue("profitRealizedKobo"))
       return (
-        <div className="font-medium text-sm text-green-700 hidden lg:table-cell min-w-[100px]">
-          {profit === 0n ? "-" : formatCurrency(profit)}
+        <div className="font-medium text-sm text-primary hidden lg:table-cell min-w-[100px]">
+          {profit === 0 ? "-" : formatCurrency(profit)}
         </div>
       )
     },
@@ -92,57 +89,17 @@ export const columns: ColumnDef<BusinessVentureWithDetails>[] = [
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
-      const status = row.getValue("status") as string
+      const status = row.getValue("status") as VentureStatus
+      const statusConfig: Record<VentureStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+        FUNDED: { label: "Funded", variant: "secondary" },
+        OPERATING: { label: "Operating", variant: "default" },
+        LIQUIDATED: { label: "Liquidated", variant: "outline" },
+      }
+      const config = statusConfig[status] || { label: status, variant: "secondary" as const }
       return (
-        <Badge
-          variant={status === "completed" ? "default" : "secondary"}
-          className={
-            status === "completed"
-              ? "bg-gradient-to-r from-emerald-500 to-green-500 text-white"
-              : "bg-gray-100 text-gray-700"
-          }
-        >
-          {status === "completed" ? "Completed" : "Active"}
+        <Badge variant={config.variant}>
+          {config.label}
         </Badge>
-      )
-    },
-  },
-  {
-    id: "actions",
-    header: "",
-    cell: ({ row }) => {
-      const venture = row.original
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[200px]">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer">
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Allocation
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">
-              <Eye className="mr-2 h-4 w-4" />
-              View Details
-            </DropdownMenuItem>
-            {venture.status === "active" && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer text-green-600">
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Mark as Completed
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
       )
     },
   },

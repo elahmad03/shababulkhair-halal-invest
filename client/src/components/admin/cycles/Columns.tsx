@@ -5,13 +5,20 @@ import { format } from "date-fns";
 import { CycleStatusBadge } from "./CyclestatusBadge";
 import { CycleActionsDropdown } from "./CycleActionMenu";
 import { formatCurrency } from "@/lib/utils";
-import type { InvestmentCycle } from "@/db/types";
 
-export interface CycleWithStats extends InvestmentCycle {
+export interface CycleWithStats {
+  id: string;
+  name: string; 
+  status: string;
+  pricePerShare: bigint;
+
   totalInvested: bigint;
   investorCount: number;
-}
 
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: string;
+}
 export const columns: ColumnDef<CycleWithStats>[] = [
   {
     accessorKey: "name",

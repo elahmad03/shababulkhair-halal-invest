@@ -81,3 +81,4 @@ next-env.d.ts
 
 # Coverage and test output
 /coverage/
+*.md

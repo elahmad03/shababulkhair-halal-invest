@@ -18,16 +18,18 @@ export function InvestorsTab({ investors }: InvestorsTabProps) {
   }
 
   return (
-    <Card>
+    <Card className="border-blue-100 bg-blue-50">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Investor List</CardTitle>
-            <CardDescription>All shareholders in this cycle</CardDescription>
+            <CardTitle className="text-blue-900">Investor List</CardTitle>
+            <CardDescription className="text-blue-700">
+              {investors.length} shareholders in this cycle
+            </CardDescription>
           </div>
           <Button
             onClick={handleExportCSV}
-            className="bg-gradient-to-r from-emerald-600 to-green-500 text-white border-0 hover:opacity-90"
+            className="bg-blue-600 hover:bg-blue-700 text-white border-0"
           >
             <Download className="mr-2 h-4 w-4" />
             Export to CSV

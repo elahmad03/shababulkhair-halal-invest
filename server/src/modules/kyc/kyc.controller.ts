@@ -2,7 +2,7 @@ import { Response } from "express";
 import { KycService } from "./kyc.service";
 import { submitKycSchema } from "./kyc.schema";
 import { catchAsync } from "../../utils/catchAsync";
-import { AuthenticatedRequest } from "../../common/middleware/auth.middlware";
+import { AuthenticatedRequest } from "../../common/middleware/auth.middleware";
 import { successResponse } from "../../utils/response";
 import { BadRequestError } from "../../utils/errors";
 

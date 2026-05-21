@@ -160,7 +160,7 @@ export function KycForm() {
       });
 
       // ✅ Redirect to dashboard after successful submission
-      router.push("/dashboard");
+      router.push("/user/dashboard");
     } catch (err: any) {
       toast.error("Submission failed", {
         description: err?.data?.message ?? "Please try again.",

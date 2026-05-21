@@ -39,39 +39,40 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
 
   if (cycleData.status === "Active") {
     return (
-      <Card>
+      <Card className="border-green-100 bg-green-50">
         <CardHeader>
-          <CardTitle>Finalize Cycle & Distribute Profits</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-green-900">Finalize Cycle & Distribute Profits</CardTitle>
+          <CardDescription className="text-green-700">
             Enter the total profit realized to close this cycle
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="totalProfit">Total Profit Realized *</Label>
+            <Label htmlFor="totalProfit" className="text-green-900">Total Profit Realized *</Label>
             <Input
               id="totalProfit"
               type="number"
               placeholder="Enter total profit amount"
               value={totalProfit}
               onChange={(e) => setTotalProfit(e.target.value)}
+              className="border-green-200 focus:border-green-400 focus:ring-green-400"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+          <div className="grid grid-cols-2 gap-4 p-4 bg-green-100 rounded-lg border border-green-200">
             <div>
-              <Label className="text-sm text-muted-foreground">
+              <Label className="text-sm text-green-700">
                 Investor Pool (80%)
               </Label>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-bold text-green-900">
                 ₦{parseFloat(investorPool).toLocaleString()}
               </p>
             </div>
             <div>
-              <Label className="text-sm text-muted-foreground">
+              <Label className="text-sm text-green-700">
                 Organizational Share (20%)
               </Label>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-bold text-green-900">
                 ₦{parseFloat(organizationalShare).toLocaleString()}
               </p>
             </div>
@@ -84,10 +85,11 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
               onCheckedChange={(checked) =>
                 setConfirmDistribution(checked as boolean)
               }
+              className="border-green-600 text-green-600"
             />
             <Label
               htmlFor="confirm"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-green-900"
             >
               I confirm the profit amount is final and correct. This action is
               irreversible.
@@ -95,7 +97,7 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
           </div>
 
           <Button
-            className="w-full bg-red-600 hover:bg-red-700 text-white"
+            className="w-full bg-green-600 hover:bg-green-700 text-white border-0"
             size="lg"
             disabled={!totalProfit || !confirmDistribution}
             onClick={handleCloseCycle}
@@ -109,34 +111,34 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
 
   if (cycleData.status === "Completed") {
     return (
-      <Card>
+      <Card className="border-green-100 bg-green-50">
         <CardHeader>
-          <CardTitle>Distribution Summary</CardTitle>
-          <CardDescription>Final profit distribution record</CardDescription>
+          <CardTitle className="text-green-900">Distribution Summary</CardTitle>
+          <CardDescription className="text-green-700">Final profit distribution record</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-sm text-muted-foreground">
+              <Label className="text-sm text-green-700">
                 Total Profit Realized
               </Label>
-              <p className="text-xl font-bold">
+              <p className="text-xl font-bold text-green-900">
                 {formatCurrency(cycleData.profitRealized)}
               </p>
             </div>
             <div>
-              <Label className="text-sm text-muted-foreground">
+              <Label className="text-sm text-green-700">
                 Investor Pool (80%)
               </Label>
-              <p className="text-xl font-bold">
+              <p className="text-xl font-bold text-green-900">
                 {formatCurrency(cycleData.investorPool)}
               </p>
             </div>
             <div>
-              <Label className="text-sm text-muted-foreground">
+              <Label className="text-sm text-green-700">
                 Organizational Share (20%)
               </Label>
-              <p className="text-xl font-bold">
+              <p className="text-xl font-bold text-green-900">
                 ₦{formatCurrency(cycleData.organizationalShare)}
               </p>
             </div>
@@ -147,8 +149,8 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
   }
 
   return (
-    <Card>
-      <CardContent className="py-8 text-center text-muted-foreground">
+    <Card className="border-slate-200">
+      <CardContent className="py-8 text-center text-slate-600">
         Profit distribution controls will become available once the cycle is
         ready to be closed.
       </CardContent>

@@ -5,15 +5,21 @@ import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 
+interface CycleWithProgress {
+  id: string;
+  cycleName: string;
+  status: "PENDING" | "OPEN_FOR_INVESTMENT" | "ACTIVE" | "COMPLETED";
+  capitalTargetKobo: string;
+  capitalRaisedKobo: string;
+  investorCount: number;
+  startDate: string;
+  endDate: string;
+  daysRemaining: number;
+  progress: number; // 0-100
+}
+
 type CurrentCycleProps = {
-  data: {
-    id: number;
-    name: string;
-    progress: number;
-    daysRemaining: number;
-    capitalRaised: number;
-    investorCount: number;
-  } | null;
+  data: CycleWithProgress | null;
 };
 
 export function CurrentCycleCard({ data }: CurrentCycleProps) {
@@ -30,7 +36,7 @@ export function CurrentCycleCard({ data }: CurrentCycleProps) {
   return (
     <Card className="lg:col-span-2">
       <CardHeader>
-        <CardTitle>{data.name}</CardTitle>
+        <CardTitle>{data.cycleName}</CardTitle>
         <CardDescription>Overview of the current active investment cycle.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -44,7 +50,7 @@ export function CurrentCycleCard({ data }: CurrentCycleProps) {
         <div className="grid grid-cols-2 gap-4 pt-2">
           <div>
             <p className="text-sm text-muted-foreground">Capital Raised</p>
-            <p className="font-semibold">{formatCurrency(data.capitalRaised)}</p>
+            <p className="font-semibold">{formatCurrency(parseInt(data.capitalRaisedKobo) / 100)}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Investors</p>

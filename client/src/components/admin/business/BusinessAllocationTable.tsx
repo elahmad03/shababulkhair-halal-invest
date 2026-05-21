@@ -21,16 +21,27 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, ChevronLeft, ChevronRight } from "lucide-react"
-import { mockInvestmentCycles } from "@/db"
-import type { InvestmentCycle } from "@/db/types"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Search, ChevronLeft, ChevronRight, MoreHorizontal, TrendingUp, Trash2 } from "lucide-react"
+import { toast } from "sonner"
+import { useDeleteVentureMutation } from "@/store/modules/venture/ventureApi"
+import RecordProfitModal from "./RecordProfitModal"
+import type { Venture } from "@/store/modules/venture/venture.types"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -42,6 +53,11 @@ export function BusinessAllocationsTable<TData, TValue>({
   data,
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [deleteVenture, { isLoading: isDeleting }] = useDeleteVentureMutation()
+  const [profitModalOpen, setProfitModalOpen] = useState(false)
+  const [selectedVenture, setSelectedVenture] = useState<Venture | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [ventureToDelete, setVentureToDelete] = useState<Venture | null>(null)
 
   const table = useReactTable({
     data,
@@ -60,159 +76,185 @@ export function BusinessAllocationsTable<TData, TValue>({
     },
   })
 
+  const handleRecordProfit = (venture: Venture) => {
+    setSelectedVenture(venture)
+    setProfitModalOpen(true)
+  }
+
+  const handleDeleteClick = (venture: Venture) => {
+    setVentureToDelete(venture)
+    setDeleteConfirmOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!ventureToDelete) return
+
+    try {
+      await deleteVenture(ventureToDelete.id).unwrap()
+      toast.success("Venture deleted successfully")
+      setDeleteConfirmOpen(false)
+      setVentureToDelete(null)
+    } catch (error: any) {
+      const message = error?.data?.message || "Failed to delete venture"
+      toast.error(message)
+    }
+  }
+
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="space-y-4">
-        <CardTitle className="text-xl sm:text-2xl">Business Allocations</CardTitle>
-        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search ventures..."
-              value={(table.getColumn("companyName")?.getFilterValue() as string) ?? ""}
-              onChange={(event) =>
-                table.getColumn("companyName")?.setFilterValue(event.target.value)
-              }
-              className="pl-9 w-full"
-            />
-          </div>
-          <Select
-            value={
-              (table.getColumn("cycleName")?.getFilterValue() as string) ?? "all"
-            }
-            onValueChange={(value) =>
-              table
-                .getColumn("cycleName")
-                ?.setFilterValue(value === "all" ? "" : value)
-            }
-          >
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="All Cycles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Cycles</SelectItem>
-              {mockInvestmentCycles.map((cycle: InvestmentCycle) => (
-                <SelectItem key={cycle.id} value={String(cycle.id)}>
-                  {cycle.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
-      <CardContent className="p-0 sm:p-6">
-        <div className="rounded-md border">
-          <div className="w-full overflow-x-auto border rounded-md">
-            <div className="min-w-full">
-              <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-muted/50">
-                    {headerGroup.headers.map((header) => {
-                      return (
-                        <TableHead key={header.id} className="font-semibold">
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
-                      )
-                    })}
-                  </TableRow>
+    <div className="space-y-4">
+      {/* Search Bar */}
+      <div className="flex items-center gap-2">
+        <Search className="h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search ventures..."
+          value={(table.getColumn("companyName")?.getFilterValue() as string) ?? ""}
+          onChange={(event) =>
+            table.getColumn("companyName")?.setFilterValue(event.target.value)
+          }
+          className="max-w-sm"
+        />
+      </div>
+
+      {/* Table */}
+      <div className="rounded-lg border overflow-hidden">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="bg-muted/50">
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} className="font-semibold">
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
                 ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
-                      className="hover:bg-muted/50"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-32 text-center"
-                    >
-                      <div className="flex flex-col items-center justify-center text-muted-foreground">
-                        <p className="text-sm">No allocations found</p>
-                        <p className="text-xs mt-1">Try adjusting your filters</p>
-                      </div>
+                <TableHead className="text-right font-semibold">Actions</TableHead>
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => {
+                const venture = row.original as Venture
+                return (
+                  <TableRow key={row.id} className="hover:bg-muted/50">
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleRecordProfit(venture)}
+                            className="cursor-pointer"
+                          >
+                            <TrendingUp className="mr-2 h-4 w-4" />
+                            Record Profit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteClick(venture)}
+                            className="cursor-pointer text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-              </Table>
-            </div>
-          </div>
+                )
+              })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length + 1} className="h-24 text-center">
+                  No ventures found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="text-sm text-muted-foreground">
+          Showing{" "}
+          <span className="font-medium">
+            {table.getState().pagination.pageIndex *
+              table.getState().pagination.pageSize +
+              1}
+          </span>{" "}
+          to{" "}
+          <span className="font-medium">
+            {Math.min(
+              (table.getState().pagination.pageIndex + 1) *
+                table.getState().pagination.pageSize,
+              table.getFilteredRowModel().rows.length
+            )}
+          </span>{" "}
+          of{" "}
+          <span className="font-medium">
+            {table.getFilteredRowModel().rows.length}
+          </span>{" "}
+          entries
         </div>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-2 sm:px-0">
-          <div className="text-sm text-muted-foreground">
-            Showing{" "}
-            <span className="font-medium">
-              {table.getState().pagination.pageIndex *
-                table.getState().pagination.pageSize +
-                1}
-            </span>{" "}
-            to{" "}
-            <span className="font-medium">
-              {Math.min(
-                (table.getState().pagination.pageIndex + 1) *
-                  table.getState().pagination.pageSize,
-                table.getFilteredRowModel().rows.length
-              )}
-            </span>{" "}
-            of{" "}
-            <span className="font-medium">
-              {table.getFilteredRowModel().rows.length}
-            </span>{" "}
-            entries
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="h-8 w-8 p-0 sm:w-auto sm:px-3"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-1">Previous</span>
-            </Button>
-            <div className="flex items-center gap-1 text-sm">
-              <span className="text-muted-foreground">Page</span>
-              <span className="font-medium">
-                {table.getState().pagination.pageIndex + 1}
-              </span>
-              <span className="text-muted-foreground">of</span>
-              <span className="font-medium">{table.getPageCount()}</span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="h-8 w-8 p-0 sm:w-auto sm:px-3"
-            >
-              <span className="sr-only sm:not-sr-only sm:mr-1">Next</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Record Profit Modal */}
+      <RecordProfitModal
+        venture={selectedVenture}
+        open={profitModalOpen}
+        onOpenChange={setProfitModalOpen}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Venture?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <span className="font-semibold">{ventureToDelete?.companyName}</span>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   )
 }

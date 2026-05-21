@@ -1,41 +1,43 @@
 import { Badge } from "@/components/ui/badge";
-import type { InvestmentCycle } from "@/db/types";
 
-// FIX: Use NonNullable to remove 'null' from the possible types
-type CycleStatus = NonNullable<InvestmentCycle["status"]>;
+// Backend enum
+type ApiStatus =
+  | "PENDING"
+  | "OPEN_FOR_INVESTMENT"
+  | "ACTIVE"
+  | "COMPLETED";
 
-const statusConfig: Record<
-  CycleStatus,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
-> = {
-  pending: {
+// UI config with semantic colors
+const statusConfig = {
+  PENDING: {
     label: "Pending",
-    variant: "secondary",
+    variant: "secondary" as const,
+    className: "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200",
   },
-  open_for_investment: {
+  OPEN_FOR_INVESTMENT: {
     label: "Open for Investment",
-    variant: "default",
+    variant: "default" as const,
+    className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200",
   },
-  active: {
+  ACTIVE: {
     label: "Active",
-    variant: "default",
+    variant: "default" as const,
+    className: "bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200",
   },
-  completed: {
+  COMPLETED: {
     label: "Completed",
-    variant: "outline",
+    variant: "outline" as const,
+    className: "bg-green-100 text-green-700 hover:bg-green-200 border border-green-200",
   },
-};
+} as const;
 
 interface CycleStatusBadgeProps {
-  // It's okay for the prop to be null, we just have to guard against it
-  status: InvestmentCycle["status"];
+  status: ApiStatus | null;
 }
 
 export function CycleStatusBadge({ status }: CycleStatusBadgeProps) {
-  // Guard clause: if status is null, don't render anything
   if (!status) return null;
 
-  // Now TypeScript knows 'status' here is not null
   const config = statusConfig[status];
 
   if (!config) return null;
@@ -43,13 +45,7 @@ export function CycleStatusBadge({ status }: CycleStatusBadgeProps) {
   return (
     <Badge
       variant={config.variant}
-      className={
-        status === "open_for_investment"
-          ? "bg-green-600 hover:bg-green-700"
-          : status === "active"
-          ? "bg-blue-600 hover:bg-blue-700"
-          : ""
-      }
+      className={config.className}
     >
       {config.label}
     </Badge>

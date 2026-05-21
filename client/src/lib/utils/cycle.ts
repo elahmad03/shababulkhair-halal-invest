@@ -3,11 +3,11 @@ import { CycleStatus } from "@/lib/types/cycle"
 
 export function getStatusColor(status: CycleStatus): string {
   switch (status) {
-    case "Active":
+    case "active":
       return "bg-green-500"
-    case "Completed":
+    case "completed":
       return "bg-blue-500"
-    case "Pending":
+    case "pending":
       return "bg-yellow-500"
     default:
       return "bg-gray-500"

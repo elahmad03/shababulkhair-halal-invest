@@ -23,15 +23,16 @@ export const OtpEmail = ({ otp, expirationMinutes }: OtpEmailProps) => {
   return (
     <Html>
       <Head />
-      <Preview>Your Halavest verification code</Preview>
+      <Preview>Your Shababul Khair Halal Investment LTD verification code</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={heading}>Halavest</Heading>
+          <Heading style={heading}>Shababul Khair Halal Investment LTD</Heading>
           <Section style={section}>
       
             <Text style={text}>
-              Hello and welcome to Halavest! Use the following one-time password (OTP) to complete your verification process:
+              Assalamu Alaikum! Welcome to Shababul Khair Halal Investment LTD. Use the following one-time password (OTP) to complete your verification process:
             </Text>
+            
             <Text style={otpText}>{otp}</Text>
 
             <Text style={boldText}>
@@ -42,11 +43,11 @@ export const OtpEmail = ({ otp, expirationMinutes }: OtpEmailProps) => {
             </Text>
           </Section>
           <Hr style={hr} />
-          <Text style={footer}>Growing together with technology</Text>
-          <Text style={footer}>&copy; {year} Halavest. All rights reserved.</Text>
+          <Text style={footer}>Growing together with ethical technology</Text>
+          <Text style={footer}>&copy; {year} Shababul Khair Halal Investment LTD. All rights reserved.</Text>
           <Text style={footer}>
-            <Link href="https://halavest.com" style={link}>
-              halavest.com
+            <Link href="https://shababulkhairest.com" style={link}>
+              shababulkhairest.com
             </Link>
           </Text>
         </Container>
@@ -59,7 +60,7 @@ export default OtpEmail;
 
 // --- Styles ---
 const main = {
-  backgroundColor: "#f3f4f6", // secondary background
+  backgroundColor: "#f0fdf4", // Light mint/Islamic-themed background
   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
 };
 
@@ -67,17 +68,18 @@ const container = {
   margin: "0 auto",
   padding: "40px 0",
   maxWidth: "600px",
-  backgroundColor: "#ffffff", // primary foreground
+  backgroundColor: "#ffffff",
   borderRadius: "12px",
-  boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
+  boxShadow: "0 6px 20px rgba(22, 101, 52, 0.08)", // Slight green tinted shadow
 };
 
 const heading = {
-  fontSize: "28px",
+  fontSize: "22px",
   fontWeight: "700",
-  color: "#3b82f6", // primary color
+  color: "#166534", // Deep Islamic Green
   textAlign: "center" as const,
   margin: "20px 0 40px",
+  padding: "0 20px",
 };
 
 const section = {
@@ -90,12 +92,13 @@ const section = {
 const text = {
   fontSize: "16px",
   lineHeight: "24px",
-  color: "#4b5563", // secondary foreground
+  color: "#374151",
 };
 
 const boldText = {
   ...text,
   fontWeight: 600 as const,
+  color: "#166534",
 };
 
 const otpText = {
@@ -104,7 +107,7 @@ const otpText = {
   fontWeight: "700",
   letterSpacing: "5px",
   color: "#ffffff",
-  backgroundColor: "#3b82f6", // primary color
+  backgroundColor: "#166534", // Main Green Brand Color
   padding: "20px 30px",
   borderRadius: "12px",
   textAlign: "center" as const,
@@ -112,12 +115,12 @@ const otpText = {
 };
 
 const hr = {
-  borderColor: "#d1d5db", // subtle separation
+  borderColor: "#dcfce7", // Light green divider
   margin: "30px 0",
 };
 
 const footer = {
-  color: "#4b5563",
+  color: "#6b7280",
   fontSize: "12px",
   lineHeight: "16px",
   textAlign: "center" as const,
@@ -126,6 +129,6 @@ const footer = {
 };
 
 const link = {
-  color: "#3b82f6", // primary color
+  color: "#15803d",
   textDecoration: "underline",
 };

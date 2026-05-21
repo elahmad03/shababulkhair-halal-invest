@@ -39,12 +39,13 @@ async function timingDelay() {
 
 async function issueTokenPair(
   userId: string,
+  email: string,
   role: string,
   meta?: { deviceId?: string | null; ip?: string | null; userAgent?: string | null }
 ) {
   const jti = crypto.randomUUID();
-  const accessToken = signAccessToken({ userId, role, jti });
-  const refreshToken = signRefreshToken({ userId, role, jti });
+  const accessToken = signAccessToken({ userId, email, role, jti });
+  const refreshToken = signRefreshToken({ userId, email, role, jti });
 
   await redisService.storeRefreshToken(userId, jti, refreshToken, {
     deviceId: meta?.deviceId ?? undefined,
@@ -132,7 +133,7 @@ export async function login(input: LoginInput) {
     };
   }
 
-  const tokens = await issueTokenPair(user.id, user.role, {
+  const tokens = await issueTokenPair(user.id, user.email, user.role, {
     deviceId: input.deviceId,
     ip: input.ip,
     userAgent: input.userAgent,
@@ -162,7 +163,7 @@ export async function verifyOtp(userId: string, otp: string, purpose: OtpPurpose
     });
 
     // Issue tokens immediately — user is verified, log them in right away
-    const tokens = await issueTokenPair(user.id, user.role);
+    const tokens = await issueTokenPair(user.id, user.email, user.role);
 
     return {
       message: "Account verified successfully",
@@ -269,11 +270,16 @@ export async function refreshTokens(rawRefreshToken: string) {
 
   await redisService.revokeRefreshToken(userId, jti);
 
-  const tokens = await issueTokenPair(userId, role, {
-    deviceId: session.deviceId,
-    ip: session.ip,
-    userAgent: session.userAgent,
-  });
+  const tokens = await issueTokenPair(
+    userId,
+    user.email,
+    role,
+    {
+      deviceId: session.deviceId,
+      ip: session.ip,
+      userAgent: session.userAgent,
+    }
+  );
 
   // 2. RETURN THE USER ALONGSIDE THE TOKENS
   return {

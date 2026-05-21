@@ -17,20 +17,21 @@ export default function DepositModal({ open, onOpenChange }: { open: boolean, on
     e.preventDefault();
     const numAmount = parseFloat(amount);
     
-    if (!numAmount || numAmount < 1000) {
+    if (!numAmount || numAmount < 10000) {
       return toast.error("Invalid Amount",{ 
-        description: "Minimum deposit is ₦1,000", 
+        description: "Minimum deposit is ₦10,000", 
  }
       );
     }
 
     try {
-      const res = await initializeDeposit({ amount: numAmount }).unwrap();
-      
-      if (res.success && res.data.authorizationUrl) {
-        // Redirect to Paystack/Flutterwave checkout page
-        window.location.href = res.data.authorizationUrl;
-      }
+      const amountKobo = Math.round(numAmount * 100);
+      const res = await initializeDeposit({ amountKobo }).unwrap();
+     
+       if (res.data && res.data.authorizationUrl) {
+         // Redirect to Paystack/Flutterwave checkout page
+         window.location.href = res.data.authorizationUrl;
+       }
     } catch (err: any) {
       toast.error("Deposit Failed", { 
         description: "Could not process deposit. Please try again."

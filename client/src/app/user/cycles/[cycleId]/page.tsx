@@ -4,10 +4,11 @@ import { use } from "react";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import CycleSummaryCard from "@/components/user/cycles/cycleDetails/CycleSummaryCard";
 import StickyInvestmentBar from "@/components/user/cycles/cycleDetails/StickyInvestmentbar";
 import FloatingInvestmentFooter from "@/components/user/cycles/cycleDetails/FloatingInvestmentFooter";
-import { mockInvestmentCycles } from "@/db";
+import { useGetCycleByIdQuery } from "@/store/hooks";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import {
@@ -17,7 +18,10 @@ import {
   TrendingUp,
   Briefcase,
   Shield,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
+import type { Cycle } from "@/store/modules/cycle/cycle.types";
 
 interface CycleDetailsPageProps {
   params: Promise<{
@@ -25,37 +29,81 @@ interface CycleDetailsPageProps {
   }>;
 }
 
-const CycleDetailsPage = ({ params }: CycleDetailsPageProps) => {
-  const { cycleId } = use(params);
+// Adapter to convert API Cycle to InvestmentCycle-like format
+const adaptCycleForComponents = (cycle: Cycle): any => {
+  return {
+    id: Number(cycle.id),
+    name: cycle.cycleName,
+    status: cycle.status,
+    pricePerShare: Number(cycle.pricePerShareKobo) / 100,
+    startDate: cycle.startDate ? new Date(cycle.startDate) : null,
+    endDate: cycle.endDate ? new Date(cycle.endDate) : null,
+    description: cycle.description || "",
+    PricePerShareKobo: cycle.pricePerShareKobo,
+  };
+};
 
-  // Validate cycleId
-  if (!cycleId) notFound();
+const CycleDetailsPageContent = ({ cycleId, cycle, isLoading, isError, error }: { 
+  cycleId: string;
+  cycle: Cycle | null;
+  isLoading: boolean;
+  isError: boolean;
+  error: any;
+}) => {
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-emerald-600" />
+          <p className="text-lg text-muted-foreground">Loading cycle details...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const cycleIdNum = Number(cycleId);
-  if (isNaN(cycleIdNum)) notFound();
+  // Error state
+  if (isError || !cycle) {
+    const errorMessage = 
+      error && 'data' in error && typeof error.data === 'object' && error.data !== null && 'message' in error.data
+        ? (error.data as { message: string }).message
+        : "Failed to load cycle details. Please try again.";
+    
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <Alert variant="destructive" className="max-w-md border-red-200 bg-red-50">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="text-red-800">
+            {errorMessage}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
-  const cycle = mockInvestmentCycles.find((c) => c.id === cycleIdNum);
-  if (!cycle) notFound();
+  // Adapt the cycle for components that expect the old format
+  const adaptedCycle = adaptCycleForComponents(cycle);
 
   // Helper to map status to UI
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case "open_for_investment":
+      case "OPEN_FOR_INVESTMENT":
         return { label: "Open for Investment", color: "bg-emerald-500" };
-      case "active":
+      case "ACTIVE":
         return { label: "Active", color: "bg-blue-500" };
-      case "completed":
+      case "COMPLETED":
         return { label: "Completed", color: "bg-gray-500" };
       default:
         return { label: "Pending", color: "bg-gray-400" };
     }
   };
 
-  const statusConfig = getStatusConfig(cycle.status ?? "pending");
+  const statusConfig = getStatusConfig(adaptedCycle.status ?? "pending");
+  const pricePerShare = adaptedCycle.pricePerShare;
 
   return (
     <>
-      <StickyInvestmentBar cycle={cycle} />
+      <StickyInvestmentBar cycle={adaptedCycle} />
 
       <div className="min-h-screen pb-24 lg:pb-8">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -71,10 +119,10 @@ const CycleDetailsPage = ({ params }: CycleDetailsPageProps) => {
                   </Badge>
                   <div>
                     <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
-                      {cycle.name}
+                      {adaptedCycle.name}
                     </h1>
                     <p className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-                      {formatCurrency(cycle.pricePerShare)} per share
+                      {formatCurrency(pricePerShare)} per share
                     </p>
                   </div>
                 </CardHeader>
@@ -97,12 +145,12 @@ const CycleDetailsPage = ({ params }: CycleDetailsPageProps) => {
                           Investment Window
                         </p>
                         <p className="font-semibold">
-                          {cycle.startDate
-                            ? format(new Date(cycle.startDate), "MMM dd")
+                          {adaptedCycle.startDate
+                            ? format(new Date(adaptedCycle.startDate), "MMM dd")
                             : "N/A"}{" "}
                           -{" "}
-                          {cycle.endDate
-                            ? format(new Date(cycle.endDate), "MMM dd, yyyy")
+                          {adaptedCycle.endDate
+                            ? format(new Date(adaptedCycle.endDate), "MMM dd, yyyy")
                             : "N/A"}
                         </p>
                       </div>
@@ -117,7 +165,21 @@ const CycleDetailsPage = ({ params }: CycleDetailsPageProps) => {
                         <p className="text-sm text-muted-foreground">
                           Duration
                         </p>
-                        <p className="font-semibold">30 Days</p>
+                        <p className="font-semibold">
+                          {adaptedCycle.startDate && adaptedCycle.endDate
+                            ? (() => {
+                                const start = new Date(adaptedCycle.startDate);
+                                const end = new Date(adaptedCycle.endDate);
+                                const diffTime = Math.abs(end.getTime() - start.getTime());
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                const weeks = Math.floor(diffDays / 7);
+                                const months = Math.floor(diffDays / 30);
+                                if (months > 0) return `${months} Month${months > 1 ? "s" : ""}`;
+                                if (weeks > 0) return `${weeks} Week${weeks > 1 ? "s" : ""}`;
+                                return `${diffDays} Day${diffDays > 1 ? "s" : ""}`;
+                              })()
+                            : "N/A"}
+                        </p>
                       </div>
                     </div>
 
@@ -131,8 +193,8 @@ const CycleDetailsPage = ({ params }: CycleDetailsPageProps) => {
                           Maturity Date
                         </p>
                         <p className="font-semibold">
-                          {cycle.endDate
-                            ? format(new Date(cycle.endDate), "MMMM dd, yyyy")
+                          {adaptedCycle.endDate
+                            ? format(new Date(adaptedCycle.endDate), "MMMM dd, yyyy")
                             : "N/A"}
                         </p>
                       </div>
@@ -200,7 +262,7 @@ const CycleDetailsPage = ({ params }: CycleDetailsPageProps) => {
                             </h4>
                             <p className="text-sm text-muted-foreground">
                               Invest during the open window by purchasing shares
-                              at {formatCurrency(cycle.pricePerShare)} per
+                              at {formatCurrency(pricePerShare)} per
                               share.
                             </p>
                           </>
@@ -268,7 +330,7 @@ const CycleDetailsPage = ({ params }: CycleDetailsPageProps) => {
             {/* Right Column - Desktop Summary */}
             <div className="hidden lg:block lg:col-span-5">
               <div className="sticky top-6">
-                <CycleSummaryCard cycle={cycle} />
+                <CycleSummaryCard cycle={adaptedCycle} />
               </div>
             </div>
           </div>
@@ -277,11 +339,30 @@ const CycleDetailsPage = ({ params }: CycleDetailsPageProps) => {
 
       {/* Mobile Summary */}
       <div className="lg:hidden container mx-auto px-4 pb-6">
-        <CycleSummaryCard cycle={cycle} />
+        <CycleSummaryCard cycle={adaptedCycle} />
       </div>
 
-      <FloatingInvestmentFooter cycle={cycle} />
+      <FloatingInvestmentFooter cycle={adaptedCycle} />
     </>
+  );
+};
+
+const CycleDetailsPage = ({ params }: CycleDetailsPageProps) => {
+  const { cycleId } = use(params);
+
+  if (!cycleId) notFound();
+
+  const { data: response, isLoading, isError, error } = useGetCycleByIdQuery(cycleId);
+  const cycle = response?.data ?? null;
+
+  return (
+    <CycleDetailsPageContent 
+      cycleId={cycleId} 
+      cycle={cycle} 
+      isLoading={isLoading} 
+      isError={isError} 
+      error={error} 
+    />
   );
 };
 

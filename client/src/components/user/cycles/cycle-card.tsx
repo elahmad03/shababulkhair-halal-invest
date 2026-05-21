@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 
 interface CycleCardProps {
   title: string;
-  status: 'open_for_investment' | 'active';
+  status: 'OPEN_FOR_INVESTMENT' | 'ACTIVE';
   details: {
     label: string;
     value: string;
@@ -23,11 +23,11 @@ export function CycleCard({
   onButtonClick,
 }: CycleCardProps) {
   const statusConfig = {
-    open_for_investment: {
+    OPEN_FOR_INVESTMENT: {
       label: 'Open for Investment',
       className: 'bg-green-500 hover:bg-green-600 text-white',
     },
-    active: {
+    ACTIVE: {
       label: 'Active',
       className: 'bg-blue-500 hover:bg-blue-600 text-white',
     },

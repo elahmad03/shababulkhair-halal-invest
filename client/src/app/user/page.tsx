@@ -1,15 +1,10 @@
-"use client";
+// 
+import React from 'react'
 
-import ProfilePictureUpload from "@/components/user/profileUpload"
-
-
-function userPage() {
+function page() {
   return (
-    <div>
-      <h1>User Profile</h1>
-      <ProfilePictureUpload />
-    </div>
-  );
+    <div>page</div>
+  )
 }
 
-export default userPage
+export default page

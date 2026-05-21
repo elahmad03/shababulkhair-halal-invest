@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -55,6 +54,7 @@ enum CycleStatus {
   PENDING
   OPEN_FOR_INVESTMENT
   ACTIVE
+  CLOSING         // 🔥 NEW: cycle is ending, disbursement window is open
   COMPLETED
   @@map("cycle_status")
 }
@@ -78,6 +78,16 @@ enum DisbursementType {
   @@map("disbursement_type")
 }
 
+// 🔥 NEW: Replaces TransactionStatus on all disbursement models
+enum DisbursementStatus {
+  PENDING       // Member submitted request
+  APPROVED      // Admin approved, about to transfer
+  TRANSFERRED   // Admin has sent the money manually
+  COMPLETED     // Confirmed received, record closed
+  REJECTED      // Admin rejected the request
+  @@map("disbursement_status")
+}
+
 enum ClaimStatus {
   PENDING_REVIEW
   DOCUMENTS_REQUESTED
@@ -87,77 +97,82 @@ enum ClaimStatus {
   @@map("claim_status")
 }
 
+enum VentureStatus {
+  FUNDED
+  OPERATING
+  LIQUIDATED
+  @@map("venture_status")
+}
+
 // ====================================================================================
 // SECTION 1: USER & IDENTITY MANAGEMENT
 // ====================================================================================
 
 model User {
-  id                  String        @id @default(uuid()) @db.Uuid
-  firstName           String        @map("first_name")
-  lastName            String        @map("last_name")
-  email               String        @unique @db.VarChar(255) 
+  id              String        @id @default(uuid()) @db.Uuid
+  firstName       String        @map("first_name")
+  lastName        String        @map("last_name")
+  email           String        @unique @db.VarChar(255)
   password        String        @map("password_hash")
-  phoneNumber         String?       @unique @db.VarChar(20) @map("phone_number")
-  role                UserRole      @default(MEMBER)
-  status              AccountStatus @default(ACTIVE) 
-  
-  isEmailVerified     Boolean       @default(false) @map("is_email_verified")
-  emailVerifiedAt     DateTime?     @map("email_verified_at") @db.Timestamptz()
-  
-  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+  phoneNumber     String?       @unique @db.VarChar(20) @map("phone_number")
+  role            UserRole      @default(MEMBER)
+  status          AccountStatus @default(ACTIVE)
+
+  isEmailVerified Boolean   @default(false) @map("is_email_verified")
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz()
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relations
-  kycProfiles KycProfile[]
-  wallet              Wallet?
-  preferences         UserPreference?
-  notifications       Notification[]
-  transactions        Transaction[]
-  investments         ShareholderInvestment[]
-  idempotencyKeys     IdempotencyKey[] 
+  kycProfiles     KycProfile[]
+  wallet          Wallet?
+  preferences     UserPreference?
+  notifications   Notification[]
+  transactions    Transaction[]
+  investments     ShareholderInvestment[]
+  idempotencyKeys IdempotencyKey[]
+
+  managedVentures               BusinessVenture[]
+  recordedLedgers               OrganizationalLedger[]
+  disbursementRequests          DisbursementRequest[]
+  approvedDisbursements         DisbursementRequest[]          @relation("ApprovedDisbursements")
+  emergencyDisbursementRequests EmergencyDisbursementRequest[]
+  approvedEmergencyDisbursements EmergencyDisbursementRequest[] @relation("ApprovedEmergencyDisbursements") // 🔥 NEW
+
+  deceasedClaim   DeceasedUserClaim? @relation("DeceasedUserClaim")
+  processedClaims DeceasedUserClaim[] @relation("ProcessedClaims")
+
+  approvedKycs KycProfile[] @relation("KycApprovedBy")
+  kycAuditLogs KycAuditLog[]
+
+  // 🔥 NEW: Profit distributions they authorised
+  authorisedDistributions ProfitDistribution[]
 
   @@index([email])
   @@map("users")
-  // Ventures they manage
-  managedVentures         BusinessVenture[] 
-  
-  // Ledgers they recorded
-  recordedLedgers         OrganizationalLedger[] 
-  
-  // Withdrawals they requested
-  disbursementRequests    DisbursementRequest[] 
-  
-  // Withdrawals they approved (Admin/Committee only)
-  approvedDisbursements   DisbursementRequest[] @relation("ApprovedDisbursements")
-  emergencyDisbursementRequests EmergencyDisbursementRequest[]
-  
-  deceasedClaim           DeceasedUserClaim?      @relation("DeceasedUserClaim")
-  
-  processedClaims         DeceasedUserClaim[]     @relation("ProcessedClaims")
-  approvedKycs KycProfile[] @relation("KycApprovedBy")
-  kycAuditLogs KycAuditLog[]
 }
 
 model VerificationToken {
-  id          String   @id @default(uuid()) @db.Uuid
-  identifier  String   
-  token       String   @unique 
-  expiresAt   DateTime @map("expires_at") @db.Timestamptz()
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  token      String   @unique
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz()
 
   @@index([identifier])
   @@map("verification_tokens")
 }
+
 model KycProfile {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid @map("user_id")
+  id       String @id @default(uuid()) @db.Uuid
+  userId   String @db.Uuid @map("user_id")
+  version  Int    @default(1)
+  isActive Boolean @default(true)
 
-  version   Int      @default(1)
-  isActive  Boolean  @default(true)
-
-  streetAddress String? @map("street_address")
-  city          String? @map("city")
-  stateRegion   String? @map("state_region")
-  countryCode   String? @map("country_code")
+  streetAddress String?   @map("street_address")
+  city          String?
+  stateRegion   String?   @map("state_region")
+  countryCode   String?   @map("country_code")
   dateOfBirth   DateTime? @map("date_of_birth") @db.Date
 
   avatarUrl        String? @map("avatar_url")
@@ -171,17 +186,16 @@ model KycProfile {
 
   kycStatus KycStatus @default(NOT_SUBMITTED) @map("kyc_status")
 
-  // 🔥 Audit
-  submittedAt   DateTime?
-  reviewedAt    DateTime?
-  approvedById  String?   @db.Uuid
-  rejectedReason String?
+  submittedAt    DateTime?
+  reviewedAt     DateTime?
+  approvedById   String?   @db.Uuid @map("approved_by_id")
+  rejectedReason String?   @map("rejected_reason")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  approvedBy User? @relation("KycApprovedBy", fields: [approvedById], references: [id])
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy User?        @relation("KycApprovedBy", fields: [approvedById], references: [id])
   auditLogs  KycAuditLog[]
 
   @@index([userId])
@@ -190,33 +204,33 @@ model KycProfile {
 }
 
 model KycAuditLog {
-  id        String    @id @default(uuid()) @db.Uuid @map("id")
-  action    String    @map("action")
-  actorId   String    @db.Uuid @map("actor_id")
-  kycId     String?   @db.Uuid @map("kyc_id")
-  meta      String?   @map("meta")
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  id        String   @id @default(uuid()) @db.Uuid
+  action    String
+  actorId   String   @db.Uuid @map("actor_id")
+  kycId     String?  @db.Uuid @map("kyc_id")
+  meta      String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-  actor     User         @relation(fields: [actorId], references: [id])
-  kyc       KycProfile?  @relation(fields: [kycId], references: [id])
+  actor User        @relation(fields: [actorId], references: [id])
+  kyc   KycProfile? @relation(fields: [kycId], references: [id])
 
   @@index([actorId])
   @@index([kycId])
   @@index([createdAt])
   @@map("kyc_audit_logs")
 }
+
 // ====================================================================================
 // SECTION 2: CORE FINANCIAL INFRASTRUCTURE
 // ====================================================================================
 
 model Wallet {
-  id               String   @id @default(uuid()) @db.Uuid
-  userId           String   @unique @db.Uuid @map("user_id")
-  
-  balanceKobo      BigInt   @default(0) @map("balance_kobo") 
-  lockedBalanceKobo BigInt  @default(0) @map("locked_balance_kobo") // 🔥 Integrated your brilliant feature
+  id                String @id @default(uuid()) @db.Uuid
+  userId            String @unique @db.Uuid @map("user_id")
+  balanceKobo       BigInt @default(0) @map("balance_kobo")
+  lockedBalanceKobo BigInt @default(0) @map("locked_balance_kobo")
 
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
 
@@ -224,59 +238,103 @@ model Wallet {
 }
 
 model Transaction {
-  id                  String            @id @default(uuid()) @db.Uuid
-  transactionRef      String            @unique @default(uuid()) @db.Uuid @map("transaction_ref") // Prevents double insertion
-  userId              String            @db.Uuid @map("user_id")
-  
-  transactionType     TransactionType   @map("transaction_type")
-  amountKobo          BigInt            @map("amount_kobo")
-  transactionStatus   TransactionStatus @map("transaction_status")
-  
-  narration           String?           @map("narration")
-  relatedEntityType   String?           @map("related_entity_type")
-  relatedEntityId     String?           @db.Uuid @map("related_entity_id")
-  
-  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+  id              String            @id @default(uuid()) @db.Uuid
+  transactionRef  String            @unique @default(uuid()) @db.Uuid @map("transaction_ref")
+  userId          String            @db.Uuid @map("user_id")
+  transactionType TransactionType   @map("transaction_type")
+  amountKobo      BigInt            @map("amount_kobo")
+  transactionStatus TransactionStatus @map("transaction_status")
+  narration       String?
+  relatedEntityType String?         @map("related_entity_type")
+  relatedEntityId   String?         @db.Uuid @map("related_entity_id")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz()
 
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  // 🔥 NEW: Link successful deposit to its Paystack reference
+  paystackDeposit  PaystackDeposit?
 
   @@index([userId])
   @@index([transactionRef])
   @@map("transactions")
 }
 
+// 🔥 NEW: Only successful Paystack deposit references are stored here
+model PaystackDeposit {
+  id            String   @id @default(uuid()) @db.Uuid
+  transactionId String   @unique @db.Uuid @map("transaction_id") // one-to-one with Transaction
+  reference     String   @unique @db.VarChar(100) // Paystack reference e.g. "pay_abc123"
+  amountKobo    BigInt   @map("amount_kobo")
+  paidAt        DateTime @map("paid_at") @db.Timestamptz() // timestamp from Paystack webhook
+  channel       String?  @db.VarChar(50) // e.g. "card", "bank_transfer", "ussd"
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+
+  @@index([reference])
+  @@map("paystack_deposits")
+}
+
 model InvestmentCycle {
-  id                       String             @id @default(uuid()) @db.Uuid
-  cycleName                String             @map("cycle_name")
-  status                   CycleStatus        @default(PENDING) 
-  pricePerShareKobo        BigInt             @map("price_per_share_kobo")
-  startDate                DateTime?          @map("start_date") @db.Timestamptz()
-  endDate                  DateTime?          @map("end_date") @db.Timestamptz()
-  description              String?            
-  
+  id                    String      @id @default(uuid()) @db.Uuid
+  cycleName             String      @map("cycle_name")
+  status                CycleStatus @default(PENDING)
+  pricePerShareKobo     BigInt      @map("price_per_share_kobo")
+  startDate             DateTime?   @map("start_date") @db.Timestamptz()
+  endDate               DateTime?   @map("end_date") @db.Timestamptz()
+  description           String?
+
+  // These are computed and stored when ProfitDistribution is finalised
   totalProfitRealizedKobo  BigInt             @default(0) @map("total_profit_realized_kobo")
   investorProfitPoolKobo   BigInt             @default(0) @map("investor_profit_pool_kobo")
   orgProfitShareKobo       BigInt             @default(0) @map("org_profit_share_kobo")
   profitDistributionStatus DistributionStatus @default(PENDING) @map("profit_distribution_status")
-  
-  createdAt                DateTime           @default(now()) @map("created_at") @db.Timestamptz()
 
-  investments         ShareholderInvestment[]
+  // 🔥 REMOVED: investorProfitPercentage — moved to ProfitDistribution where it belongs
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  investments           ShareholderInvestment[]
   organizationalLedgers OrganizationalLedger[]
-  businessVentures    BusinessVenture[]
-  disbursementReqs    DisbursementRequest[]
+  businessVentures      BusinessVenture[]
+  disbursementReqs      DisbursementRequest[]
+  // 🔥 NEW
+  profitDistribution    ProfitDistribution?
 
   @@map("investment_cycles")
 }
 
+// 🔥 NEW: Records the profit split decision made by admin at cycle close
+model ProfitDistribution {
+  id                      String   @id @default(uuid()) @db.Uuid
+  cycleId                 String   @unique @db.Uuid @map("cycle_id") // one per cycle
+  authorisedById          String   @db.Uuid @map("authorised_by_id") // admin who did it
+
+  // The split — must always sum to 100
+  investorProfitPercentage Decimal @map("investor_profit_percentage") // e.g. 95.00
+  orgProfitPercentage      Decimal @map("org_profit_percentage")      // e.g. 5.00
+
+  // Resolved amounts in kobo
+  totalProfitKobo          BigInt  @map("total_profit_kobo")
+  investorProfitPoolKobo   BigInt  @map("investor_profit_pool_kobo")
+  orgProfitShareKobo       BigInt  @map("org_profit_share_kobo")
+
+  notes       String?  // admin can leave a note explaining the split decision
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  cycle        InvestmentCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  authorisedBy User            @relation(fields: [authorisedById], references: [id])
+
+  @@map("profit_distributions")
+}
+
 model ShareholderInvestment {
-  id                  String   @id @default(uuid()) @db.Uuid
-  userId              String   @db.Uuid @map("user_id")
-  cycleId             String   @db.Uuid @map("cycle_id")
-  sharesAllocated     BigInt   @map("shares_allocated")
-  amountInvestedKobo  BigInt   @map("amount_invested_kobo")
-  profitEarnedKobo    BigInt   @default(0) @map("profit_earned_kobo")
-  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @db.Uuid @map("user_id")
+  cycleId            String   @db.Uuid @map("cycle_id")
+  sharesAllocated    BigInt   @map("shares_allocated")
+  amountInvestedKobo BigInt   @map("amount_invested_kobo")
+  profitEarnedKobo   BigInt   @default(0) @map("profit_earned_kobo")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   user  User            @relation(fields: [userId], references: [id], onDelete: Restrict)
   cycle InvestmentCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
@@ -290,14 +348,17 @@ model ShareholderInvestment {
 // ====================================================================================
 
 model OrganizationalLedger {
-  id              String          @id @default(uuid()) @db.Uuid
-  entryType       LedgerEntryType @map("entry_type")
-  source          String          
-  amountKobo      BigInt          @map("amount_kobo")
-  date            DateTime        @db.Timestamptz()
-  relatedCycleId  String?         @db.Uuid @map("related_cycle_id")
-  recordedById    String          @db.Uuid @map("recorded_by_id")
-  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+  id             String          @id @default(uuid()) @db.Uuid
+  entryType      LedgerEntryType @map("entry_type")
+  source         String
+  amountKobo     BigInt          @map("amount_kobo")
+  date           DateTime        @db.Timestamptz()
+  relatedCycleId String?         @db.Uuid @map("related_cycle_id")
+  recordedById   String          @db.Uuid @map("recorded_by_id")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+
+  // 🔥 NEW: Running balance snapshot so you never need a full table scan
+  runningBalanceKobo BigInt @map("running_balance_kobo")
 
   cycle      InvestmentCycle? @relation(fields: [relatedCycleId], references: [id])
   recordedBy User             @relation(fields: [recordedById], references: [id])
@@ -306,13 +367,17 @@ model OrganizationalLedger {
 }
 
 model BusinessVenture {
-  id                   String   @id @default(uuid()) @db.Uuid
-  cycleId              String   @db.Uuid @map("cycle_id")
-  managedById          String   @db.Uuid @map("managed_by_id")
-  companyName          String   @map("company_name")
-  allocatedAmountKobo  BigInt   @map("allocated_amount_kobo")
-  expectedProfitKobo   BigInt   @map("expected_profit_kobo")
-  profitRealizedKobo   BigInt   @default(0) @map("profit_realized_kobo")
+  id                  String        @id @default(uuid()) @db.Uuid
+  cycleId             String        @db.Uuid @map("cycle_id")
+  managedById         String        @db.Uuid @map("managed_by_id")
+  companyName         String        @map("company_name")
+  allocatedAmountKobo BigInt        @map("allocated_amount_kobo")
+  expectedProfitKobo  BigInt        @map("expected_profit_kobo")
+  profitRealizedKobo  BigInt        @default(0) @map("profit_realized_kobo")
+  status              VentureStatus @default(FUNDED) @map("venture_status")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz() // 🔥 NEW
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()      // 🔥 NEW
 
   cycle     InvestmentCycle @relation(fields: [cycleId], references: [id])
   managedBy User            @relation(fields: [managedById], references: [id])
@@ -325,13 +390,13 @@ model BusinessVenture {
 // ====================================================================================
 
 model Notification {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid @map("user_id")
-  title       String
-  message     String
-  isRead      Boolean  @default(false) @map("is_read")
-  link        String?
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid @map("user_id")
+  title     String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  link      String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -342,6 +407,9 @@ model Notification {
 model UserPreference {
   id           String  @id @default(uuid()) @db.Uuid
   userId       String  @unique @db.Uuid @map("user_id")
+  // If true: at cycle close, capital + profit auto-roll into next cycle
+  // If false: member gets notified and must submit a DisbursementRequest
+  // if they want anything out. Silence = auto-reinvest anyway.
   autoReinvest Boolean @default(false) @map("auto_reinvest")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -350,21 +418,25 @@ model UserPreference {
 }
 
 model DisbursementRequest {
-  id                    String            @id @default(uuid()) @db.Uuid
-  userId                String            @db.Uuid @map("user_id")
-  amountKobo            BigInt            @map("amount_kobo")
-  disbursementType      DisbursementType  @map("disbursement_type")
-  relatedCycleId        String?           @db.Uuid @map("related_cycle_id")
-  
-  bankName              String            @map("bank_name")
-  accountNumber         String            @db.VarChar(20) @map("account_number")
-  accountName           String            @map("account_name")
-  
-  status                TransactionStatus @default(PENDING) 
-  requestedAt           DateTime          @default(now()) @map("requested_at") @db.Timestamptz()
-  approvedById          String?           @db.Uuid @map("approved_by_id")
-  processedAt           DateTime?         @map("processed_at") @db.Timestamptz()
-  rejectionReason       String?           @map("rejection_reason")
+  id               String             @id @default(uuid()) @db.Uuid
+  userId           String             @db.Uuid @map("user_id")
+  amountKobo       BigInt             @map("amount_kobo")
+  disbursementType DisbursementType   @map("disbursement_type")
+  relatedCycleId   String?            @db.Uuid @map("related_cycle_id")
+
+  bankName      String @map("bank_name")
+  accountNumber String @db.VarChar(20) @map("account_number")
+  accountName   String @map("account_name")
+
+  // 🔥 UPDATED: Now uses DisbursementStatus instead of TransactionStatus
+  status          DisbursementStatus @default(PENDING)
+  requestedAt     DateTime           @default(now()) @map("requested_at") @db.Timestamptz()
+  approvedById    String?            @db.Uuid @map("approved_by_id")
+  processedAt     DateTime?          @map("processed_at") @db.Timestamptz()
+  rejectionReason String?            @map("rejection_reason")
+
+  // 🔥 NEW: Admin can leave a note when transferring or rejecting
+  adminNote String? @map("admin_note")
 
   user       User             @relation(fields: [userId], references: [id])
   cycle      InvestmentCycle? @relation(fields: [relatedCycleId], references: [id])
@@ -374,30 +446,40 @@ model DisbursementRequest {
 }
 
 model EmergencyDisbursementRequest {
-  id                  String            @id @default(uuid()) @db.Uuid
-  userId              String            @db.Uuid @map("user_id")
-  reason              String            
-  amountKobo          BigInt            @map("amount_kobo")
-  status              TransactionStatus @default(PENDING) 
-  requestedAt         DateTime          @default(now()) @map("requested_at") @db.Timestamptz()
-  processedAt         DateTime?         @map("processed_at") @db.Timestamptz()
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid @map("user_id")
+  reason      String
+  amountKobo  BigInt   @map("amount_kobo")
 
-  user User @relation(fields: [userId], references: [id])
+  bankName      String @map("bank_name")       // 🔥 NEW: needed for manual transfer
+  accountNumber String @db.VarChar(20) @map("account_number") // 🔥 NEW
+  accountName   String @map("account_name")    // 🔥 NEW
+
+  // 🔥 UPDATED: Now uses DisbursementStatus, same flow as normal disbursements
+  status          DisbursementStatus @default(PENDING)
+  requestedAt     DateTime           @default(now()) @map("requested_at") @db.Timestamptz()
+  approvedById    String?            @db.Uuid @map("approved_by_id")  // 🔥 NEW
+  processedAt     DateTime?          @map("processed_at") @db.Timestamptz()
+  rejectionReason String?            @map("rejection_reason")          // 🔥 NEW
+  adminNote       String?            @map("admin_note")                // 🔥 NEW
+
+  user       User  @relation(fields: [userId], references: [id])
+  approvedBy User? @relation("ApprovedEmergencyDisbursements", fields: [approvedById], references: [id]) // 🔥 NEW
 
   @@map("emergency_disbursement_requests")
 }
 
 model DeceasedUserClaim {
-  id                    String      @id @default(uuid()) @db.Uuid
-  deceasedUserId        String      @unique @db.Uuid @map("deceased_user_id")
-  claimantName          String      @map("claimant_name")
-  claimantContact       String      @map("claimant_contact")
-  status                ClaimStatus @default(PENDING_REVIEW) 
-  deathCertificateUrl   String?     @map("death_certificate_url")
-  adminNotes            String?     @map("admin_notes")
-  processedById         String?     @db.Uuid @map("processed_by_id")
-  createdAt             DateTime    @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt             DateTime    @updatedAt @map("updated_at") @db.Timestamptz()
+  id                  String      @id @default(uuid()) @db.Uuid
+  deceasedUserId      String      @unique @db.Uuid @map("deceased_user_id")
+  claimantName        String      @map("claimant_name")
+  claimantContact     String      @map("claimant_contact")
+  status              ClaimStatus @default(PENDING_REVIEW)
+  deathCertificateUrl String?     @map("death_certificate_url")
+  adminNotes          String?     @map("admin_notes")
+  processedById       String?     @db.Uuid @map("processed_by_id")
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz()
 
   deceasedUser User  @relation("DeceasedUserClaim", fields: [deceasedUserId], references: [id])
   processedBy  User? @relation("ProcessedClaims", fields: [processedById], references: [id])
@@ -410,20 +492,17 @@ model DeceasedUserClaim {
 // ====================================================================================
 
 model IdempotencyKey {
-  id              String    @id @default(uuid()) @db.Uuid
-  key             String    @unique @db.VarChar(100) 
-  userId          String?   @db.Uuid @map("user_id") 
-  requestMethod   String    @db.VarChar(10) @map("request_method") 
-  requestPath     String    @db.VarChar(255) @map("request_path") 
-  
-  recoveryPoint   String    @default("STARTED") @map("recovery_point") 
-  lockedAt        DateTime? @map("locked_at") @db.Timestamptz() 
-  
-  responseCode    Int?      @map("response_code")
-  responseBody    Json?     @map("response_body") 
-
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  id            String    @id @default(uuid()) @db.Uuid
+  key           String    @unique @db.VarChar(100)
+  userId        String?   @db.Uuid @map("user_id")
+  requestMethod String    @db.VarChar(10) @map("request_method")
+  requestPath   String    @db.VarChar(255) @map("request_path")
+  recoveryPoint String    @default("STARTED") @map("recovery_point")
+  lockedAt      DateTime? @map("locked_at") @db.Timestamptz()
+  responseCode  Int?      @map("response_code")
+  responseBody  Json?     @map("response_body")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
 
   user User? @relation(fields: [userId], references: [id])
 

@@ -46,7 +46,7 @@ const ShareCounter = ({
         size="icon"
         onClick={handleDecrement}
         disabled={shares === 0}
-        className="h-14 w-14 rounded-full border-2 hover:bg-emerald-50 hover:border-emerald-500 disabled:opacity-50"
+        className="h-14 w-14 rounded-full border-2 hover:bg-primary/10 hover:border-primary disabled:opacity-50"
       >
         <Minus className="h-6 w-6" />
       </Button>
@@ -58,7 +58,7 @@ const ShareCounter = ({
           onChange={handleInputChange}
           min={0}
           max={maxShares}
-          className="w-32 h-16 text-center text-3xl font-bold border-2 focus:border-emerald-500"
+          className="w-32 h-16 text-center text-3xl font-bold border-2 focus:border-primary"
         />
         <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground whitespace-nowrap">
           shares
@@ -71,7 +71,7 @@ const ShareCounter = ({
         size="icon"
         onClick={handleIncrement}
         disabled={shares >= maxShares}
-        className="h-14 w-14 rounded-full border-2 hover:bg-emerald-50 hover:border-emerald-500 disabled:opacity-50"
+        className="h-14 w-14 rounded-full border-2 hover:bg-primary/10 hover:border-primary disabled:opacity-50"
       >
         <Plus className="h-6 w-6" />
       </Button>

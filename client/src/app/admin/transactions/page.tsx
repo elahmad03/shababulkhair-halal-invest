@@ -1,6 +1,4 @@
 import HeaderBox from '@/components/common/HeaderBox'
-import { title } from 'process'
-import React from 'react'
 
 function page() {
   return (
