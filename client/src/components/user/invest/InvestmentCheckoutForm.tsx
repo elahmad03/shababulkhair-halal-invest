@@ -10,7 +10,8 @@ import { ArrowLeft, Wallet as WalletIcon, Loader2 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { toast } from "sonner"
 import type { Cycle } from "@/store/modules/cycle/cycle.types"
-import type { Wallet } from "@/store/modules/wallet/wallet.types"
+// import type { Wallet } from "@/store/modules/wallet/wallet.types"
+import type { WalletBalance as Wallet } from "@/store/modules/wallet/Wallet.types"
 import ShareCounter from "./ShareCounter"
 import InvestmentSummaryCard from "./InvestmentSummaryCard"
 
@@ -27,7 +28,7 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
 
   const pricePerShareNaira = Number(cycle.pricePerShareKobo) / 100
   const totalInvestment = pricePerShareNaira * shares
-  const walletBalanceNaira = Number(wallet.balance) / 100
+  const walletBalanceNaira = Number(wallet.balanceKobo) / 100
   const remainingBalance = walletBalanceNaira - totalInvestment
   const hasSufficientFunds = remainingBalance >= 0
   const canSubmit = shares > 0 && hasSufficientFunds && termsAccepted && !isSubmitting

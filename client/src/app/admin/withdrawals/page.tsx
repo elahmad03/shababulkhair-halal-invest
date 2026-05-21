@@ -19,10 +19,10 @@ const statusMap: Record<string, "pending" | "approved" | "processed" | "rejected
   REJECTED: "rejected",
 };
 
-const reverseStatusMap: Record<"pending" | "approved" | "processed" | "rejected", string> = {
+const reverseStatusMap: Record<"pending" | "approved" | "processed" | "rejected", "PENDING" | "APPROVED" | "TRANSFERRED" | "REJECTED"> = {
   pending: "PENDING",
   approved: "APPROVED",
-  processed: "PROCESSED",
+  processed: "TRANSFERRED",
   rejected: "REJECTED",
 };
 

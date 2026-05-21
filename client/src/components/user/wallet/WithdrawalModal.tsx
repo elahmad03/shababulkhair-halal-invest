@@ -18,16 +18,21 @@ interface WithdrawModalProps {
 
 export default function WithdrawModal({ open, onOpenChange, maxAmount }: WithdrawModalProps) {
   const [amount, setAmount] = useState("");
+  const [disbursementType, setDisbursementType] = useState<"WALLET_BALANCE" | "PROFIT_ONLY" | "FULL_DIVESTMENT">("WALLET_BALANCE");
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
-  
+
   const [requestWithdrawal, { isLoading }] = useRequestWithdrawalMutation();
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     const numAmount = parseFloat(amount);
-    
+    if (!numAmount || numAmount <= 0) {
+      return toast.error("Invalid Amount", {
+        description: "Please enter a valid withdrawal amount.",
+      });
+    }
     if (numAmount > maxAmount) {
       return toast.error("Insufficient Balance", {
         description: "You cannot withdraw more than your available balance.",
@@ -35,27 +40,22 @@ export default function WithdrawModal({ open, onOpenChange, maxAmount }: Withdra
     }
 
     try {
-      const idempotencyKey = uuidv4();
-
-      await requestWithdrawal({ 
-        amount: numAmount,
+      await requestWithdrawal({
+        amountKobo: Math.round(numAmount * 100),
+        disbursementType,
         bankName,
         accountNumber,
         accountName,
-        idempotencyKey
       }).unwrap();
-      
-      // 🔥 Sonner Success Toast
-      toast.success("Withdrawal Queued Successfully", { 
+
+      toast.success("Withdrawal Queued Successfully", {
         description: `₦${numAmount.toLocaleString()} has been locked and is pending admin processing.`,
       });
-      
+
       onOpenChange(false);
       setAmount(""); setBankName(""); setAccountNumber(""); setAccountName("");
-      
     } catch (err: any) {
-      // 🔥 Sonner Error Toast
-      toast.error("Request Failed", { 
+      toast.error("Request Failed", {
         description: err?.data?.message || "Could not process withdrawal. Please try again.",
       });
     }
@@ -76,6 +76,7 @@ export default function WithdrawModal({ open, onOpenChange, maxAmount }: Withdra
           </div>
         </DialogHeader>
         
+
         <form onSubmit={handleWithdraw} className="space-y-5 mt-4">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
@@ -84,9 +85,9 @@ export default function WithdrawModal({ open, onOpenChange, maxAmount }: Withdra
                 Max: ₦{maxAmount.toLocaleString()}
               </span>
             </div>
-            <Input 
-              id="w-amount" 
-              type="number" 
+            <Input
+              id="w-amount"
+              type="number"
               placeholder="0.00"
               max={maxAmount}
               value={amount}
@@ -95,6 +96,22 @@ export default function WithdrawModal({ open, onOpenChange, maxAmount }: Withdra
               className="text-lg font-semibold"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="disbursementType">Withdrawal Type</Label>
+            <select
+              id="disbursementType"
+              value={disbursementType}
+              onChange={e => setDisbursementType(e.target.value as any)}
+              disabled={isLoading}
+              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring"
+              required
+            >
+              <option value="WALLET_BALANCE">Wallet Balance</option>
+              <option value="PROFIT_ONLY">Profit Only</option>
+              <option value="FULL_DIVESTMENT">Full Divestment</option>
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

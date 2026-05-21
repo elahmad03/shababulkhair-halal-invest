@@ -137,10 +137,23 @@ class UserService {
 
     return {
       ...userRest,
+      avatarUrl: kyc?.avatarUrl || null,
       kyc: kyc
         ? {
             status: kyc.kycStatus,
             verificationDate: kyc.reviewedAt,
+            avatarUrl: kyc.avatarUrl,
+            idCardFrontUrl: kyc.idCardFrontUrl,
+            idCardBackUrl: kyc.idCardBackUrl,
+            streetAddress: kyc.streetAddress,
+            city: kyc.city,
+            stateRegion: kyc.stateRegion,
+            countryCode: kyc.countryCode,
+            dateOfBirth: kyc.dateOfBirth,
+            governmentIdType: kyc.governmentIdType,
+            nextOfKinName: kyc.nextOfKinName,
+            nextOfKinRelationship: kyc.nextOfKinRelationship,
+            nextOfKinPhone: kyc.nextOfKinPhone,
           }
         : undefined,
       wallet: wallet

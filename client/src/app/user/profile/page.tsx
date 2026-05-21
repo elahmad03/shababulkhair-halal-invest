@@ -1,15 +1,10 @@
-"use client";
-
-import UserProfile from '@/components/user/userProfile'
+// 
 import React from 'react'
 
-function UserProfilePage() {
+function page() {
   return (
-    <div>
-      {/* <UserProfile/> */}
-      page
-      </div>
+    <div>page</div>
   )
 }
 
-export default UserProfilePage
+export default page

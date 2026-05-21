@@ -1,7 +1,8 @@
+import { serializeBigInt } from "./serializer";
 
 export const successResponse = <T>(data: T, message?: string) => ({
   success: true,
-  data,
+  data: serializeBigInt(data),
   message,
 });
 

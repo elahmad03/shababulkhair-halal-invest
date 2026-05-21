@@ -51,6 +51,35 @@ export const recordVentureProfitSchema = z.object({
     .max(1_000_000_000, { error: "Amount too large" }),
 });
 
+// 🔥 NEW: Cycle status transition validator
+export const updateCycleStatusSchema = z.object({
+  status: z.enum(["PENDING", "OPEN_FOR_INVESTMENT", "ACTIVE", "CLOSING", "COMPLETED"], {
+    error: (issue) => issue.input === undefined 
+      ? "Status is required" 
+      : "Status must be a valid cycle status",
+  }),
+  durationDays: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe("Duration in days for ACTIVE cycles"),
+});
+
+// 🔥 NEW: Profit distribution validator
+export const distributeProfitSchema = z.object({
+  investorProfitPercentage: z
+    .number()
+    .min(0, { error: "Investor profit percentage must be >= 0" })
+    .max(100, { error: "Investor profit percentage must be <= 100" })
+    .describe("Percentage of profit to distribute to investors (0-100)"),
+  notes: z
+    .string()
+    .max(500)
+    .optional()
+    .describe("Admin notes explaining the profit split decision"),
+});
+
 export const completeCycleSchema = z.object({
   investorProfitPercent: z
     .number()
@@ -120,3 +149,5 @@ export type RecordVentureProfitInput = z.infer<typeof recordVentureProfitSchema>
 export type CompleteCycleInput       = z.infer<typeof completeCycleSchema>;
 export type CreateVentureInput       = z.infer<typeof createVentureSchema>;
 export type RecordLedgerEntryInput   = z.infer<typeof recordLedgerEntrySchema>;
+export type UpdateCycleStatusInput   = z.infer<typeof updateCycleStatusSchema>; // 🔥 NEW
+export type DistributeProfitInput    = z.infer<typeof distributeProfitSchema>;  // 🔥 NEW

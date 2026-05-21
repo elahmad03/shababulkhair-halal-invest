@@ -68,9 +68,22 @@ router.patch("/:id/open", adminOrCommittee, CycleController.openCycle);
  */
 router.patch("/:id/activate", adminOrCommittee, CycleController.activateCycle);
 
+
+/**
+ * PATCH /cycles/:id/status
+ * Generic status transition (PENDING → ... → COMPLETED)
+ */
+router.patch("/:id/status", adminOrCommittee, CycleController.updateCycleStatus);
+
+/**
+ * POST /cycles/:id/distribute-profit
+ * Distribute profit and record split (CLOSING phase only)
+ */
+router.post("/:id/distribute-profit", adminOrCommittee, CycleController.distributeProfit);
+
 /**
  * PATCH /cycles/:id/complete
- * ACTIVE → COMPLETED (distributes profits to all investors)
+ * ACTIVE → COMPLETED (legacy endpoint, still supported)
  * Body: { investorProfitPercent: 80 }
  */
 router.patch("/:id/complete", adminOrCommittee, CycleController.completeCycle);

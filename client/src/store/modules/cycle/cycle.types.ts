@@ -1,3 +1,27 @@
+// Status Transition
+export interface UpdateCycleStatusRequest {
+  status: "PENDING" | "OPEN_FOR_INVESTMENT" | "ACTIVE" | "CLOSING" | "COMPLETED";
+  durationDays?: number;
+}
+
+// Profit Distribution
+export interface DistributeProfitRequest {
+  investorProfitPercentage: number;
+  notes?: string;
+}
+export interface DistributeProfitResponse {
+  cycle: Cycle;
+  distribution: {
+    id: string;
+    investorProfitPercentage: number;
+    orgProfitPercentage: number;
+    totalProfitKobo: string;
+    investorProfitPoolKobo: string;
+    orgProfitShareKobo: string;
+    notes?: string;
+    createdAt: string;
+  };
+}
 
 // ─── Types ───────────────────────────────────────────────────────────
 

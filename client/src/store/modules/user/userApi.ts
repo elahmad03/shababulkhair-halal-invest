@@ -9,10 +9,23 @@ export interface User {
   role: "ADMIN" | "COMMITTEE" | "MEMBER";
   status: "ACTIVE" | "SUSPENDED" | "BANNED";
   walletAddress?: string;
+  avatarUrl?: string;
   createdAt: string;
   kyc?: {
     status: string;
     verificationDate?: string;
+    avatarUrl?: string;
+    idCardFrontUrl?: string;
+    idCardBackUrl?: string;
+    streetAddress?: string;
+    city?: string;
+    stateRegion?: string;
+    countryCode?: string;
+    dateOfBirth?: string;
+    governmentIdType?: string;
+    nextOfKinName?: string;
+    nextOfKinRelationship?: string;
+    nextOfKinPhone?: string;
   };
   _count?: {
     investments: number;

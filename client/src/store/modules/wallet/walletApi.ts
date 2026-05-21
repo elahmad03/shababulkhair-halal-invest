@@ -1,24 +1,46 @@
 import { rootApi } from "@/store/rootApi";
-import type { ApiResponse } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface DepositRequest {
-  amount: number; // In Naira (converted to Kobo on backend)
+export interface WalletBalance {
+  balanceKobo: string;
+  lockedBalanceKobo: string;
+  totalKobo: string;
 }
 
-export interface DepositResponse {
+export interface WalletTransaction {
+  id: string;
+  transactionRef: string;
+  transactionType: string;
+  amountKobo: string;
+  transactionStatus: string;
+  narration: string | null;
+  createdAt: string;
+}
+
+export interface WalletSummary {
+  balanceKobo: string;
+  lockedBalanceKobo: string;
+  recentTransactions: WalletTransaction[];
+}
+
+export interface InitializeDepositRequest {
+  amountKobo: number;
+}
+
+export interface InitializeDepositResponse {
   transactionRef: string;
   amountKobo: string;
   authorizationUrl: string;
+  accessCode: string;
 }
 
 export interface WithdrawRequest {
-  amount: number;
+  amountKobo: number;
+  disbursementType: "WALLET_BALANCE" | "PROFIT_ONLY" | "FULL_DIVESTMENT";
   bankName: string;
   accountNumber: string;
   accountName: string;
-  idempotencyKey: string; 
 }
 
 export interface WithdrawResponse {
@@ -27,16 +49,21 @@ export interface WithdrawResponse {
   amountKobo: string;
 }
 
-export interface WalletSummary {
-  balanceKobo: string;
-  lockedBalanceKobo: string;
-  recentTransactions: Array<{
-    id: string;
-    transactionType: string;
-    amountKobo: string;
-    transactionStatus: string;
-    createdAt: string;
-  }>;
+export interface AdminAdjustRequest {
+  userId: string;
+  amountKobo: number;
+  narration: string;
+}
+
+export interface AdminAdjustResponse {
+  adjusted: boolean;
+  transactionId: string;
+  newBalance: string;
+}
+
+export interface ResolveWithdrawalRequest {
+  status: "APPROVED" | "REJECTED";
+  rejectionReason?: string;
 }
 
 export interface WithdrawalRecord {
@@ -48,94 +75,137 @@ export interface WithdrawalRecord {
   bankName: string;
   accountNumber: string;
   accountName: string;
-  status: "PENDING" | "APPROVED" | "PROCESSED" | "REJECTED";
+  status: "PENDING" | "APPROVED" | "TRANSFERRED" | "COMPLETED" | "REJECTED";
   rejectionReason?: string;
   requestedAt: string;
   processedAt?: string;
 }
 
-export interface ResolveWithdrawalRequest {
-  status: "APPROVED" | "REJECTED";
-  rejectionReason?: string;
+export interface TransactionsResponse {
+  transactions: WalletTransaction[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ListWithdrawalsRequest {
+  status?: "PENDING" | "APPROVED" | "TRANSFERRED" | "COMPLETED" | "REJECTED";
+  page?: number;
+  limit?: number;
+}
+
+export interface ListWithdrawalsResponse {
+  data: WithdrawalRecord[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 export const walletApi = rootApi.injectEndpoints({
   endpoints: (build) => ({
-    // Initialize a deposit to get the Paystack/Gateway URL
-    initializeDeposit: build.mutation<ApiResponse<DepositResponse>, DepositRequest>({
+    // GET /api/wallet/me - Get authenticated user's wallet
+    getMyWallet: build.query<{ data: WalletBalance }, void>({
+      query: () => ({ url: "/wallet/me" }),
+      providesTags: ["Wallet"],
+    }),
+
+    // GET /api/wallet/summary - Get wallet summary with recent transactions
+    getWalletSummary: build.query<{ data: WalletSummary }, void>({
+      query: () => ({ url: "/wallet/summary" }),
+      providesTags: ["Wallet"],
+    }),
+
+    // POST /api/wallet/deposit/initialize - Initialize Paystack deposit
+    initializeDeposit: build.mutation<{ data: InitializeDepositResponse }, InitializeDepositRequest>({
       query: (body) => ({ 
         url: "/wallet/deposit/initialize", 
         method: "POST", 
         body 
       }),
+      invalidatesTags: ["Wallet"],
     }),
 
-    // Request a manual withdrawal (quarantines funds)
-    requestWithdrawal: build.mutation<ApiResponse<WithdrawResponse>, WithdrawRequest>({
+    // POST /api/wallet/withdraw - Request withdrawal
+    requestWithdrawal: build.mutation<{ data: WithdrawResponse }, WithdrawRequest>({
       query: (body) => ({ 
         url: "/wallet/withdraw", 
         method: "POST", 
         body 
       }),
-      // Invalidates wallet cache so the UI updates to show the locked balance immediately
-      invalidatesTags: ["Wallet"], 
+      invalidatesTags: ["Wallet"],
     }),
 
-    // Get the user's current wallet status (balances and recent transactions)
-    getWalletSummary: build.query<ApiResponse<WalletSummary>, void>({
-      query: () => ({ url: "/wallet/summary" }),
+    // GET /api/wallet/transactions - Get transaction history
+    getTransactions: build.query<
+      { data: TransactionsResponse },
+      { page?: number; limit?: number }
+    >({
+      query: ({ page = 1, limit = 20 }) => ({
+        url: `/wallet/transactions?page=${page}&limit=${limit}`,
+      }),
       providesTags: ["Wallet"],
     }),
 
     // ─── ADMIN ENDPOINTS ────────────────────────────────────────────────────
     
-    // GET /admin/withdrawals - List all withdrawal requests with optional filtering
-    listWithdrawals: build.query<
-      ApiResponse<{
-        data: WithdrawalRecord[];
-        pagination: {
-          page: number;
-          limit: number;
-          total: number;
-          totalPages: number;
-        };
-      }>,
-      { status?: string; page?: number; limit?: number }
-    >({
-      query: ({ status, page = 1, limit = 10 }) => {
-        const params = new URLSearchParams();
-        if (status) params.append("status", status);
-        params.append("page", page.toString());
-        params.append("limit", limit.toString());
-        return {
-          url: `/admin/withdrawals?${params.toString()}`,
-        };
-      },
-      providesTags: ["Withdrawals"],
+    // GET /api/wallet/admin/:userId - Get user's wallet as admin
+    getAdminWallet: build.query<{ data: WalletBalance }, string>({
+      query: (userId) => ({ url: `/wallet/admin/${userId}` }),
+      providesTags: ["Wallet"],
     }),
 
-    // PATCH /admin/withdrawals/:id/resolve - Approve or reject a withdrawal
+    // POST /api/wallet/admin/adjust - Admin manual wallet adjustment
+    adminAdjust: build.mutation<{ data: AdminAdjustResponse }, AdminAdjustRequest>({
+      query: (body) => ({
+        url: "/wallet/admin/adjust",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Wallet"],
+    }),
+
+    // POST /api/wallet/admin/withdrawals/:id/resolve - Resolve withdrawal request
     resolveWithdrawal: build.mutation<
-      ApiResponse<WithdrawalRecord>,
+      { data: WithdrawalRecord },
       { id: string; body: ResolveWithdrawalRequest }
     >({
       query: ({ id, body }) => ({
-        url: `/admin/withdrawals/${id}/resolve`,
-        method: "PATCH",
+        url: `/wallet/admin/withdrawals/${id}/resolve`,
+        method: "POST",
         body,
       }),
-      invalidatesTags: ["Withdrawals", "Dashboard"],
+      invalidatesTags: ["Wallet", "Withdrawals", "Dashboard"],
+    }),
+
+    // GET /api/wallet/admin/withdrawals - List withdrawal requests
+    listWithdrawals: build.query<
+      { data: ListWithdrawalsResponse },
+      ListWithdrawalsRequest
+    >({
+      query: ({ status, page = 1, limit = 20 }) => {
+        let url = `/wallet/admin/withdrawals?page=${page}&limit=${limit}`;
+        if (status) url += `&status=${status}`;
+        return { url };
+      },
+      providesTags: ["Withdrawals"],
     }),
   }),
   overrideExisting: process.env.NODE_ENV !== "production",
 });
 
 export const {
+  useGetMyWalletQuery,
+  useGetWalletSummaryQuery,
   useInitializeDepositMutation,
   useRequestWithdrawalMutation,
-  useGetWalletSummaryQuery,
-  useListWithdrawalsQuery,
+  useGetTransactionsQuery,
+  useGetAdminWalletQuery,
+  useAdminAdjustMutation,
   useResolveWithdrawalMutation,
+  useListWithdrawalsQuery,
 } = walletApi;

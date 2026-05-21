@@ -10,7 +10,26 @@ import {
   completeCycleSchema,
   createVentureSchema,
   recordLedgerEntrySchema,
+  updateCycleStatusSchema,
+  distributeProfitSchema,
 } from "./cycle.validators";
+// PATCH /cycles/:id/status — generic status transition (admin only)
+export const updateCycleStatus = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const adminId = req.user!.userId;
+  const input = updateCycleStatusSchema.parse(req.body);
+  const result = await CycleService.updateCycleStatus(id, input, adminId);
+  res.status(200).json(successResponse(result, `Cycle status updated to ${input.status}`));
+});
+
+// POST /cycles/:id/distribute-profit — profit distribution step (admin only)
+export const distributeProfit = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const adminId = req.user!.userId;
+  const input = distributeProfitSchema.parse(req.body);
+  const result = await CycleService.distributeProfit(id, adminId, input);
+  res.status(200).json(successResponse(result, "Profit distributed and recorded"));
+});
 
 // ============================================================
 // ADMIN — CYCLE LIFECYCLE

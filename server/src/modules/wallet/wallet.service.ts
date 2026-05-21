@@ -72,6 +72,24 @@ async function paystackInitialize(
 
 export default class WalletService {
   // ==========================================
+  // WALLET RETRIEVAL
+  // ==========================================
+
+  static async getWallet(userId: string) {
+    const wallet = await prisma.wallet.upsert({
+      where: { userId },
+      create: { userId, balanceKobo: 0n, lockedBalanceKobo: 0n },
+      update: {},
+    });
+
+    return {
+      balanceKobo: wallet.balanceKobo.toString(),
+      lockedBalanceKobo: wallet.lockedBalanceKobo.toString(),
+      totalKobo: (wallet.balanceKobo + wallet.lockedBalanceKobo).toString(),
+    };
+  }
+
+  // ==========================================
   // DASHBOARD SUMMARY
   // ==========================================
 
@@ -221,36 +239,29 @@ export default class WalletService {
 
   static async requestWithdrawal(
     userId: string,
-    amountNaira: number,
-    bankDetails: { bankName: string; accountNumber: string; accountName: string },
-    idempotencyKey: string
+    data: {
+      amountKobo: number;
+      disbursementType: "WALLET_BALANCE" | "PROFIT_ONLY" | "FULL_DIVESTMENT";
+      bankName: string;
+      accountNumber: string;
+      accountName: string;
+    }
   ) {
-    const amountKobo = BigInt(Math.round(amountNaira * 100));
+    const amountKobo = BigInt(data.amountKobo);
 
     return await prisma.$transaction(async (tx) => {
-      // 1. Idempotency Check
-      const existingKey = await tx.idempotencyKey.findUnique({
-        where: { key: idempotencyKey },
-      });
-      if (existingKey) throw new Error("Duplicate request detected");
-
-      await tx.idempotencyKey.create({
-        data: {
-          key: idempotencyKey,
-          userId,
-          requestMethod: "POST",
-          requestPath: "/wallet/withdraw",
-        },
-      });
-
-      // 2. Fetch Wallet (Prisma wraps the SELECT in a transaction, giving us row-level isolation)
+      // 1. Get wallet
       const wallet = await tx.wallet.findUnique({ where: { userId } });
 
       if (!wallet || wallet.balanceKobo < amountKobo) {
         throw new Error("Insufficient funds");
       }
 
-      // 3. Quarantine — atomically move funds from available → locked
+      if (wallet.balanceKobo - amountKobo < 0n) {
+        throw new Error("Wallet balance cannot go negative");
+      }
+
+      // 2. Quarantine — atomically move funds from available → locked
       await tx.wallet.update({
         where: { id: wallet.id },
         data: {
@@ -259,16 +270,16 @@ export default class WalletService {
         },
       });
 
-      // 4. Create Disbursement Request (workflow state)
+      // 3. Create Disbursement Request (workflow state)
       const request = await tx.disbursementRequest.create({
         data: {
           userId,
           amountKobo,
-          disbursementType: DisbursementType.WALLET_BALANCE,
-          bankName: bankDetails.bankName,
-          accountNumber: bankDetails.accountNumber,
-          accountName: bankDetails.accountName,
-          status: TransactionStatus.PENDING,
+          disbursementType: data.disbursementType as DisbursementType,
+          bankName: data.bankName,
+          accountNumber: data.accountNumber,
+          accountName: data.accountName,
+          status: "PENDING",
         },
       });
 
@@ -283,7 +294,7 @@ export default class WalletService {
   static async resolveWithdrawal(
     requestId: string,
     adminId: string,
-    status: "COMPLETED" | "FAILED",
+    status: "APPROVED" | "REJECTED",
     reason?: string
   ) {
     return await prisma.$transaction(async (tx) => {
@@ -292,40 +303,44 @@ export default class WalletService {
         include: { user: true },
       });
 
-      if (!request || request.status !== TransactionStatus.PENDING) {
+      if (!request || request.status !== "PENDING") {
         throw new Error("Invalid or already processed request");
       }
 
-      await tx.disbursementRequest.update({
+      // Update disbursement request status
+      const updatedRequest = await tx.disbursementRequest.update({
         where: { id: requestId },
         data: {
-          status,
+          status: status as any, // Use string literal as Prisma will handle enum mapping
           approvedById: adminId,
           processedAt: new Date(),
           rejectionReason: reason || null,
         },
       });
 
-      if (status === "COMPLETED") {
-        // Funds leave the system — remove from locked balance only
-        await tx.wallet.update({
-          where: { userId: request.userId },
-          data: { lockedBalanceKobo: { decrement: request.amountKobo } },
-        });
-
-        // Immutable ledger entry
+      if (status === "APPROVED") {
+        // Create transaction to show completion
         await tx.transaction.create({
           data: {
             userId: request.userId,
             transactionType: TransactionType.WITHDRAWAL,
             amountKobo: request.amountKobo,
             transactionStatus: TransactionStatus.COMPLETED,
+            narration: `Withdrawal to ${request.bankName} - ${request.accountNumber}`,
             relatedEntityType: "DISBURSEMENT_REQUEST",
             relatedEntityId: request.id,
           },
         });
+
+        // Remove from locked balance (funds have left the system)
+        await tx.wallet.update({
+          where: { userId: request.userId },
+          data: { 
+            lockedBalanceKobo: { decrement: request.amountKobo },
+          },
+        });
       } else {
-        // FAILED — revert quarantine, return funds to spendable balance
+        // REJECTED — revert quarantine, return funds to spendable balance
         await tx.wallet.update({
           where: { userId: request.userId },
           data: {
@@ -334,6 +349,150 @@ export default class WalletService {
           },
         });
       }
+
+      return {
+        requestId: updatedRequest.id,
+        status: updatedRequest.status,
+      };
     });
+  }
+
+  // ==========================================
+  // TRANSACTION HISTORY
+  // ==========================================
+
+  static async getTransactions(userId: string, page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+
+    const [transactions, total] = await Promise.all([
+      prisma.transaction.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          transactionRef: true,
+          transactionType: true,
+          amountKobo: true,
+          transactionStatus: true,
+          narration: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.transaction.count({ where: { userId } }),
+    ]);
+
+    return {
+      transactions: transactions.map((tx) => ({
+        ...tx,
+        amountKobo: tx.amountKobo.toString(),
+      })),
+      total,
+      page,
+      limit,
+    };
+  }
+
+  // ==========================================
+  // ADMIN OPERATIONS
+  // ==========================================
+
+  static async adminAdjust(
+    userId: string,
+    amountKobo: number,
+    narration: string,
+    adminId: string
+  ) {
+    return await prisma.$transaction(async (tx) => {
+      // Verify user exists
+      const user = await tx.user.findUnique({ where: { id: userId } });
+      if (!user) throw new Error("User not found");
+
+      // Get wallet
+      const wallet = await tx.wallet.upsert({
+        where: { userId },
+        create: { userId, balanceKobo: 0n, lockedBalanceKobo: 0n },
+        update: {},
+      });
+
+      const bigAmount = BigInt(amountKobo);
+
+      // If debit, check balance won't go negative
+      if (amountKobo < 0) {
+        if (wallet.balanceKobo + bigAmount < 0n) {
+          throw new Error("Insufficient balance for debit");
+        }
+      }
+
+      // Update wallet
+      await tx.wallet.update({
+        where: { userId },
+        data: {
+          balanceKobo: { increment: bigAmount },
+        },
+      });
+
+      // Create transaction record
+      const transaction = await tx.transaction.create({
+        data: {
+          userId,
+          transactionType: amountKobo > 0 ? TransactionType.CAPITAL_RETURN : TransactionType.WITHDRAWAL,
+          amountKobo: BigInt(Math.abs(amountKobo)),
+          transactionStatus: TransactionStatus.COMPLETED,
+          narration,
+        },
+      });
+
+      return {
+        adjusted: true,
+        transactionId: transaction.id,
+        newBalance: (wallet.balanceKobo + bigAmount).toString(),
+      };
+    });
+  }
+
+  // List withdrawal requests with optional status filter
+  static async listWithdrawals(status?: string, page: number = 1, limit: number = 20) {
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
+
+    const [requests, total] = await Promise.all([
+      prisma.disbursementRequest.findMany({
+        where,
+        include: {
+          user: { select: { firstName: true, lastName: true, email: true } },
+        },
+        orderBy: { requestedAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.disbursementRequest.count({ where }),
+    ]);
+
+    return {
+      data: requests.map((r: any) => ({
+        id: r.id,
+        userId: r.userId,
+        userName: `${r.user.firstName} ${r.user.lastName}`,
+        userEmail: r.user.email,
+        amountKobo: r.amountKobo.toString(),
+        bankName: r.bankName,
+        accountNumber: r.accountNumber,
+        accountName: r.accountName,
+        status: r.status,
+        rejectionReason: r.rejectionReason,
+        requestedAt: r.requestedAt.toISOString(),
+        processedAt: r.processedAt?.toISOString(),
+      })),
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

@@ -1,6 +1,6 @@
 import { rootApi } from "@/store/rootApi";
 import type { ApiResponse } from "@/types";
-import { CompleteCycleRequest, CreateCycleRequest, CreateVentureRequest, Cycle, InvestmentHistory, LedgerEntryRequest, MemberPosition, PaginatedCycles, PurchaseSharesRequest, PurchaseSharesResponse, RecordVentureProfitRequest } from "./cycle.types";
+import { CompleteCycleRequest, CreateCycleRequest, CreateVentureRequest, Cycle, InvestmentHistory, LedgerEntryRequest, MemberPosition, PaginatedCycles, PurchaseSharesRequest, PurchaseSharesResponse, RecordVentureProfitRequest, UpdateCycleStatusRequest, DistributeProfitRequest, DistributeProfitResponse } from "./cycle.types";
 
 // ─── API ─────────────────────────────────────────────────────────────
 
@@ -84,6 +84,33 @@ export const cycleApi = rootApi.injectEndpoints({
       invalidatesTags: ["Cycles"],
     }),
 
+
+    // PATCH /cycles/:id/status
+    updateCycleStatus: build.mutation<
+      ApiResponse<Cycle>,
+      { cycleId: string; body: UpdateCycleStatusRequest }
+    >({
+      query: ({ cycleId, body }) => ({
+        url: `/cycles/${cycleId}/status`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Cycles"],
+    }),
+
+    // POST /cycles/:id/distribute-profit
+    distributeProfit: build.mutation<
+      ApiResponse<DistributeProfitResponse>,
+      { cycleId: string; body: DistributeProfitRequest }
+    >({
+      query: ({ cycleId, body }) => ({
+        url: `/cycles/${cycleId}/distribute-profit`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Cycles"],
+    }),
+
     // PATCH /cycles/:id/complete
     completeCycle: build.mutation<
       ApiResponse<Cycle>,
@@ -146,6 +173,8 @@ export const {
   useCreateCycleMutation,
   useOpenCycleMutation,
   useActivateCycleMutation,
+  useUpdateCycleStatusMutation,
+  useDistributeProfitMutation,
   useCompleteCycleMutation,
   useCreateVentureMutation,
   useRecordVentureProfitMutation,

@@ -14,7 +14,7 @@ CREATE TYPE "transaction_type" AS ENUM ('DEPOSIT', 'SHARE_PURCHASE', 'CAPITAL_RE
 CREATE TYPE "transaction_status" AS ENUM ('PENDING', 'COMPLETED', 'FAILED');
 
 -- CreateEnum
-CREATE TYPE "cycle_status" AS ENUM ('PENDING', 'OPEN_FOR_INVESTMENT', 'ACTIVE', 'COMPLETED');
+CREATE TYPE "cycle_status" AS ENUM ('PENDING', 'OPEN_FOR_INVESTMENT', 'ACTIVE', 'CLOSING', 'COMPLETED');
 
 -- CreateEnum
 CREATE TYPE "distribution_status" AS ENUM ('PENDING', 'COMPLETED');
@@ -26,7 +26,13 @@ CREATE TYPE "ledger_entry_type" AS ENUM ('INCOME', 'EXPENSE');
 CREATE TYPE "disbursement_type" AS ENUM ('WALLET_BALANCE', 'FULL_DIVESTMENT', 'PROFIT_ONLY');
 
 -- CreateEnum
+CREATE TYPE "disbursement_status" AS ENUM ('PENDING', 'APPROVED', 'TRANSFERRED', 'COMPLETED', 'REJECTED');
+
+-- CreateEnum
 CREATE TYPE "claim_status" AS ENUM ('PENDING_REVIEW', 'DOCUMENTS_REQUESTED', 'APPROVED_FOR_PAYOUT', 'COMPLETED', 'REJECTED');
+
+-- CreateEnum
+CREATE TYPE "venture_status" AS ENUM ('FUNDED', 'OPERATING', 'LIQUIDATED');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -60,21 +66,41 @@ CREATE TABLE "verification_tokens" (
 CREATE TABLE "kyc_profiles" (
     "id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
+    "version" INTEGER NOT NULL DEFAULT 1,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "street_address" TEXT,
     "city" TEXT,
     "state_region" TEXT,
-    "country_code" VARCHAR(100),
+    "country_code" TEXT,
     "date_of_birth" DATE,
-    "kyc_status" "kyc_status" NOT NULL DEFAULT 'NOT_SUBMITTED',
     "avatar_url" TEXT,
     "government_id_type" TEXT,
     "id_card_front_url" TEXT,
     "id_card_back_url" TEXT,
     "next_of_kin_name" TEXT NOT NULL,
     "next_of_kin_relationship" TEXT NOT NULL,
-    "next_of_kin_phone" VARCHAR(20) NOT NULL,
+    "next_of_kin_phone" TEXT NOT NULL,
+    "kyc_status" "kyc_status" NOT NULL DEFAULT 'NOT_SUBMITTED',
+    "submittedAt" TIMESTAMP(3),
+    "reviewedAt" TIMESTAMP(3),
+    "approved_by_id" UUID,
+    "rejected_reason" TEXT,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT "kyc_profiles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "kyc_audit_logs" (
+    "id" UUID NOT NULL,
+    "action" TEXT NOT NULL,
+    "actor_id" UUID NOT NULL,
+    "kyc_id" UUID,
+    "meta" TEXT,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "kyc_audit_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -105,6 +131,19 @@ CREATE TABLE "transactions" (
 );
 
 -- CreateTable
+CREATE TABLE "paystack_deposits" (
+    "id" UUID NOT NULL,
+    "transaction_id" UUID NOT NULL,
+    "reference" VARCHAR(100) NOT NULL,
+    "amount_kobo" BIGINT NOT NULL,
+    "paid_at" TIMESTAMPTZ NOT NULL,
+    "channel" VARCHAR(50),
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "paystack_deposits_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "investment_cycles" (
     "id" UUID NOT NULL,
     "cycle_name" TEXT NOT NULL,
@@ -120,6 +159,22 @@ CREATE TABLE "investment_cycles" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "investment_cycles_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "profit_distributions" (
+    "id" UUID NOT NULL,
+    "cycle_id" UUID NOT NULL,
+    "authorised_by_id" UUID NOT NULL,
+    "investor_profit_percentage" DECIMAL(65,30) NOT NULL,
+    "org_profit_percentage" DECIMAL(65,30) NOT NULL,
+    "total_profit_kobo" BIGINT NOT NULL,
+    "investor_profit_pool_kobo" BIGINT NOT NULL,
+    "org_profit_share_kobo" BIGINT NOT NULL,
+    "notes" TEXT,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "profit_distributions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -145,6 +200,7 @@ CREATE TABLE "organizational_ledgers" (
     "related_cycle_id" UUID,
     "recorded_by_id" UUID NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "running_balance_kobo" BIGINT NOT NULL,
 
     CONSTRAINT "organizational_ledgers_pkey" PRIMARY KEY ("id")
 );
@@ -158,6 +214,9 @@ CREATE TABLE "business_ventures" (
     "allocated_amount_kobo" BIGINT NOT NULL,
     "expected_profit_kobo" BIGINT NOT NULL,
     "profit_realized_kobo" BIGINT NOT NULL DEFAULT 0,
+    "venture_status" "venture_status" NOT NULL DEFAULT 'FUNDED',
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT "business_ventures_pkey" PRIMARY KEY ("id")
 );
@@ -194,11 +253,12 @@ CREATE TABLE "disbursement_requests" (
     "bank_name" TEXT NOT NULL,
     "account_number" VARCHAR(20) NOT NULL,
     "account_name" TEXT NOT NULL,
-    "status" "transaction_status" NOT NULL DEFAULT 'PENDING',
+    "status" "disbursement_status" NOT NULL DEFAULT 'PENDING',
     "requested_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "approved_by_id" UUID,
     "processed_at" TIMESTAMPTZ,
     "rejection_reason" TEXT,
+    "admin_note" TEXT,
 
     CONSTRAINT "disbursement_requests_pkey" PRIMARY KEY ("id")
 );
@@ -209,9 +269,15 @@ CREATE TABLE "emergency_disbursement_requests" (
     "user_id" UUID NOT NULL,
     "reason" TEXT NOT NULL,
     "amount_kobo" BIGINT NOT NULL,
-    "status" "transaction_status" NOT NULL DEFAULT 'PENDING',
+    "bank_name" TEXT NOT NULL,
+    "account_number" VARCHAR(20) NOT NULL,
+    "account_name" TEXT NOT NULL,
+    "status" "disbursement_status" NOT NULL DEFAULT 'PENDING',
     "requested_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "approved_by_id" UUID,
     "processed_at" TIMESTAMPTZ,
+    "rejection_reason" TEXT,
+    "admin_note" TEXT,
 
     CONSTRAINT "emergency_disbursement_requests_pkey" PRIMARY KEY ("id")
 );
@@ -265,7 +331,19 @@ CREATE UNIQUE INDEX "verification_tokens_token_key" ON "verification_tokens"("to
 CREATE INDEX "verification_tokens_identifier_idx" ON "verification_tokens"("identifier");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "kyc_profiles_user_id_key" ON "kyc_profiles"("user_id");
+CREATE INDEX "kyc_profiles_user_id_idx" ON "kyc_profiles"("user_id");
+
+-- CreateIndex
+CREATE INDEX "kyc_profiles_user_id_isActive_idx" ON "kyc_profiles"("user_id", "isActive");
+
+-- CreateIndex
+CREATE INDEX "kyc_audit_logs_actor_id_idx" ON "kyc_audit_logs"("actor_id");
+
+-- CreateIndex
+CREATE INDEX "kyc_audit_logs_kyc_id_idx" ON "kyc_audit_logs"("kyc_id");
+
+-- CreateIndex
+CREATE INDEX "kyc_audit_logs_created_at_idx" ON "kyc_audit_logs"("created_at");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "wallets_user_id_key" ON "wallets"("user_id");
@@ -278,6 +356,18 @@ CREATE INDEX "transactions_user_id_idx" ON "transactions"("user_id");
 
 -- CreateIndex
 CREATE INDEX "transactions_transaction_ref_idx" ON "transactions"("transaction_ref");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "paystack_deposits_transaction_id_key" ON "paystack_deposits"("transaction_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "paystack_deposits_reference_key" ON "paystack_deposits"("reference");
+
+-- CreateIndex
+CREATE INDEX "paystack_deposits_reference_idx" ON "paystack_deposits"("reference");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "profit_distributions_cycle_id_key" ON "profit_distributions"("cycle_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "shareholder_investments_user_id_cycle_id_key" ON "shareholder_investments"("user_id", "cycle_id");
@@ -301,10 +391,28 @@ CREATE INDEX "idempotency_keys_key_idx" ON "idempotency_keys"("key");
 ALTER TABLE "kyc_profiles" ADD CONSTRAINT "kyc_profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "kyc_profiles" ADD CONSTRAINT "kyc_profiles_approved_by_id_fkey" FOREIGN KEY ("approved_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "kyc_audit_logs" ADD CONSTRAINT "kyc_audit_logs_actor_id_fkey" FOREIGN KEY ("actor_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "kyc_audit_logs" ADD CONSTRAINT "kyc_audit_logs_kyc_id_fkey" FOREIGN KEY ("kyc_id") REFERENCES "kyc_profiles"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "wallets" ADD CONSTRAINT "wallets_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "paystack_deposits" ADD CONSTRAINT "paystack_deposits_transaction_id_fkey" FOREIGN KEY ("transaction_id") REFERENCES "transactions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "profit_distributions" ADD CONSTRAINT "profit_distributions_cycle_id_fkey" FOREIGN KEY ("cycle_id") REFERENCES "investment_cycles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "profit_distributions" ADD CONSTRAINT "profit_distributions_authorised_by_id_fkey" FOREIGN KEY ("authorised_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "shareholder_investments" ADD CONSTRAINT "shareholder_investments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -341,6 +449,9 @@ ALTER TABLE "disbursement_requests" ADD CONSTRAINT "disbursement_requests_approv
 
 -- AddForeignKey
 ALTER TABLE "emergency_disbursement_requests" ADD CONSTRAINT "emergency_disbursement_requests_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "emergency_disbursement_requests" ADD CONSTRAINT "emergency_disbursement_requests_approved_by_id_fkey" FOREIGN KEY ("approved_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "deceased_user_claims" ADD CONSTRAINT "deceased_user_claims_deceased_user_id_fkey" FOREIGN KEY ("deceased_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

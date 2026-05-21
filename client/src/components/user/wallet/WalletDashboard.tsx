@@ -9,7 +9,7 @@ export default function WalletDashboard() {
   const { data, isLoading, isError, refetch } = useGetWalletSummaryQuery();
 
   if (isLoading) return <WalletSkeleton />;
-  if (isError || !data?.success) {
+  if (isError || !data?.data) {
     return (
       <div className="p-6 text-center text-red-500 bg-red-50 rounded-lg">
         Failed to load wallet data. <button onClick={refetch} className="underline">Try again</button>
