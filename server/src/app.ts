@@ -37,23 +37,25 @@ app.use(
 
 
 // 2. CORS – handle preflight early
-const allowedOrigins = env.CLIENT_ORIGIN.split(",").map((origin: string) => origin.trim());
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true, 
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
+const allowedOrigins = new Set(
+  env.CLIENT_ORIGIN
+    .split(",")
+    .map((o) => o.trim().replace(/\/$/, ""))
 );
+
+cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+
+    const clean = origin.replace(/\/$/, "");
+
+    if (allowedOrigins.has(clean)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked: ${clean}`));
+  },
+});
 
 // 3. Trust proxy (important behind Nginx, Render, Vercel, Cloudflare, etc.)
 app.set("trust proxy", 1);
