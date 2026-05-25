@@ -10,6 +10,7 @@ import cookieParser from "cookie-parser";
 import { errorHandler } from "./common/middleware/errorHandler";
 import { env } from "./config";
 import redis from "./config/redis";
+import  "./jobs/workers";
 
 import authRoutes from "./modules/auth/auth.routes";
 import kycRoutes from "./modules/kyc/kyc.routes";
@@ -133,13 +134,13 @@ const logFormat = env.NODE_ENV === "production" ? "combined" : "dev";
 app.use(morgan(logFormat));
 
 // ─── Base routes ──────────────────────────────────────────────────────────────
-app.get("/", (_req: Request, res: Response) => {
+app.get("/api/v1", (_req: Request, res: Response) => {
   res.send(
     "Welcome to shababukhair API - Version 1.0.0. Visit /api/v1 for endpoints."
   );
 });
 
-app.get("/health", (_req, res) => {
+app.get("/api/v1health", (_req, res) => {
   res.status(200).json({
     status: "ok",
     uptime: process.uptime(),

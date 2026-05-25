@@ -4,6 +4,7 @@ import { AppError, NotFoundError } from "../../utils/errors";
 import { KycStatus } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import cloudinary from "../../config/cloudinary";
+import { kycCleanupQueue, kycAuditQueue } from "../../jobs/queues/kyc.queue";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -28,21 +29,14 @@ function validateKycUrl(url: string, userId: string, type: "front" | "back" | "a
   try {
     const parsed = new URL(url);
 
-    // Must be res.cloudinary.com
     if (parsed.hostname !== "res.cloudinary.com") return false;
 
-    // Cloudinary path structure:
-    // /{cloudName}/image/authenticated/s--TOKEN--/v{version}/kyc/{userId}/{type}/{filename}
-    // OR without token:
-    // /{cloudName}/image/authenticated/v{version}/kyc/{userId}/{type}/{filename}
     const segments = parsed.pathname.split("/").filter(Boolean);
 
     if (segments[0] !== cloudName)       return false;
     if (segments[1] !== "image")         return false;
     if (segments[2] !== "authenticated") return false;
 
-    // Everything after /authenticated/ may contain s--TOKEN-- and v{version}
-    // before the actual folder — so we just check the path contains the folder
     const remainingPath = segments.slice(3).join("/");
     const expectedFolder = `kyc/${userId}/${type}/`;
 
@@ -73,39 +67,25 @@ function enforceSignatureRateLimit(userId: string): void {
 }
 
 /**
- * Destroys all KYC assets for a user on Cloudinary (authenticated type).
- * Called when a user re-submits KYC so old ID images don't linger.
+ * Enqueues an audit log write via BullMQ.
+ * Non-blocking — failures are retried by the worker, never surface to the caller.
  */
-async function destroyOldKycAssets(userId: string): Promise<void> {
-  const types: Array<"front" | "back" | "avatar"> = ["front", "back", "avatar"];
-
-  await Promise.allSettled(
-    types.map((type) =>
-      cloudinary.uploader.destroy(`kyc/${userId}/${type}`, {
-        type: "authenticated",
-        invalidate: true,
-      })
-    )
-  );
-}
-
-/**
- * Writes an audit log entry to the KycAuditLog table.
- */
-async function writeAuditLog(
+async function enqueueAuditLog(
   action: "VIEW_PENDING" | "VIEW_DETAIL" | "APPROVE" | "REJECT",
   actorId: string,
   kycId?: string,
   meta?: Record<string, unknown>
 ): Promise<void> {
-  await prisma.kycAuditLog.create({
-    data: {
-      action,
-      actorId,
-      kycId: kycId ?? null,
-      meta: meta ? JSON.stringify(meta) : null,
-    },
-  });
+  await kycAuditQueue.add(
+    action, // use action as job name for easy queue inspection
+    { action, actorId, kycId, meta },
+    {
+      // Deduplicate rapid identical audit events within a 2-second window.
+      // jobId pattern: audit:{action}:{actorId}:{kycId} — identical calls
+      // within the deduplication window are silently dropped by BullMQ.
+      jobId: `audit:${action}:${actorId}:${kycId ?? "none"}:${Math.floor(Date.now() / 2000)}`,
+    }
+  );
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -120,9 +100,6 @@ export class KycService {
     const timestamp = Math.round(Date.now() / 1000);
     const folder = `kyc/${userId}/${type}`;
 
-    // ⚠️ Only include params in paramsToSign that you ALSO send in the upload
-    // request. allowed_formats was here before but wasn't being sent to
-    // Cloudinary in the upload, causing the signature mismatch.
     const paramsToSign = {
       timestamp,
       folder,
@@ -138,7 +115,7 @@ export class KycService {
       signature,
       timestamp,
       folder,
-      allowed_formats: ALLOWED_FORMATS, // sent to client for UI hints only, not signed
+      allowed_formats: ALLOWED_FORMATS, // UI hint only — not signed
       type: "authenticated",
       cloud_name: cloudinary.config().cloud_name,
       api_key: cloudinary.config().api_key,
@@ -147,10 +124,13 @@ export class KycService {
 
   /**
    * 🚀 Submit KYC — versioned + transactional.
-   * Field names aligned with schema: idCardFrontUrl, idCardBackUrl, avatarUrl
+   *
+   * Changes from original:
+   * - Old asset cleanup is now enqueued via BullMQ AFTER the transaction
+   *   commits, so a Cloudinary hiccup can never roll back or block KYC submission.
+   * - The cleanup job carries the previousKycId for traceability.
    */
   static async submitKyc(userId: string, dto: KycDto) {
-    // Validate URL ownership — aligned with schema field names
     const urlFields: Array<{ field: keyof KycDto; type: "front" | "back" | "avatar" }> = [
       { field: "idCardFrontUrl", type: "front" },
       { field: "idCardBackUrl", type: "back" },
@@ -164,35 +144,52 @@ export class KycService {
       }
     }
 
-    return prisma.$transaction(async (tx) => {
-      const existing = await tx.kycProfile.findFirst({
-        where: { userId, isActive: true },
-        orderBy: { version: "desc" },
-      });
-
-      if (existing?.kycStatus === KycStatus.VERIFIED) {
-        throw new AppError("KYC already verified", 400);
-      }
-
-      if (existing) {
-        await destroyOldKycAssets(userId);
-
-        await tx.kycProfile.update({
-          where: { id: existing.id },
-          data: { isActive: false },
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.kycProfile.findFirst({
+          where: { userId, isActive: true },
+          orderBy: { version: "desc" },
         });
-      }
 
-      const newKyc = await tx.kycProfile.create({
-        data: {
-          ...KycMapper.toPersistence(userId, dto),
-          version: existing ? existing.version + 1 : 1,
-          isActive: true,
-        },
-      });
+        if (existing?.kycStatus === KycStatus.VERIFIED) {
+          throw new AppError("KYC already verified", 400);
+        }
 
-      return newKyc;
-    });
+        if (existing) {
+          await tx.kycProfile.update({
+            where: { id: existing.id },
+            data: { isActive: false },
+          });
+        }
+
+        const kyc = await tx.kycProfile.create({
+          data: {
+            ...KycMapper.toPersistence(userId, dto),
+            version: existing ? existing.version + 1 : 1,
+            isActive: true,
+          },
+        });
+
+        return { kyc, previousUserId: existing ? userId : null };
+      },
+      { timeout: 10000 }
+    );
+
+    // ✅ Transaction committed — now safely enqueue cleanup outside the tx.
+    // If this add() call fails, no data is corrupted; the old Cloudinary
+    // assets simply linger until the next submission triggers cleanup again.
+    if (result.previousUserId) {
+      await kycCleanupQueue.add(
+        "destroy-old-assets",
+        { userId: result.previousUserId },
+        {
+          // Deduplicate: if the user spam-submits, only one cleanup job runs.
+          jobId: `kyc-cleanup:${userId}`,
+        }
+      );
+    }
+
+    return result.kyc;
   }
 
   /**
@@ -210,11 +207,13 @@ export class KycService {
 
   /**
    * 🧑‍⚖️ Admin: list all pending KYC submissions.
-   * Requires adminId for audit logging — pass req.user.id from the controller.
-   * Image URLs deliberately excluded from list view.
+   * Audit log is enqueued — never blocks the response.
    */
   static async getPending(adminId: string) {
-    await writeAuditLog("VIEW_PENDING", adminId);
+    // Fire-and-forget — intentionally not awaited so audit never delays response
+    enqueueAuditLog("VIEW_PENDING", adminId).catch((err) =>
+      console.error("[kyc-audit] Failed to enqueue VIEW_PENDING audit:", err)
+    );
 
     return prisma.kycProfile.findMany({
       where: { kycStatus: KycStatus.PENDING_REVIEW, isActive: true },
@@ -224,7 +223,6 @@ export class KycService {
         version: true,
         kycStatus: true,
         createdAt: true,
-        // idCardFrontUrl, idCardBackUrl, avatarUrl deliberately omitted
         user: {
           select: {
             id: true,
@@ -239,66 +237,66 @@ export class KycService {
 
   /**
    * 🔍 Admin: get full KYC detail with short-lived signed image URLs.
-   * Uses schema-correct field names: idCardFrontUrl, idCardBackUrl, avatarUrl
+   * Audit log is enqueued — never blocks the response.
    */
- static async getKycDetail(kycId: string, adminId: string) {
-  // Include user so admin sees applicant name + email
-  const kyc = await prisma.kycProfile.findUnique({
-    where: { id: kycId },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
+  static async getKycDetail(kycId: string, adminId: string) {
+    const kyc = await prisma.kycProfile.findUnique({
+      where: { id: kycId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
         },
       },
-    },
-  });
-
-  if (!kyc || !kyc.isActive) throw new NotFoundError("KYC not found");
-
-  await writeAuditLog("VIEW_DETAIL", adminId, kycId);
-
-  // cloudinary.url() expects a public_id NOT a full URL.
-  // The stored URL looks like:
-  //   https://res.cloudinary.com/{cloud}/image/authenticated/s--TOKEN--/v123456/kyc/userId/front/file.jpg
-  // We extract everything after the version segment as the public_id.
-  const extractPublicId = (url: string): string | null => {
-    try {
-      const segments = new URL(url).pathname.split("/").filter(Boolean);
-      const vIdx = segments.findIndex((s) => /^v\d+$/.test(s));
-      if (vIdx === -1) return null;
-      return segments.slice(vIdx + 1).join("/");
-    } catch {
-      return null;
-    }
-  };
-
-  const expiresAt = Math.round(Date.now() / 1000) + 60 * 15; // 15 min
-
-  const signUrl = (storedUrl: string | null): string | null => {
-    if (!storedUrl) return null;
-    const publicId = extractPublicId(storedUrl);
-    if (!publicId) return storedUrl; // fallback — don't break if parsing fails
-    return cloudinary.url(publicId, {
-      type: "authenticated",
-      sign_url: true,
-      expires_at: expiresAt,
-      resource_type: "image",
     });
-  };
 
-  return {
-    ...kyc,
-    avatarUrl:      signUrl(kyc.avatarUrl),
-    idCardFrontUrl: signUrl(kyc.idCardFrontUrl),
-    idCardBackUrl:  signUrl(kyc.idCardBackUrl),
-  };
-}
- /**
+    if (!kyc || !kyc.isActive) throw new NotFoundError("KYC not found");
+
+    // Fire-and-forget — intentionally not awaited
+    enqueueAuditLog("VIEW_DETAIL", adminId, kycId).catch((err) =>
+      console.error("[kyc-audit] Failed to enqueue VIEW_DETAIL audit:", err)
+    );
+
+    const extractPublicId = (url: string): string | null => {
+      try {
+        const segments = new URL(url).pathname.split("/").filter(Boolean);
+        const vIdx = segments.findIndex((s) => /^v\d+$/.test(s));
+        if (vIdx === -1) return null;
+        return segments.slice(vIdx + 1).join("/");
+      } catch {
+        return null;
+      }
+    };
+
+    const expiresAt = Math.round(Date.now() / 1000) + 60 * 15; // 15 min
+
+    const signUrl = (storedUrl: string | null): string | null => {
+      if (!storedUrl) return null;
+      const publicId = extractPublicId(storedUrl);
+      if (!publicId) return storedUrl;
+      return cloudinary.url(publicId, {
+        type: "authenticated",
+        sign_url: true,
+        expires_at: expiresAt,
+        resource_type: "image",
+      });
+    };
+
+    return {
+      ...kyc,
+      avatarUrl:      signUrl(kyc.avatarUrl),
+      idCardFrontUrl: signUrl(kyc.idCardFrontUrl),
+      idCardBackUrl:  signUrl(kyc.idCardBackUrl),
+    };
+  }
+
+  /**
    * ✅ Approve a KYC submission.
+   * Audit log is enqueued after the DB write succeeds.
    */
   static async approve(kycId: string, adminId: string) {
     const kyc = await prisma.kycProfile.findUnique({ where: { id: kycId } });
@@ -317,13 +315,15 @@ export class KycService {
       },
     });
 
-    await writeAuditLog("APPROVE", adminId, kycId);
+    // Enqueue after successful DB write — no point auditing a failed approve
+    await enqueueAuditLog("APPROVE", adminId, kycId);
 
     return updated;
   }
 
   /**
    * ❌ Reject a KYC submission.
+   * Audit log is enqueued after the DB write succeeds.
    */
   static async reject(kycId: string, reason: string, adminId: string) {
     if (!reason?.trim()) throw new AppError("Rejection reason required", 400);
@@ -345,7 +345,7 @@ export class KycService {
       },
     });
 
-    await writeAuditLog("REJECT", adminId, kycId, { reason });
+    await enqueueAuditLog("REJECT", adminId, kycId, { reason });
 
     return updated;
   }

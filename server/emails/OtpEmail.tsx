@@ -46,8 +46,8 @@ export const OtpEmail = ({ otp, expirationMinutes }: OtpEmailProps) => {
           <Text style={footer}>Growing together with ethical technology</Text>
           <Text style={footer}>&copy; {year} Shababul Khair Halal Investment LTD. All rights reserved.</Text>
           <Text style={footer}>
-            <Link href="https://shababulkhairest.com" style={link}>
-              shababulkhairest.com
+            <Link href="https://shababulkhair.com" style={link}>
+              shababulkhair.com
             </Link>
           </Text>
         </Container>
