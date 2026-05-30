@@ -15,7 +15,7 @@ import  "./jobs/workers";
 import authRoutes from "./modules/auth/auth.routes";
 import kycRoutes from "./modules/kyc/kyc.routes";
 import walletRoutes from "./modules/wallet/wallet.routes";
-import paystackWebhookRoutes from "./modules/wallet/wallet.routes";
+import paystackWebhookRoutes from "./webhook/paystack.webhook";
 import ventureRoutes from "./modules/venture/venture.routes";
 import cycleRoutes from "./modules/cycles/cycle.routes";
 import userRoutes from "./modules/user/user.routes";
@@ -37,8 +37,10 @@ app.use(
 const rawOrigins = env.CLIENT_ORIGIN
   .split(",")
   .map((o) => o.trim().replace(/\/$/, ""));
+  
 
 const allowedOrigins = new Set(rawOrigins);
+
 
 // ── CORS DEBUG ─────────────────────────────────────────────────────────────
 // Shows exactly what's in the allowlist and what each request sends.

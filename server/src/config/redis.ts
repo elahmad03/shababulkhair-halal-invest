@@ -10,6 +10,8 @@ const baseOptions = {
   password: env.REDIS_PASSWORD,
   tls: isProd ? {} : undefined,
   retryStrategy(times: number) {
+    const maxRetries = 20; // ~20 seconds total with exponential backoff
+    if (times > maxRetries) return null; // stop retrying
     return Math.min(times * 50, 2000);
   },
 };

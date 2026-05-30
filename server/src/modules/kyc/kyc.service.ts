@@ -83,7 +83,7 @@ async function enqueueAuditLog(
       // Deduplicate rapid identical audit events within a 2-second window.
       // jobId pattern: audit:{action}:{actorId}:{kycId} — identical calls
       // within the deduplication window are silently dropped by BullMQ.
-      jobId: `audit:${action}:${actorId}:${kycId ?? "none"}:${Math.floor(Date.now() / 2000)}`,
+      jobId: `audit:${action}-${actorId}-${kycId ?? "none"}-${Math.floor(Date.now() / 2000)}`,
     }
   );
 }
@@ -184,7 +184,7 @@ export class KycService {
         { userId: result.previousUserId },
         {
           // Deduplicate: if the user spam-submits, only one cleanup job runs.
-          jobId: `kyc-cleanup:${userId}`,
+          jobId: `kyc-cleanup-${userId}`,
         }
       );
     }
@@ -316,7 +316,9 @@ export class KycService {
     });
 
     // Enqueue after successful DB write — no point auditing a failed approve
-    await enqueueAuditLog("APPROVE", adminId, kycId);
+    enqueueAuditLog("APPROVE", adminId, kycId).catch((err) =>
+      console.error("[kyc-audit] Failed to enqueue APPROVE audit:", err)
+    );
 
     return updated;
   }
@@ -345,7 +347,12 @@ export class KycService {
       },
     });
 
-    await enqueueAuditLog("REJECT", adminId, kycId, { reason });
+     // Enqueue after successful DB write — no point auditing a failed approve
+    enqueueAuditLog("REJECT", adminId, kycId, { reason })
+    .catch((err) =>
+      console.error("[kyc-audit] Failed to enqueue REJECT audit:", err)
+    );
+
 
     return updated;
   }

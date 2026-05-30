@@ -79,14 +79,4 @@ router.post(
   WalletController.resolveWithdrawal
 );
 
-// ==========================================
-// WEBHOOK ROUTES (Unprotected - Verified via HMAC)
-// ==========================================
-
-// POST /api/wallet/paystack - Paystack webhook
-router.post(
-  "/paystack",
-  WalletController.handlePaystackWebhook
-);
-
 export default router;

@@ -60,7 +60,11 @@ export const kycAuditWorker = new Worker<KycAuditJobData>(
         action,
         actorId,
         kycId: kycId ?? null,
-        meta: meta ? JSON.stringify(meta) : null,
+        meta: meta ? JSON.stringify(meta, (key, value) => {
+          // Strip non-serializable values
+          if (typeof value === 'function' || typeof value === 'symbol') return undefined;
+          return value;
+        }) : null,
       },
     });
   },

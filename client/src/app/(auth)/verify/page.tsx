@@ -281,7 +281,7 @@ function VerifyOtpContent() {
           "Email verified successfully!"
         );
 
-        router.push("/dashboard");
+        router.push("/user/dashboard");
       } catch (err: unknown) {
         const error = err as {
           data?: {
