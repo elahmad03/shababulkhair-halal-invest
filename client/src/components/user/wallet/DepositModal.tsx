@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast, Toaster } from "sonner";
 import { Loader2 } from "lucide-react";
+import { ngnToApiAmount } from "@/lib/utils";
 
 export default function DepositModal({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
   const [amount, setAmount] = useState("");
@@ -25,11 +26,12 @@ export default function DepositModal({ open, onOpenChange }: { open: boolean, on
     }
 
     try {
-      const amountKobo = Math.round(numAmount * 100);
-      const res = await initializeDeposit({ amountKobo }).unwrap();
+      // Convert NGN to API amount (server will convert to kobo)
+      const amountForApi = ngnToApiAmount(numAmount);
+      const res = await initializeDeposit({ amountKobo: amountForApi }).unwrap();
      
        if (res.data && res.data.authorizationUrl) {
-         // Redirect to Paystack/Flutterwave checkout page
+         // Redirect to Paystack checkout page
          window.location.href = res.data.authorizationUrl;
        }
     } catch (err: any) {
@@ -64,7 +66,7 @@ export default function DepositModal({ open, onOpenChange }: { open: boolean, on
           </div>
           
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />}
             {isLoading ? "Initializing..." : "Proceed to Payment"}
           </Button>
         </form>

@@ -67,7 +67,7 @@ router.post(
 router.get(
   "/admin/withdrawals",
   authMiddleware,
-  authorizeRoles("ADMIN", "COMMITTEE"),
+  authorizeRoles("ADMIN"),
   WalletController.listWithdrawals
 );
 
@@ -75,7 +75,7 @@ router.get(
 router.post(
   "/admin/withdrawals/:id/resolve",
   authMiddleware,
-  authorizeRoles("ADMIN", "COMMITTEE"),
+  authorizeRoles("ADMIN"),
   WalletController.resolveWithdrawal
 );
 

@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-// Minimum deposit: 10,000 NGN = 1,000,000 kobo
-const MINIMUM_DEPOSIT_KOBO = 1_000_000;
+// Minimum deposit: 10,000 NGN (the API receives NGN, server converts to kobo)
+const MINIMUM_DEPOSIT_NGN = 10_000;
 
 export const initializeDepositSchema = z.object({
   amountKobo: z.number()
     .int("Amount must be a whole number")
-    .min(MINIMUM_DEPOSIT_KOBO, `Minimum deposit is ₦${MINIMUM_DEPOSIT_KOBO / 100_000}`),
+    .min(MINIMUM_DEPOSIT_NGN, `Minimum deposit is ₦${MINIMUM_DEPOSIT_NGN}`),
 });
 
 export const withdrawSchema = z.object({
