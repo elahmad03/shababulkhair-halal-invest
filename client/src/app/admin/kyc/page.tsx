@@ -20,16 +20,36 @@ import { useGetPendingKycQuery } from "@/store/modules/kyc/adminKycApi";
 
 function KycStatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
-    PENDING_REVIEW: { label: "Pending",  className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" },
-    VERIFIED:       { label: "Verified", className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" },
-    REJECTED:       { label: "Rejected", className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
-    NOT_SUBMITTED:  { label: "Not submitted", className: "bg-muted text-muted-foreground" },
+    PENDING_REVIEW: {
+      label: "Pending",
+      className:
+        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+    },
+    VERIFIED: {
+      label: "Verified",
+      className:
+        "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+    },
+    REJECTED: {
+      label: "Rejected",
+      className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    },
+    NOT_SUBMITTED: {
+      label: "Not submitted",
+      className: "bg-muted text-muted-foreground",
+    },
   };
 
-  const cfg = map[status] ?? { label: status, className: "bg-muted text-muted-foreground" };
+  const cfg = map[status] ?? {
+    label: status,
+    className: "bg-muted text-muted-foreground",
+  };
 
   return (
-    <Badge variant="outline" className={`border-0 font-medium ${cfg.className}`}>
+    <Badge
+      variant="outline"
+      className={`border-0 font-medium ${cfg.className}`}
+    >
       {cfg.label}
     </Badge>
   );
@@ -72,7 +92,9 @@ export default function AdminKycListPage() {
           <div>
             <h1 className="text-xl font-bold">KYC Reviews</h1>
             <p className="text-sm text-muted-foreground">
-              {isLoading ? "Loading…" : `${items.length} pending submission${items.length !== 1 ? "s" : ""}`}
+              {isLoading
+                ? "Loading…"
+                : `${items.length} pending submission${items.length !== 1 ? "s" : ""}`}
             </p>
           </div>
         </div>
@@ -104,7 +126,10 @@ export default function AdminKycListPage() {
 
             {!isLoading && items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
+                <TableCell
+                  colSpan={6}
+                  className="text-center py-16 text-muted-foreground"
+                >
                   <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   No pending KYC submissions
                 </TableCell>
@@ -112,7 +137,10 @@ export default function AdminKycListPage() {
             )}
 
             {items.map((kyc) => (
-              <TableRow key={kyc.id} className="hover:bg-muted/30 transition-colors">
+              <TableRow
+                key={kyc.id}
+                className="hover:bg-muted/30 transition-colors"
+              >
                 <TableCell className="font-medium">
                   {kyc.user.firstName} {kyc.user.lastName}
                 </TableCell>

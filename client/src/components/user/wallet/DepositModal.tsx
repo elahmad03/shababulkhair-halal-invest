@@ -34,10 +34,12 @@ export default function DepositModal({ open, onOpenChange }: { open: boolean, on
          // Redirect to Paystack checkout page
          window.location.href = res.data.authorizationUrl;
        }
-    } catch (err: any) {
-      toast.error("Deposit Failed", { 
-        description: "Could not process deposit. Please try again."
-      });
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        toast.error("Deposit Failed", { description: err.message });
+      } else {
+        toast.error("Deposit Failed", { description: "Could not process deposit. Please try again." });
+      }
     }
   };
 
