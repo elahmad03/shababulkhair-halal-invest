@@ -67,7 +67,7 @@ router.post(
 router.get(
   "/admin/withdrawals",
   authMiddleware,
-  authorizeRoles("ADMIN", "COMMITTEE"),
+  authorizeRoles("ADMIN"),
   WalletController.listWithdrawals
 );
 
@@ -75,18 +75,8 @@ router.get(
 router.post(
   "/admin/withdrawals/:id/resolve",
   authMiddleware,
-  authorizeRoles("ADMIN", "COMMITTEE"),
+  authorizeRoles("ADMIN"),
   WalletController.resolveWithdrawal
-);
-
-// ==========================================
-// WEBHOOK ROUTES (Unprotected - Verified via HMAC)
-// ==========================================
-
-// POST /api/wallet/paystack - Paystack webhook
-router.post(
-  "/paystack",
-  WalletController.handlePaystackWebhook
 );
 
 export default router;

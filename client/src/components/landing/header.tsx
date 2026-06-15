@@ -168,7 +168,7 @@ export function Header() {
 
                     <DropdownMenuItem
                       onClick={() => {
-                        router.push("/login");
+                        router.push("/sign-in");
                         setDropdownOpen(false);
                       }}
                       className="flex gap-2 items-center px-3 py-2 text-destructive hover:bg-destructive/10 rounded cursor-pointer"
@@ -183,8 +183,8 @@ export function Header() {
           </>
         ) : (
           <Button asChild className="hidden md:flex bg-primary hover:bg-primary/90 text-primary-foreground">
-            <Link href="/login">
-              Login
+            <Link href="/sign-in">
+              Sign in
             </Link>
           </Button>
         )}

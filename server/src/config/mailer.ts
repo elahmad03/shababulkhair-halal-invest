@@ -42,7 +42,7 @@ async function sendEmail(to: string, subject: string, template: ReactElement) {
 export async function sendOTPEmail(email: string, otp: string) {
   await sendEmail(
     email,
-    "Your Halavest verification code",
+    "Your Shababul Khair verification code",
     OtpEmail({ otp, expirationMinutes: Number(env.OTP_EXPIRES_MINUTES) }) as ReactElement
   );
 }

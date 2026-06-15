@@ -108,3 +108,14 @@ export function formatName(name: string): string {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
 }
+
+/**
+ * Convert NGN (Naira) amount to the format expected by API.
+ * The server will handle the kobo conversion (NGN * 100).
+ * This ensures the user input (e.g., 10000 NGN) is sent as-is.
+ * Example: 10000 (NGN) => 10000 (sent to API)
+ */
+export function ngnToApiAmount(ngnAmount: string | number): number {
+  const amount = typeof ngnAmount === 'string' ? parseFloat(ngnAmount) : ngnAmount;
+  return Number.isFinite(amount) ? Math.round(amount) : 0;
+}

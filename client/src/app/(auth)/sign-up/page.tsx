@@ -240,7 +240,7 @@ export default function SignUpPage() {
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ahmad" disabled={isLoading} {...field} />
+                      <Input placeholder="Usman" disabled={isLoading} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -256,7 +256,7 @@ export default function SignUpPage() {
                   <FormItem>
                     <FormLabel>Last Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Ibrahim" disabled={isLoading} {...field} />
+                      <Input placeholder="kabiru" disabled={isLoading} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -273,7 +273,7 @@ export default function SignUpPage() {
                 <FormItem>
                   <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="ahmad@example.com" disabled={isLoading} {...field} />
+                    <Input type="email" placeholder="usman@example.com" disabled={isLoading} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
