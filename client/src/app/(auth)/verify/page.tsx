@@ -281,7 +281,7 @@ function VerifyOtpContent() {
           "Email verified successfully!"
         );
 
-        router.push("/user/dashboard");
+        router.push("/user/onboarding/kyc");
       } catch (err: unknown) {
         const error = err as {
           data?: {

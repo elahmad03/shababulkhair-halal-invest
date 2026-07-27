@@ -20,8 +20,8 @@ import { Menu, LogOut, User, Sun, Moon, ShieldCheck, Loader2 } from "lucide-reac
 import NotificationDropdown from "@/components/user/notifications/NotificalDropdown";
 
 // API & Store
-import { useLogoutMutation } from "@/store/modules/auth/authApi"; // Adjust path if needed
-// import type { RootState } from "@/store"; // Uncomment and adjust path for strict typing
+import { useLogoutMutation } from "@/store/modules/auth/authApi"
+import type { RootState } from "@/store"; // Uncomment and adjust path for strict typing
 
 export default function Topbar() {
   const router = useRouter();
@@ -83,7 +83,7 @@ export default function Topbar() {
       {/* Right: Actions & Profile */}
       <div className="flex items-center gap-2 sm:gap-4">
         {/* Notifications (Mocked until API is ready) */}
-        <NotificationDropdown notifications={[]} userId={user?.id || 0} />
+        {/* <NotificationDropdown notifications={[]} userId={user?.id || 0} /> */}
 
         {/* Theme Toggle */}
         {mounted ? (
@@ -123,7 +123,7 @@ export default function Topbar() {
           >
             <div className="px-3 py-2 flex flex-col gap-0.5">
               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                {user?.fullName || "Ahmad"}
+                {user?.fullName || "User Name"}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
                 {user?.email || "User Account"}
