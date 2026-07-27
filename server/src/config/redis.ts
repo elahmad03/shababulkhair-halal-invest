@@ -2,27 +2,26 @@ import Redis from 'ioredis';
 import { env } from '.';
 
 const isProd = env.NODE_ENV === 'production';
+const useTLS = env.REDIS_TLS === true; 
 
 const baseOptions = {
   host: env.REDIS_HOST || 'localhost',
   port: env.REDIS_PORT || 6379,
-  username: isProd ? 'default' : undefined,
+  username: useTLS ? 'default' : undefined,
   password: env.REDIS_PASSWORD,
-  tls: isProd ? {} : undefined,
+  tls: useTLS ? {} : undefined,
   retryStrategy(times: number) {
-    const maxRetries = 20; // ~20 seconds total with exponential backoff
-    if (times > maxRetries) return null; // stop retrying
+    const maxRetries = 20;
+    if (times > maxRetries) return null;
     return Math.min(times * 50, 2000);
   },
 };
 
-// ─── General use (cache, sessions, etc.) ─────────────────────────────────────
 const redisClient = new Redis({
   ...baseOptions,
   maxRetriesPerRequest: 3,
 });
 
-// ─── BullMQ only — must be null, separate connection ─────────────────────────
 export const bullmqRedis = new Redis({
   ...baseOptions,
   maxRetriesPerRequest: null,
