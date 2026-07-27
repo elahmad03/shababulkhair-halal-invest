@@ -142,7 +142,7 @@ app.get("/api/v1", (_req: Request, res: Response) => {
   );
 });
 
-app.get("/api/v1health", (_req, res) => {
+app.get("/api/v1/health", (_req, res) => {
   res.status(200).json({
     status: "ok",
     uptime: process.uptime(),

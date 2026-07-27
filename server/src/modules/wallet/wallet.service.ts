@@ -170,7 +170,9 @@ export default class WalletService {
    * Step 2 of 2: Called by your Express webhook route.
    * Verifies the HMAC-SHA512 signature, then credits the wallet atomically.
    *
-   * Idempotent — safe to receive the same webhook event multiple times.
+   * Idempotent AND concurrency-safe — safe to receive the same webhook event
+   * multiple times, including near-simultaneous duplicate deliveries (Paystack
+   * retries on non-2xx responses, and duplicates can otherwise race each other).
    */
   static async processPaymentWebhook(signature: string, rawBody: Buffer) {
     // ── 1. Cryptographic Signature Verification ──────────────────────────────
@@ -191,41 +193,62 @@ export default class WalletService {
     // We only handle charge.success; ignore all other Paystack events silently.
     if (payload.event !== "charge.success") return;
 
-    const { reference, status, amount } = payload.data as {
+    const { reference, status, amount: reportedAmountKobo } = payload.data as {
       reference: string;
       status: string;
-      amount: number; // Paystack sends this as a number in kobo
+      amount: number; // Paystack sends this as a number in kobo — NOT trusted for crediting
     };
 
     if (status !== "success") return;
 
-    // ── 3. ACID-Compliant State Update ───────────────────────────────────────
+    // ── 3. ACID-Compliant, Concurrency-Safe State Update ─────────────────────
     await prisma.$transaction(async (tx) => {
-      const transaction = await tx.transaction.findUnique({
-        where: { transactionRef: reference },
-      });
-
-      // Guard: unknown reference or already processed (idempotency)
-      if (!transaction || transaction.transactionStatus !== TransactionStatus.PENDING) {
-        return;
-      }
-
-      // Mark transaction complete
-      await tx.transaction.update({
-        where: { id: transaction.id },
+      // Atomically "claim" the transaction: this UPDATE only affects a row
+      // that is still PENDING, and Postgres takes a row lock on it. If two
+      // webhook deliveries for the same reference race each other, only one
+      // will see count === 1; the other sees count === 0 and bails out.
+      // This closes the replay/race window without needing extra locking code.
+      const claimed = await tx.transaction.updateMany({
+        where: {
+          transactionRef: reference,
+          transactionStatus: TransactionStatus.PENDING,
+        },
         data: { transactionStatus: TransactionStatus.COMPLETED },
       });
 
-      // Credit wallet — upsert so new users without a wallet row are handled
+      // Guard: unknown reference, or already processed/claimed by a
+      // concurrent/replayed delivery.
+      if (claimed.count === 0) {
+        return;
+      }
+
+      const transaction = await tx.transaction.findUniqueOrThrow({
+        where: { transactionRef: reference },
+      });
+
+      // Defense in depth: the amount we credit comes from OUR OWN record
+      // (set at initializeDeposit time), never from the webhook payload.
+      // If Paystack reports a different amount than we expect, that's a
+      // signal worth surfacing rather than silently trusting the payload.
+      if (BigInt(reportedAmountKobo) !== transaction.amountKobo) {
+        console.warn(
+          `Paystack webhook amount mismatch for ref=${reference}: ` +
+            `expected=${transaction.amountKobo.toString()} reported=${reportedAmountKobo}`
+        );
+      }
+
+      // Credit wallet — upsert so new users without a wallet row are handled.
+      // Always credit transaction.amountKobo (our source of truth), not the
+      // payload's amount field.
       await tx.wallet.upsert({
         where: { userId: transaction.userId },
         create: {
           userId: transaction.userId,
-          balanceKobo: BigInt(amount),
+          balanceKobo: transaction.amountKobo,
           lockedBalanceKobo: 0n,
         },
         update: {
-          balanceKobo: { increment: BigInt(amount) },
+          balanceKobo: { increment: transaction.amountKobo },
         },
       });
 
@@ -291,6 +314,14 @@ export default class WalletService {
     });
   }
 
+  /**
+   * Resolves a pending withdrawal request (approve/reject).
+   *
+   * Uses the same atomic-claim pattern as processPaymentWebhook: the status
+   * transition itself (PENDING -> APPROVED/REJECTED) is the guard against
+   * concurrent double-processing (e.g. two admins clicking "approve" at the
+   * same moment, or a duplicate request from a retried client call).
+   */
   static async resolveWithdrawal(
     requestId: string,
     adminId: string,
@@ -298,24 +329,26 @@ export default class WalletService {
     reason?: string
   ) {
     return await prisma.$transaction(async (tx) => {
-      const request = await tx.disbursementRequest.findUnique({
-        where: { id: requestId },
-        include: { user: true },
-      });
-
-      if (!request || request.status !== "PENDING") {
-        throw new Error("Invalid or already processed request");
-      }
-
-      // Update disbursement request status
-      const updatedRequest = await tx.disbursementRequest.update({
-        where: { id: requestId },
+      // Atomically claim the request: only succeeds if still PENDING.
+      const claimed = await tx.disbursementRequest.updateMany({
+        where: {
+          id: requestId,
+          status: "PENDING",
+        },
         data: {
-          status: status as any, // Use string literal as Prisma will handle enum mapping
+          status: status as any,
           approvedById: adminId,
           processedAt: new Date(),
           rejectionReason: reason || null,
         },
+      });
+
+      if (claimed.count === 0) {
+        throw new Error("Invalid or already processed request");
+      }
+
+      const request = await tx.disbursementRequest.findUniqueOrThrow({
+        where: { id: requestId },
       });
 
       if (status === "APPROVED") {
@@ -335,7 +368,7 @@ export default class WalletService {
         // Remove from locked balance (funds have left the system)
         await tx.wallet.update({
           where: { userId: request.userId },
-          data: { 
+          data: {
             lockedBalanceKobo: { decrement: request.amountKobo },
           },
         });
@@ -351,8 +384,8 @@ export default class WalletService {
       }
 
       return {
-        requestId: updatedRequest.id,
-        status: updatedRequest.status,
+        requestId: request.id,
+        status: status,
       };
     });
   }
