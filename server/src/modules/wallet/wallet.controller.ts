@@ -82,7 +82,14 @@ export const getTransactions = catchAsync(async (req: AuthenticatedRequest, res:
   const result = await WalletService.getTransactions(userId, page, limit);
   res.status(200).json(successResponse(result, "Transactions retrieved successfully"));
 });
+// GET /api/wallet/transactions/:reference/status - Poll deposit status after Paystack redirect
+export const getTransactionStatus = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const { reference } = req.params;
+  const userId = req.user!.userId;
 
+  const result = await WalletService.getTransactionStatus(reference, userId);
+  res.status(200).json(successResponse(result, "Transaction status retrieved successfully"));
+});
 // GET /api/wallet/admin/withdrawals - List withdrawal requests with filters
 export const listWithdrawals = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { status, page, limit } = listWithdrawalsSchema.parse(req.query);

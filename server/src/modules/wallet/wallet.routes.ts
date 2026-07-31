@@ -42,7 +42,12 @@ router.get(
   authMiddleware,
   WalletController.getTransactions
 );
-
+// GET /api/wallet/transactions/:reference/status - Poll deposit status
+router.get(
+  "/transactions/:reference/status",
+  authMiddleware,
+  WalletController.getTransactionStatus
+);
 // ==========================================
 // ADMIN ROUTES (Protected + Role Check)
 // ==========================================

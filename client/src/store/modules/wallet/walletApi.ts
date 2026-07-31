@@ -104,6 +104,16 @@ export interface ListWithdrawalsResponse {
   };
 }
 
+// Result of GET /wallet/transactions/:reference/status — used to poll for the
+// outcome of a deposit after Paystack redirects back to /payment/callback.
+export interface TransactionStatusResponse {
+  transactionRef: string;
+  transactionType: string;
+  amountKobo: string;
+  transactionStatus: "PENDING" | "COMPLETED" | "FAILED";
+  createdAt: string;
+}
+
 // ─── API ──────────────────────────────────────────────────────────────────────
 
 export const walletApi = rootApi.injectEndpoints({
@@ -148,6 +158,14 @@ export const walletApi = rootApi.injectEndpoints({
       query: ({ page = 1, limit = 20 }) => ({
         url: `/wallet/transactions?page=${page}&limit=${limit}`,
       }),
+      providesTags: ["Wallet"],
+    }),
+
+    // GET /api/wallet/transactions/:reference/status - Poll deposit status
+    // after Paystack redirects back to /payment/callback. Backed by our own
+    // DB (populated by the webhook), not a re-call to Paystack.
+    getTransactionStatus: build.query<{ data: TransactionStatusResponse }, string>({
+      query: (reference) => ({ url: `/wallet/transactions/${reference}/status` }),
       providesTags: ["Wallet"],
     }),
 
@@ -204,6 +222,7 @@ export const {
   useInitializeDepositMutation,
   useRequestWithdrawalMutation,
   useGetTransactionsQuery,
+  useGetTransactionStatusQuery,
   useGetAdminWalletQuery,
   useAdminAdjustMutation,
   useResolveWithdrawalMutation,

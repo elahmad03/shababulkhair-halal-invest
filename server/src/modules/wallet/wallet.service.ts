@@ -35,7 +35,8 @@ interface PaystackInitializeResponse {
 async function paystackInitialize(
   email: string,
   amountKobo: bigint,
-  reference: string
+  reference: string,
+  callbackUrl: string
 ): Promise<PaystackInitializeResponse["data"]> {
   const res = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
     method: "POST",
@@ -48,7 +49,8 @@ async function paystackInitialize(
       amount: amountKobo.toString(), // Paystack expects a string or number in kobo
       reference,
       currency: "NGN",
-      channels: ["card", "bank", "ussd", "qr", "mobile_money", "bank_transfer"],
+      callback_url: callbackUrl,
+      channels: ["card", "bank", "bank_transfer"],
     }),
   });
 
@@ -153,10 +155,11 @@ export default class WalletService {
         narration: "Wallet Deposit Initialization",
       },
     });
+    const callbackUrl = `${env.CLIENT_ORIGIN}/payment/callback`;
 
     // 2. Call Paystack — if this throws, the PENDING record stays in the DB
     //    which is fine; it will simply never be fulfilled and won't affect the wallet.
-    const paystackData = await paystackInitialize(userEmail, amountKobo, transactionRef);
+    const paystackData = await paystackInitialize(userEmail, amountKobo, transactionRef, callbackUrl);
 
     return {
       transactionRef: transaction.transactionRef,
@@ -424,6 +427,41 @@ export default class WalletService {
       total,
       page,
       limit,
+    };
+  }
+
+  // ==========================================
+  // TRANSACTION STATUS (for post-payment polling)
+  // ==========================================
+
+  /**
+   * Used by the Next.js /payment/callback page to poll for the outcome
+   * of a deposit after Paystack redirects the user back. Does NOT call
+   * Paystack again — the webhook (processPaymentWebhook) is the source
+   * of truth for crediting; this just reads what our own DB knows.
+   *
+   * Scoped to userId as well as reference so a user can never poll for
+   * (and thus learn the outcome of) another user's transaction.
+   */
+  static async getTransactionStatus(reference: string, userId: string) {
+    const transaction = await prisma.transaction.findFirst({
+      where: { transactionRef: reference, userId },
+      select: {
+        transactionRef: true,
+        transactionType: true,
+        amountKobo: true,
+        transactionStatus: true,
+        createdAt: true,
+      },
+    });
+
+    if (!transaction) {
+      throw new Error("Transaction not found");
+    }
+
+    return {
+      ...transaction,
+      amountKobo: transaction.amountKobo.toString(),
     };
   }
 
