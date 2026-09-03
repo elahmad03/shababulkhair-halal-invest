@@ -34,24 +34,26 @@ export default function PaymentCallbackClient({
   }, [reference, router]);
 
   // Count attempts so we know when to give up waiting on a still-PENDING tx.
+  const isTerminalStatus = status === "COMPLETED" || status === "FAILED";
+
   useEffect(() => {
-    if (!reference || status) return; // stop counting once we have a final status
+    if (!reference || isTerminalStatus) return;
     const timer = setTimeout(() => setAttempts((a) => a + 1), POLL_INTERVAL_MS);
     return () => clearTimeout(timer);
-  }, [reference, status, attempts]);
+  }, [reference, isTerminalStatus, attempts]);
 
   // Redirect once we know the outcome, or once we've waited long enough.
   useEffect(() => {
     if (!reference) return;
 
     if (status === "COMPLETED") {
-      router.replace(`/wallet?status=success&reference=${reference}`);
+      router.replace(`/user/wallet?status=success&reference=${reference}`);
     } else if (status === "FAILED") {
-      router.replace(`/wallet?status=failed&reference=${reference}`);
+      router.replace(`/user/wallet?status=failed&reference=${reference}`);
     } else if (attempts >= MAX_ATTEMPTS) {
       // Still PENDING after ~20s — don't claim it failed, the webhook may
       // just be slow. Hand off to the wallet page, which can keep checking.
-      router.replace(`/wallet?status=pending&reference=${reference}`);
+      router.replace(`/user/wallet?status=pending&reference=${reference}`);
     }
   }, [status, attempts, reference, router]);
 

@@ -1,81 +1,89 @@
-// /components/admin/users/[id]/user-kyc-card.tsx
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// components/admin/users/user-kyc-card.tsx
+import { CalendarDays, IdCard, MapPin, Users } from "lucide-react";
+import type { UserDetail } from "@/store/modules/user/userApi";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { UserProfile } from "@/schemas/app";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDate, kycTone, resolveDocumentUrl, titleCase, toneClass } from "../utils";
 
-function DocumentLinks({ profile }: { profile: UserProfile }) {
-  // Mock document URLs on profile for now: profilePictureUrl, idFrontUrl, idBackUrl
-  const docs = [
-    { label: "Profile Picture", url: (profile as any).profilePictureUrl ?? (profile as any).profilePictureUrl },
-    { label: "ID Card Front", url: (profile as any).idCardFrontUrl ?? (profile as any).idCardFrontUrl },
-    { label: "ID Card Back", url: (profile as any).idCardBackUrl ?? (profile as any).idCardBackUrl },
-  ];
-
+function Row({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value?: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
-      {docs.map((d) => (
-        <a key={d.label} href={d.url ?? "#"} target="_blank" rel="noreferrer" className="text-sm text-emerald-700 hover:underline">
-          View {d.label}
-        </a>
-      ))}
+    <div className="flex items-start gap-2.5 py-2 first:pt-0 last:pb-0">
+      <Icon className="mt-0.5 h-3.5 w-3.5 flex-none text-muted-foreground" />
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-sm">{value || "Not provided"}</p>
+      </div>
     </div>
   );
 }
 
-export function UserKycCard({ profile }: { profile: UserProfile | undefined }) {
-  if (!profile) {
+function DocumentThumb({ label, src }: { label: string; src?: string }) {
+  if (!src) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>KYC Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>No profile submitted.</p>
-        </CardContent>
-      </Card>
+      <div className="flex aspect-[3/2] flex-col items-center justify-center gap-1 rounded-lg border border-dashed bg-muted/40 text-xs text-muted-foreground">
+        <IdCard className="h-4 w-4" />
+        {label} not on file
+      </div>
     );
   }
 
-  // profile.dateOfBirth in mocks is a string. Be tolerant: show the string as-is when present,
-  // otherwise format Date objects if that's what we get.
-  const dobRaw = (profile as any).dateOfBirth;
-  const dobDisplay = dobRaw
-    ? typeof dobRaw === "string"
-      ? dobRaw
-      : dobRaw instanceof Date
-      ? dobRaw.toLocaleDateString()
-      : String(dobRaw)
-    : "N/A";
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex flex-col gap-1.5"
+      aria-label={`Open ${label} in full size`}
+    >
+      <div className="aspect-[3/2] overflow-hidden rounded-lg border bg-muted">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt={label} className="h-full w-full object-cover transition group-hover:opacity-90" />
+      </div>
+      <span className="text-xs text-muted-foreground group-hover:text-foreground">{label}</span>
+    </a>
+  );
+}
+
+export function UserKycCard({ user }: { user: UserDetail }) {
+  const kyc = user.kyc;
+  const idFrontSrc = resolveDocumentUrl(kyc?.idCardFrontUrl);
+  const idBackSrc = resolveDocumentUrl(kyc?.idCardBackUrl);
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle>Personal Details</CardTitle>
-          <Badge className="capitalize">{String(profile.kycStatus)}</Badge>
-        </CardHeader>
-        <CardContent className="text-sm space-y-1">
-          <p><strong className="inline-block w-28">Address:</strong> {`${profile.streetAddress ?? 'N/A'}, ${profile.city ?? ''} ${profile.state ?? ''}`}</p>
-          <p><strong className="inline-block w-28">Date of Birth:</strong> {dobDisplay}</p>
-          <p><strong className="inline-block w-28">ID Type:</strong> {profile.governmentIdType ?? 'N/A'}</p>
-          <p><strong className="inline-block w-28">ID Number:</strong> {(profile as any).governmentIdNumber ?? 'N/A'}</p>
-          <div className="mt-2">
-            <DocumentLinks profile={profile} />
-          </div>
-        </CardContent>
-      </Card>
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm text-muted-foreground">Verification</CardTitle>
+        <Badge className={toneClass(kycTone(kyc?.status))}>{titleCase(kyc?.status)}</Badge>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <div className="divide-y">
+          <Row icon={IdCard} label="Government ID" value={titleCase(kyc?.governmentIdType)} />
+          <Row icon={CalendarDays} label="Date of birth" value={formatDate(kyc?.dateOfBirth)} />
+          {kyc?.verificationDate && (
+            <Row icon={CalendarDays} label="Verified on" value={formatDate(kyc.verificationDate)} />
+          )}
+          <Row
+            icon={MapPin}
+            label="Address"
+            value={
+              [kyc?.streetAddress, kyc?.city, kyc?.stateRegion, kyc?.countryCode]
+                .filter(Boolean)
+                .join(", ") || undefined
+            }
+          />
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Next of Kin</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm">
-          <p><strong className="inline-block w-28">Name:</strong> {profile.nextOfKinName ?? 'N/A'}</p>
-          <p><strong className="inline-block w-28">Relationship:</strong> {profile.nextOfKinRelationship ?? 'N/A'}</p>
-          <p><strong className="inline-block w-28">Phone:</strong> {profile.nextOfKinPhoneNumber ?? 'N/A'}</p>
-        </CardContent>
-      </Card>
-    </div>
+        <div className="grid grid-cols-2 gap-3 border-t pt-3">
+          <DocumentThumb label="ID front" src={idFrontSrc} />
+          <DocumentThumb label="ID back" src={idBackSrc} />
+        </div>
+
+        <div className="divide-y border-t pt-1">
+          <Row icon={Users} label="Next of kin" value={kyc?.nextOfKinName} />
+          <Row icon={Users} label="Relationship" value={titleCase(kyc?.nextOfKinRelationship)} />
+          <Row icon={Users} label="Next of kin phone" value={kyc?.nextOfKinPhone} />
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -6,7 +6,7 @@ import * as Walletcontroller from "../modules/wallet/wallet.controller"
 // ==========================================
 const router = Router();
 
-// POST /api/wallet/paystack - Paystack webhook
+// POST  - Paystack webhook
 router.post(
   "/paystack",
   Walletcontroller.handlePaystackWebhook

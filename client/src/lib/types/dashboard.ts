@@ -1,4 +1,3 @@
-// /lib/types.ts
 
 export type KpiData = {
   totalCapitalUnderManagement: number;
@@ -16,11 +15,10 @@ export type ActivityItem = {
 
 
 export type UserTableType = {
-  id: number;
+  id: string;
   fullName: string;
   email: string;
   role: 'member' | 'committee' | 'admin';
   kycStatus: 'pending' | 'verified' | 'failed';
-  balance: number;
   createdAt: Date;
 };

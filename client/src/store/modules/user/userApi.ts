@@ -7,7 +7,7 @@ export interface User {
   email: string;
   phoneNumber?: string;
   role: "ADMIN" | "COMMITTEE" | "MEMBER";
-  status: "ACTIVE" | "SUSPENDED" | "BANNED";
+  status: "ACTIVE" | "SUSPENDED" | "DECEASED";
   walletAddress?: string;
   avatarUrl?: string;
   createdAt: string;
@@ -134,6 +134,23 @@ export interface UserTransactionsResponse {
   };
 }
 
+/**
+ * Every endpoint on this backend wraps its payload like:
+ *   { success: boolean, data: T, message: string }
+ * `unwrap` pulls `.data` out in `transformResponse` so components never
+ * have to think about the envelope — `useGetMeQuery()` returns the user,
+ * not `{ success, data, message }`.
+ */
+interface ApiEnvelope<T> {
+  success: boolean;
+  data: T;
+  message: string;
+}
+
+function unwrap<T>(response: ApiEnvelope<T>): T {
+  return response.data;
+}
+
 export const userApi = rootApi.injectEndpoints({
   endpoints: (builder) => ({
     // ── List all users with filters
@@ -149,37 +166,41 @@ export const userApi = rootApi.injectEndpoints({
       }
     >({
       query: (params) => ({
-        url: "/users",
+        url: "/users/admin/users",
         method: "GET",
         params,
       }),
+      transformResponse: unwrap<ListUsersResponse>,
       providesTags: ["Users"],
     }),
 
     // ── Get user detail
     getUser: builder.query<UserDetail, string>({
       query: (id) => ({
-        url: `/users/${id}`,
+        url: `/users/admin/users/${id}`,
         method: "GET",
       }),
+      transformResponse: unwrap<UserDetail>,
       providesTags: ["Users"],
     }),
 
     // ── Get user KYC
     getUserKyc: builder.query<UserKyc, string>({
       query: (id) => ({
-        url: `/users/${id}/kyc`,
+        url: `/users/admin/users/${id}/kyc`,
         method: "GET",
       }),
+      transformResponse: unwrap<UserKyc>,
       providesTags: ["Users"],
     }),
 
     // ── Get user investments
     getUserInvestments: builder.query<Investment[], string>({
       query: (id) => ({
-        url: `/users/${id}/investments`,
+        url: `/users/admin/users/${id}/investments`,
         method: "GET",
       }),
+      transformResponse: unwrap<Investment[]>,
       providesTags: ["Users"],
     }),
 
@@ -189,10 +210,11 @@ export const userApi = rootApi.injectEndpoints({
       { id: string; page?: number; limit?: number }
     >({
       query: ({ id, page = 1, limit = 10 }) => ({
-        url: `/users/${id}/transactions`,
+        url: `/users/admin/users/${id}/transactions`,
         method: "GET",
         params: { page, limit },
       }),
+      transformResponse: unwrap<UserTransactionsResponse>,
       providesTags: ["Users"],
     }),
 
@@ -202,6 +224,7 @@ export const userApi = rootApi.injectEndpoints({
         url: "/users/me",
         method: "GET",
       }),
+      transformResponse: unwrap<UserDetail>,
       providesTags: ["Users"],
     }),
 
@@ -211,12 +234,14 @@ export const userApi = rootApi.injectEndpoints({
       { id: string; status: "ACTIVE" | "SUSPENDED" }
     >({
       query: ({ id, status }) => ({
-        url: `/users/${id}/status`,
+        url: `/users/admin/users/${id}/status`,
         method: "PATCH",
         body: { status },
       }),
+      transformResponse: unwrap<UserDetail>,
       invalidatesTags: ["Users"],
     }),
+
   }),
 });
 

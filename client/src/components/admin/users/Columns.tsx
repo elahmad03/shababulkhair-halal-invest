@@ -3,7 +3,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { UserTableType } from "@/lib/types/dashboard";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/utils";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,17 +56,14 @@ export const columns: ColumnDef<UserTableType>[] = [
         return <Badge variant={variant as any} className="capitalize">{status}</Badge>;
       },
   },
-  {
-    accessorKey: "balance",
-    header: () => <div className="text-right">Wallet Balance</div>,
-    cell: ({ row }) => <div className="text-right font-medium">{formatCurrency(row.original.balance)}</div>,
-  },
+  
   {
     accessorKey: "createdAt",
     header: "Date Joined",
     cell: ({ row }) => new Date(row.original.createdAt).toLocaleDateString(),
   },
-  {
+  {accessorKey: "Actions",
+    header: "Actions",
     id: "actions",
     cell: ({ row }) => {
       const user = row.original;

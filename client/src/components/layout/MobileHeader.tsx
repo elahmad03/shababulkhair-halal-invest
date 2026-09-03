@@ -21,6 +21,13 @@ import NotificationDropdown from "@/components/user/notifications/NotificalDropd
 
 // API & Store
 import { useLogoutMutation } from "@/store/modules/auth/authApi"
+import {
+  useGetMeQuery,
+  useGetUserKycQuery,
+  useGetUserInvestmentsQuery,
+  useGetUserTransactionsQuery,
+} from "@/store/modules/user/userApi";
+
 import type { RootState } from "@/store"; // Uncomment and adjust path for strict typing
 
 export default function Topbar() {
@@ -34,7 +41,7 @@ export default function Topbar() {
 
   // Auth & State Integration
   // Replace `any` with `RootState` once imported
-  const user = useSelector((state: any) => state.auth.user); 
+  // const user1 = useSelector((state: any) => state.auth.user); 
   const [logoutUser, { isLoading: isLoggingOut }] = useLogoutMutation();
 
   useEffect(() => {
@@ -64,7 +71,7 @@ export default function Topbar() {
     if (!name) return "U";
     return name.substring(0, 2).toUpperCase();
   };
-
+ const { data: user, isLoading, isError } = useGetMeQuery();
   return (
     <header className="relative px-4 py-4 border-b bg-white dark:bg-gray-900 flex items-center justify-between z-40">
       {/* Left: Brand & Mobile Toggle */}
@@ -107,12 +114,12 @@ export default function Topbar() {
               aria-label="User menu"
             >
               <AvatarImage 
-                src={user?.profilePictureUrl || "/noImage.png"} 
-                alt={`${user?.fullName || 'User'} profile picture`}
+                src={user?.avatarUrl || "/noImage.png"} 
+                alt={`${user?.lastName || 'User'} profile picture`}
                 className="w-8 h-8 rounded-full object-cover" 
               />
               <AvatarFallback className="w-8 h-8 flex items-center justify-center rounded-full bg-emerald-100 text-emerald-700 font-semibold text-sm">
-                {getInitials(user?.fullName)}
+                {getInitials(user?.firstName)}
               </AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
@@ -123,7 +130,7 @@ export default function Topbar() {
           >
             <div className="px-3 py-2 flex flex-col gap-0.5">
               <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                {user?.fullName || "User Name"}
+                {user?.firstName || "User Name"}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
                 {user?.email || "User Account"}
