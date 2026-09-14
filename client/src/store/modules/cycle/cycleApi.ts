@@ -1,19 +1,39 @@
 import { rootApi } from "@/store/rootApi";
 import type { ApiResponse } from "@/types";
-import { CompleteCycleRequest, CreateCycleRequest, CreateVentureRequest, Cycle, InvestmentHistory, LedgerEntryRequest, MemberPosition, PaginatedCycles, PurchaseSharesRequest, PurchaseSharesResponse, RecordVentureProfitRequest, UpdateCycleStatusRequest, DistributeProfitRequest, DistributeProfitResponse } from "./cycle.types";
+import type {
+  Cycle,
+  PaginatedCycles,
+  MemberPosition,
+  InvestmentHistory,
+  CycleInvestmentsResponse,
+  CreateCycleRequest,
+  UpdateCycleRequest,
+  UpdateCycleStatusRequest,
+  PurchaseSharesRequest,
+  PurchaseSharesResponse,
+  DistributeProfitRequest,
+  DistributeProfitResponse,
+  CompleteCycleRequest,
+} from "./cycle.types";
 
-// ─── API ─────────────────────────────────────────────────────────────
+// ─── CYCLE API ───────────────────────────────────────────────────────────────
 
 export const cycleApi = rootApi.injectEndpoints({
   endpoints: (build) => ({
-
-    // ─── PUBLIC ─────────────────────────────────────────────────────
+    // ─── QUERIES ─────────────────────────────────────────────────────
 
     // GET /cycles
-    listCycles: build.query<ApiResponse<PaginatedCycles>, { page?: number; limit?: number }>({
-      query: ({ page = 1, limit = 10 }) => ({
-        url: `/cycles?page=${page}&limit=${limit}`,
-      }),
+    listCycles: build.query<
+      ApiResponse<PaginatedCycles>,
+      { page?: number; limit?: number; status?: string } | void
+    >({
+      query: (params) => {
+        const page = params?.page ?? 1;
+        const limit = params?.limit ?? 10;
+        let url = `/cycles?page=${page}&limit=${limit}`;
+        if (params?.status) url += `&status=${params.status}`;
+        return { url };
+      },
       providesTags: ["Cycles"],
     }),
 
@@ -22,13 +42,18 @@ export const cycleApi = rootApi.injectEndpoints({
       query: (id) => ({
         url: `/cycles/${id}`,
       }),
+      providesTags: (_result, _error, id) => [{ type: "Cycles", id }],
     }),
 
-    // GET /cycles/:id/my-position
+    // GET /cycles/:id/my-investment (with alias /my-position)
     getMemberPosition: build.query<ApiResponse<MemberPosition>, string>({
       query: (id) => ({
-        url: `/cycles/${id}/my-position`,
+        url: `/cycles/${id}/my-investment`,
       }),
+      providesTags: (_result, _error, id) => [
+        { type: "Cycles", id },
+        "Wallet",
+      ],
     }),
 
     // GET /cycles/my-history
@@ -36,27 +61,44 @@ export const cycleApi = rootApi.injectEndpoints({
       query: () => ({
         url: `/cycles/my-history`,
       }),
+      providesTags: ["Cycles"],
     }),
 
-    // POST /cycles/:id/shares/purchase
+    // GET /cycles/:id/investments (Admin)
+    getCycleInvestments: build.query<
+      ApiResponse<CycleInvestmentsResponse>,
+      { cycleId: string; page?: number; limit?: number }
+    >({
+      query: ({ cycleId, page = 1, limit = 20 }) => ({
+        url: `/cycles/${cycleId}/investments?page=${page}&limit=${limit}`,
+      }),
+      providesTags: (_result, _error, arg) => [
+        { type: "Cycles", id: arg.cycleId },
+      ],
+    }),
+
+    // ─── MUTATIONS ───────────────────────────────────────────────────
+
+    // POST /cycles/:id/invest
     purchaseShares: build.mutation<
       ApiResponse<PurchaseSharesResponse>,
       { cycleId: string; body: PurchaseSharesRequest }
     >({
       query: ({ cycleId, body }) => ({
-        url: `/cycles/${cycleId}/shares/purchase`,
+        url: `/cycles/${cycleId}/invest`,
         method: "POST",
-        body,
-        headers: {
-          "Idempotency-Key": body.idempotencyKey,
+        body: {
+          sharesRequested: body.sharesRequested ?? body.shares ?? body.quantity,
+          idempotencyKey: body.idempotencyKey,
         },
+        headers: body.idempotencyKey
+          ? { "Idempotency-Key": body.idempotencyKey }
+          : undefined,
       }),
-      invalidatesTags: ["Cycles", "Wallet"],
+      invalidatesTags: ["Cycles", "Wallet", "Transactions"],
     }),
 
-    // ─── ADMIN ──────────────────────────────────────────────────────
-
-    // POST /cycles
+    // POST /cycles (Admin)
     createCycle: build.mutation<ApiResponse<Cycle>, CreateCycleRequest>({
       query: (body) => ({
         url: `/cycles`,
@@ -66,26 +108,23 @@ export const cycleApi = rootApi.injectEndpoints({
       invalidatesTags: ["Cycles"],
     }),
 
-    // PATCH /cycles/:id/open
-    openCycle: build.mutation<ApiResponse<Cycle>, string>({
-      query: (id) => ({
-        url: `/cycles/${id}/open`,
+    // PATCH /cycles/:id (Admin - PENDING only)
+    updateCycle: build.mutation<
+      ApiResponse<Cycle>,
+      { cycleId: string; body: UpdateCycleRequest }
+    >({
+      query: ({ cycleId, body }) => ({
+        url: `/cycles/${cycleId}`,
         method: "PATCH",
+        body,
       }),
-      invalidatesTags: ["Cycles"],
+      invalidatesTags: (_result, _error, arg) => [
+        "Cycles",
+        { type: "Cycles", id: arg.cycleId },
+      ],
     }),
 
-    // PATCH /cycles/:id/activate
-    activateCycle: build.mutation<ApiResponse<Cycle>, string>({
-      query: (id) => ({
-        url: `/cycles/${id}/activate`,
-        method: "PATCH",
-      }),
-      invalidatesTags: ["Cycles"],
-    }),
-
-
-    // PATCH /cycles/:id/status
+    // PATCH /cycles/:id/status (Admin - forward status transitions)
     updateCycleStatus: build.mutation<
       ApiResponse<Cycle>,
       { cycleId: string; body: UpdateCycleStatusRequest }
@@ -95,10 +134,15 @@ export const cycleApi = rootApi.injectEndpoints({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["Cycles"],
+      invalidatesTags: (_result, _error, arg) => [
+        "Cycles",
+        { type: "Cycles", id: arg.cycleId },
+        "Wallet",
+        "Dashboard",
+      ],
     }),
 
-    // POST /cycles/:id/distribute-profit
+    // POST /cycles/:id/distribute-profit (Admin)
     distributeProfit: build.mutation<
       ApiResponse<DistributeProfitResponse>,
       { cycleId: string; body: DistributeProfitRequest }
@@ -108,10 +152,37 @@ export const cycleApi = rootApi.injectEndpoints({
         method: "POST",
         body,
       }),
+      invalidatesTags: (_result, _error, arg) => [
+        "Cycles",
+        { type: "Cycles", id: arg.cycleId },
+      ],
+    }),
+
+    // Status shortcuts (Admin)
+    openCycle: build.mutation<ApiResponse<Cycle>, string>({
+      query: (id) => ({
+        url: `/cycles/${id}/open`,
+        method: "PATCH",
+      }),
       invalidatesTags: ["Cycles"],
     }),
 
-    // PATCH /cycles/:id/complete
+    activateCycle: build.mutation<
+      ApiResponse<Cycle>,
+      { cycleId: string; durationDays?: number } | string
+    >({
+      query: (arg) => {
+        const id = typeof arg === "string" ? arg : arg.cycleId;
+        const body = typeof arg === "string" ? {} : { durationDays: arg.durationDays };
+        return {
+          url: `/cycles/${id}/activate`,
+          method: "PATCH",
+          body,
+        };
+      },
+      invalidatesTags: ["Cycles"],
+    }),
+
     completeCycle: build.mutation<
       ApiResponse<Cycle>,
       { cycleId: string; body: CompleteCycleRequest }
@@ -123,40 +194,6 @@ export const cycleApi = rootApi.injectEndpoints({
       }),
       invalidatesTags: ["Cycles", "Wallet"],
     }),
-
-    // POST /cycles/:id/ventures
-    createVenture: build.mutation<
-      ApiResponse<any>,
-      { cycleId: string; body: CreateVentureRequest }
-    >({
-      query: ({ cycleId, body }) => ({
-        url: `/cycles/${cycleId}/ventures`,
-        method: "POST",
-        body,
-      }),
-    }),
-
-    // PATCH /cycles/ventures/:ventureId/profit
-    recordVentureProfit: build.mutation<
-      ApiResponse<any>,
-      { ventureId: string; body: RecordVentureProfitRequest }
-    >({
-      query: ({ ventureId, body }) => ({
-        url: `/cycles/ventures/${ventureId}/profit`,
-        method: "PATCH",
-        body,
-      }),
-    }),
-
-    // POST /cycles/ledger
-    recordLedgerEntry: build.mutation<ApiResponse<any>, LedgerEntryRequest>({
-      query: (body) => ({
-        url: `/cycles/ledger`,
-        method: "POST",
-        body,
-      }),
-    }),
-
   }),
   overrideExisting: process.env.NODE_ENV !== "production",
 });
@@ -168,15 +205,13 @@ export const {
   useGetCycleByIdQuery,
   useGetMemberPositionQuery,
   useGetMemberInvestmentHistoryQuery,
+  useGetCycleInvestmentsQuery,
   usePurchaseSharesMutation,
-
   useCreateCycleMutation,
-  useOpenCycleMutation,
-  useActivateCycleMutation,
+  useUpdateCycleMutation,
   useUpdateCycleStatusMutation,
   useDistributeProfitMutation,
+  useOpenCycleMutation,
+  useActivateCycleMutation,
   useCompleteCycleMutation,
-  useCreateVentureMutation,
-  useRecordVentureProfitMutation,
-  useRecordLedgerEntryMutation,
 } = cycleApi;

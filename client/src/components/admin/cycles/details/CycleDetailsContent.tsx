@@ -94,6 +94,12 @@ function StatusBadge({ status }: { status: string }) {
       border: "border-blue-200",
       icon: "⚡",
     },
+    closing: {
+      bg: "bg-amber-50",
+      text: "text-amber-800",
+      border: "border-amber-200",
+      icon: "📢",
+    },
     completed: {
       bg: "bg-green-50",
       text: "text-green-700",

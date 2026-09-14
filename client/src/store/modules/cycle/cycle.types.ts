@@ -1,109 +1,159 @@
-// Status Transition
-export interface UpdateCycleStatusRequest {
-  status: "PENDING" | "OPEN_FOR_INVESTMENT" | "ACTIVE" | "CLOSING" | "COMPLETED";
-  durationDays?: number;
-}
+// ─── Cycle Status Enum ────────────────────────────────────────────────────────
 
-// Profit Distribution
-export interface DistributeProfitRequest {
-  investorProfitPercentage: number;
-  notes?: string;
-}
-export interface DistributeProfitResponse {
-  cycle: Cycle;
-  distribution: {
-    id: string;
-    investorProfitPercentage: number;
-    orgProfitPercentage: number;
-    totalProfitKobo: string;
-    investorProfitPoolKobo: string;
-    orgProfitShareKobo: string;
-    notes?: string;
-    createdAt: string;
-  };
-}
+export type CycleStatus =
+  | "PENDING"
+  | "OPEN_FOR_INVESTMENT"
+  | "ACTIVE"
+  | "CLOSING"
+  | "COMPLETED";
 
-// ─── Types ───────────────────────────────────────────────────────────
+// ─── Core Cycle Interface ─────────────────────────────────────────────────────
 
-// Cycle
 export interface Cycle {
   id: string;
   cycleName: string;
-  status: string;
+  status: CycleStatus | string;
   pricePerShareKobo: string;
-  createdAt: string;
   startDate: string | null;
   endDate: string | null;
   description?: string | null;
   totalProfitRealizedKobo?: string;
-  profitDistributionStatus?: string;
+  investorProfitPoolKobo?: string;
+  orgProfitShareKobo?: string;
+  profitDistributionStatus?: "PENDING" | "COMPLETED" | string;
+  createdAt: string;
   _count?: {
     investments: number;
     businessVentures: number;
   };
 }
 
-// Pagination
+export type InvestmentCycle = Cycle;
+
+// ─── Shareholder Investment ───────────────────────────────────────────────────
+
+export interface ShareholderInvestment {
+  id: string;
+  userId: string;
+  cycleId: string;
+  sharesAllocated: number | string;
+  amountInvestedKobo: string;
+  profitEarnedKobo: string;
+  createdAt: string;
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string;
+  };
+  cycle?: {
+    id: string;
+    cycleName: string;
+    status: CycleStatus | string;
+    startDate: string | null;
+    endDate: string | null;
+    profitDistributionStatus?: string;
+  };
+}
+
+// ─── Pagination Envelope ──────────────────────────────────────────────────────
+
 export interface PaginatedCycles {
-  data: Cycle[];
+  cycles?: Cycle[];
+  data?: Cycle[];
   page: number;
   limit: number;
   total: number;
+  totalPages?: number;
 }
 
-// Member Position
+// ─── Member Position / History ────────────────────────────────────────────────
+
 export interface MemberPosition {
-  cycleId: string;
-  sharesOwned: number;
+  investment: ShareholderInvestment | null;
+  invested?: ShareholderInvestment | null;
+  cycle: {
+    id?: string;
+    cycleName: string;
+    status: CycleStatus | string;
+    pricePerShareKobo: string;
+  };
+}
+
+export interface InvestmentHistory extends ShareholderInvestment {}
+
+// ─── Cycle Investments (Admin) ────────────────────────────────────────────────
+
+export interface CycleInvestmentsResponse {
+  investments: ShareholderInvestment[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
   totalInvestedKobo: string;
+  totalSharesAllocated: string;
 }
 
-// Investment History
-export interface InvestmentHistory {
-  cycleId: string;
-  sharesOwned: number;
-  totalInvestedKobo: string;
-  status: string;
-}
+// ─── Request Shapes ───────────────────────────────────────────────────────────
 
-// Purchase Shares
-export interface PurchaseSharesRequest {
-  shares: number;
-  idempotencyKey: string;
-}
-
-export interface PurchaseSharesResponse {
-  transactionId: string;
-  sharesPurchased: number;
-  totalCostKobo: string;
-}
-
-// Create Cycle
 export interface CreateCycleRequest {
   cycleName: string;
-  pricePerShareNaira: number;
+  pricePerShareNaira?: number;
+  durationDays?: number;
   startDate?: string;
   endDate?: string;
   description?: string;
 }
-// Complete Cycle
+
+export interface UpdateCycleRequest {
+  cycleName?: string;
+  description?: string;
+  durationDays?: number;
+}
+
+export interface UpdateCycleStatusRequest {
+  status: CycleStatus;
+  durationDays?: number;
+}
+
+export interface PurchaseSharesRequest {
+  shares?: number;
+  sharesRequested?: number;
+  quantity?: number;
+  idempotencyKey?: string;
+}
+
+export interface PurchaseSharesResponse {
+  investment: ShareholderInvestment;
+  investmentId: string;
+  sharesAllocated: number | string;
+  amountInvestedKobo: string;
+  pricePerShareKobo: string;
+  totalCostKobo: string;
+}
+
+export interface DistributeProfitRequest {
+  investorProfitPercentage: number;
+  notes?: string;
+}
+
+export interface DistributeProfitResponse {
+  cycle: Cycle;
+  distribution: {
+    id: string;
+    cycleId: string;
+    authorisedById: string;
+    investorProfitPercentage: number;
+    orgProfitPercentage: number;
+    totalProfitKobo: string;
+    investorProfitPoolKobo: string;
+    orgProfitShareKobo: string;
+    notes?: string | null;
+    createdAt: string;
+  };
+}
+
 export interface CompleteCycleRequest {
   investorProfitPercent: number;
-}
-
-// Venture
-export interface CreateVentureRequest {
-  name: string;
-  description?: string;
-}
-
-export interface RecordVentureProfitRequest {
-  profitAmount: number;
-}
-
-// Ledger
-export interface LedgerEntryRequest {
-  type: "INCOME" | "EXPENSE";
-  amount: number;
-  description?: string;
 }

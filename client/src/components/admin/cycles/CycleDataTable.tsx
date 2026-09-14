@@ -31,27 +31,22 @@ export function CyclesDataTable() {
     limit: 10,
   });
 
-  // 🔥 Safe transformation
+  // Safe transformation
   const cyclesWithStats = useMemo<CycleWithStats[]>(() => {
-    const cycles = data?.data?.data;
+    const rawData = data?.data;
+    const cycles = Array.isArray(rawData)
+      ? rawData
+      : (rawData?.cycles || rawData?.data || []);
 
     if (!cycles || !Array.isArray(cycles)) return [];
 
-    return cycles.map((cycle) => ({
+    return cycles.map((cycle: any) => ({
       id: cycle.id,
-
-      // Match your columns
       name: cycle.cycleName,
       status: cycle.status,
-
-      // 🧠 Safe BigInt conversion
       pricePerShare: BigInt(cycle.pricePerShareKobo ?? 0),
-
-      // Placeholder until backend provides
-      totalInvested: BigInt(0),
-      investorCount: 0,
-
-      // Dates
+      totalInvested: BigInt(cycle.totalProfitRealizedKobo ?? 0),
+      investorCount: cycle._count?.investments ?? 0,
       startDate: cycle.startDate ?? null,
       endDate: cycle.endDate ?? null,
       createdAt: cycle.createdAt,

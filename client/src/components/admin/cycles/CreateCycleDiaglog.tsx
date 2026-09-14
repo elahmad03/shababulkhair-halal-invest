@@ -24,6 +24,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
 import { useCreateCycleMutation } from "@/store/modules/cycle/cycleApi";
+import { toast } from "sonner";
 
 export function CreateCycleDialog() {
   const [createCycle, { isLoading }] = useCreateCycleMutation();
@@ -39,41 +40,25 @@ export function CreateCycleDialog() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    e.preventDefault();
 
-  try {
-    await createCycle({
-      cycleName,
-      pricePerShareNaira: Number(pricePerShare),
+    try {
+      await createCycle({
+        cycleName: cycleName.trim(),
+        pricePerShareNaira: pricePerShare ? Number(pricePerShare) : 10000,
+        startDate: startDate ? startDate.toISOString() : undefined,
+        endDate: endDate ? endDate.toISOString() : undefined,
+        description: description.trim() || undefined,
+      }).unwrap();
 
-      // 👇 convert to ISO (VERY IMPORTANT)
-      startDate: startDate ? startDate.toISOString() : undefined,
-      endDate: endDate ? endDate.toISOString() : undefined,
-
-      description: description || undefined,
-    }).unwrap();
-
-    setOpen(false);
-    resetForm();
-  } catch (err) {
-    console.error("Create cycle failed:", err);
-  } 
-
-    // TODO: Implement API call to create cycle
-    // console.log({
-    //   cycleName,
-    //   startDate,
-    //   endDate,
-    //   pricePerShare: BigInt(Number(pricePerShare) * 100), // Convert to kobo
-    //   description,
-    // });
-
-    // Reset form and close dialog
-    setTimeout(() => {
-      setIsSubmitting(false);
+      toast.success("Investment cycle created successfully");
       setOpen(false);
       resetForm();
-    }, 1000);
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Failed to create cycle");
+      console.error("Create cycle failed:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
