@@ -38,14 +38,15 @@ export const updateCycleStatus = catchAsync(async (req: AuthenticatedRequest, re
 
 export const openCycle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const cycle = await CycleService.openCycle(id);
+  const adminId = req.user!.userId;
+  const cycle = await CycleService.openCycle(id, adminId);
   res.status(200).json(successResponse(cycle, "Cycle is now open for investment"));
 });
 
 export const activateCycle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const durationDays = req.body?.durationDays ? Number(req.body.durationDays) : 90;
-  const cycle = await CycleService.activateCycle(id, durationDays);
+  const adminId = req.user!.userId;
+  const cycle = await CycleService.activateCycle(id, adminId);
   res.status(200).json(successResponse(cycle, "Cycle activated — investment window closed"));
 });
 

@@ -54,7 +54,7 @@ enum CycleStatus {
   PENDING
   OPEN_FOR_INVESTMENT
   ACTIVE
-  CLOSING         // 🔥 NEW: cycle is ending, disbursement window is open
+  CLOSING
   COMPLETED
   @@map("cycle_status")
 }
@@ -78,13 +78,12 @@ enum DisbursementType {
   @@map("disbursement_type")
 }
 
-// 🔥 NEW: Replaces TransactionStatus on all disbursement models
 enum DisbursementStatus {
-  PENDING       // Member submitted request
-  APPROVED      // Admin approved, about to transfer
-  TRANSFERRED   // Admin has sent the money manually
-  COMPLETED     // Confirmed received, record closed
-  REJECTED      // Admin rejected the request
+  PENDING
+  APPROVED
+  TRANSFERRED
+  COMPLETED
+  REJECTED
   @@map("disbursement_status")
 }
 
@@ -124,7 +123,6 @@ model User {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  // Relations
   kycProfiles     KycProfile[]
   wallet          Wallet?
   preferences     UserPreference?
@@ -132,21 +130,21 @@ model User {
   transactions    Transaction[]
   investments     ShareholderInvestment[]
   idempotencyKeys IdempotencyKey[]
+  bankAccounts    BankAccount[]
 
-  managedVentures               BusinessVenture[]
-  recordedLedgers               OrganizationalLedger[]
-  disbursementRequests          DisbursementRequest[]
-  approvedDisbursements         DisbursementRequest[]          @relation("ApprovedDisbursements")
-  emergencyDisbursementRequests EmergencyDisbursementRequest[]
-  approvedEmergencyDisbursements EmergencyDisbursementRequest[] @relation("ApprovedEmergencyDisbursements") // 🔥 NEW
+  managedVentures                BusinessVenture[]
+  recordedLedgers                OrganizationalLedger[]
+  disbursementRequests           DisbursementRequest[]
+  approvedDisbursements          DisbursementRequest[]          @relation("ApprovedDisbursements")
+  emergencyDisbursementRequests  EmergencyDisbursementRequest[]
+  approvedEmergencyDisbursements EmergencyDisbursementRequest[] @relation("ApprovedEmergencyDisbursements")
 
-  deceasedClaim   DeceasedUserClaim? @relation("DeceasedUserClaim")
+  deceasedClaim   DeceasedUserClaim?  @relation("DeceasedUserClaim")
   processedClaims DeceasedUserClaim[] @relation("ProcessedClaims")
 
-  approvedKycs KycProfile[] @relation("KycApprovedBy")
+  approvedKycs KycProfile[]  @relation("KycApprovedBy")
   kycAuditLogs KycAuditLog[]
 
-  // 🔥 NEW: Profit distributions they authorised
   authorisedDistributions ProfitDistribution[]
 
   @@index([email])
@@ -164,9 +162,9 @@ model VerificationToken {
 }
 
 model KycProfile {
-  id       String @id @default(uuid()) @db.Uuid
-  userId   String @db.Uuid @map("user_id")
-  version  Int    @default(1)
+  id       String  @id @default(uuid()) @db.Uuid
+  userId   String  @db.Uuid @map("user_id")
+  version  Int     @default(1)
   isActive Boolean @default(true)
 
   streetAddress String?   @map("street_address")
@@ -194,8 +192,8 @@ model KycProfile {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  approvedBy User?        @relation("KycApprovedBy", fields: [approvedById], references: [id])
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy User?         @relation("KycApprovedBy", fields: [approvedById], references: [id])
   auditLogs  KycAuditLog[]
 
   @@index([userId])
@@ -237,35 +235,50 @@ model Wallet {
   @@map("wallets")
 }
 
-model Transaction {
-  id              String            @id @default(uuid()) @db.Uuid
-  transactionRef  String            @unique @default(uuid()) @db.Uuid @map("transaction_ref")
-  userId          String            @db.Uuid @map("user_id")
-  transactionType TransactionType   @map("transaction_type")
-  amountKobo      BigInt            @map("amount_kobo")
-  transactionStatus TransactionStatus @map("transaction_status")
-  narration       String?
-  relatedEntityType String?         @map("related_entity_type")
-  relatedEntityId   String?         @db.Uuid @map("related_entity_id")
-  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+model BankAccount {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid @map("user_id")
+  bankName      String   @map("bank_name")
+  accountNumber String   @db.VarChar(20) @map("account_number")
+  accountName   String   @map("account_name")
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-  user             User              @relation(fields: [userId], references: [id], onDelete: Restrict)
-  // 🔥 NEW: Link successful deposit to its Paystack reference
-  paystackDeposit  PaystackDeposit?
+  user                 User                           @relation(fields: [userId], references: [id])
+  disbursements        DisbursementRequest[]
+  emergencyWithdrawals EmergencyDisbursementRequest[]
+
+  @@unique([userId, accountNumber])
+  @@map("bank_accounts")
+}
+
+model Transaction {
+  id                String            @id @default(uuid()) @db.Uuid
+  transactionRef    String            @unique @default(uuid()) @db.Uuid @map("transaction_ref")
+  userId            String            @db.Uuid @map("user_id")
+  transactionType   TransactionType   @map("transaction_type")
+  amountKobo        BigInt            @map("amount_kobo")
+  transactionStatus TransactionStatus @map("transaction_status")
+  narration         String?
+  relatedEntityType String?           @map("related_entity_type")
+  relatedEntityId   String?           @db.Uuid @map("related_entity_id")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  paystackDeposit PaystackDeposit?
 
   @@index([userId])
   @@index([transactionRef])
   @@map("transactions")
 }
 
-// 🔥 NEW: Only successful Paystack deposit references are stored here
 model PaystackDeposit {
   id            String   @id @default(uuid()) @db.Uuid
-  transactionId String   @unique @db.Uuid @map("transaction_id") // one-to-one with Transaction
-  reference     String   @unique @db.VarChar(100) // Paystack reference e.g. "pay_abc123"
+  transactionId String   @unique @db.Uuid @map("transaction_id")
+  reference     String   @unique @db.VarChar(100)
   amountKobo    BigInt   @map("amount_kobo")
-  paidAt        DateTime @map("paid_at") @db.Timestamptz() // timestamp from Paystack webhook
-  channel       String?  @db.VarChar(50) // e.g. "card", "bank_transfer", "ussd"
+  paidAt        DateTime @map("paid_at") @db.Timestamptz()
+  channel       String?  @db.VarChar(50)
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
@@ -279,17 +292,17 @@ model InvestmentCycle {
   cycleName             String      @map("cycle_name")
   status                CycleStatus @default(PENDING)
   pricePerShareKobo     BigInt      @map("price_per_share_kobo")
-  startDate             DateTime?   @map("start_date") @db.Timestamptz()
-  endDate               DateTime?   @map("end_date") @db.Timestamptz()
   description           String?
 
-  // These are computed and stored when ProfitDistribution is finalised
+  fundingOpensAt        DateTime?   @map("funding_opens_at") @db.Timestamptz()
+  fundingClosesAt       DateTime?   @map("funding_closes_at") @db.Timestamptz()
+  activeStartsAt        DateTime?   @map("active_starts_at") @db.Timestamptz()
+  activeEndsAt          DateTime?   @map("active_ends_at") @db.Timestamptz()
+
   totalProfitRealizedKobo  BigInt             @default(0) @map("total_profit_realized_kobo")
   investorProfitPoolKobo   BigInt             @default(0) @map("investor_profit_pool_kobo")
   orgProfitShareKobo       BigInt             @default(0) @map("org_profit_share_kobo")
   profitDistributionStatus DistributionStatus @default(PENDING) @map("profit_distribution_status")
-
-  // 🔥 REMOVED: investorProfitPercentage — moved to ProfitDistribution where it belongs
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
@@ -297,28 +310,24 @@ model InvestmentCycle {
   organizationalLedgers OrganizationalLedger[]
   businessVentures      BusinessVenture[]
   disbursementReqs      DisbursementRequest[]
-  // 🔥 NEW
   profitDistribution    ProfitDistribution?
 
   @@map("investment_cycles")
 }
 
-// 🔥 NEW: Records the profit split decision made by admin at cycle close
 model ProfitDistribution {
   id                      String   @id @default(uuid()) @db.Uuid
-  cycleId                 String   @unique @db.Uuid @map("cycle_id") // one per cycle
-  authorisedById          String   @db.Uuid @map("authorised_by_id") // admin who did it
+  cycleId                 String   @unique @db.Uuid @map("cycle_id")
+  authorisedById          String   @db.Uuid @map("authorised_by_id")
 
-  // The split — must always sum to 100
-  investorProfitPercentage Decimal @map("investor_profit_percentage") // e.g. 95.00
-  orgProfitPercentage      Decimal @map("org_profit_percentage")      // e.g. 5.00
+  investorProfitPercentage Decimal @map("investor_profit_percentage")
+  orgProfitPercentage      Decimal @map("org_profit_percentage")     
 
-  // Resolved amounts in kobo
   totalProfitKobo          BigInt  @map("total_profit_kobo")
   investorProfitPoolKobo   BigInt  @map("investor_profit_pool_kobo")
   orgProfitShareKobo       BigInt  @map("org_profit_share_kobo")
 
-  notes       String?  // admin can leave a note explaining the split decision
+  notes       String?  
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   cycle        InvestmentCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
@@ -348,17 +357,15 @@ model ShareholderInvestment {
 // ====================================================================================
 
 model OrganizationalLedger {
-  id             String          @id @default(uuid()) @db.Uuid
-  entryType      LedgerEntryType @map("entry_type")
-  source         String
-  amountKobo     BigInt          @map("amount_kobo")
-  date           DateTime        @db.Timestamptz()
-  relatedCycleId String?         @db.Uuid @map("related_cycle_id")
-  recordedById   String          @db.Uuid @map("recorded_by_id")
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz()
-
-  // 🔥 NEW: Running balance snapshot so you never need a full table scan
-  runningBalanceKobo BigInt @map("running_balance_kobo")
+  id                 String          @id @default(uuid()) @db.Uuid
+  entryType          LedgerEntryType @map("entry_type")
+  source             String
+  amountKobo         BigInt          @map("amount_kobo")
+  date               DateTime        @db.Timestamptz()
+  relatedCycleId     String?         @db.Uuid @map("related_cycle_id")
+  recordedById       String          @db.Uuid @map("recorded_by_id")
+  runningBalanceKobo BigInt          @map("running_balance_kobo")
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz()
 
   cycle      InvestmentCycle? @relation(fields: [relatedCycleId], references: [id])
   recordedBy User             @relation(fields: [recordedById], references: [id])
@@ -376,8 +383,8 @@ model BusinessVenture {
   profitRealizedKobo  BigInt        @default(0) @map("profit_realized_kobo")
   status              VentureStatus @default(FUNDED) @map("venture_status")
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz() // 🔥 NEW
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()      // 🔥 NEW
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz() 
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()      
 
   cycle     InvestmentCycle @relation(fields: [cycleId], references: [id])
   managedBy User            @relation(fields: [managedById], references: [id])
@@ -407,9 +414,6 @@ model Notification {
 model UserPreference {
   id           String  @id @default(uuid()) @db.Uuid
   userId       String  @unique @db.Uuid @map("user_id")
-  // If true: at cycle close, capital + profit auto-roll into next cycle
-  // If false: member gets notified and must submit a DisbursementRequest
-  // if they want anything out. Silence = auto-reinvest anyway.
   autoReinvest Boolean @default(false) @map("auto_reinvest")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -420,51 +424,43 @@ model UserPreference {
 model DisbursementRequest {
   id               String             @id @default(uuid()) @db.Uuid
   userId           String             @db.Uuid @map("user_id")
+  bankAccountId    String             @db.Uuid @map("bank_account_id")
   amountKobo       BigInt             @map("amount_kobo")
   disbursementType DisbursementType   @map("disbursement_type")
   relatedCycleId   String?            @db.Uuid @map("related_cycle_id")
 
-  bankName      String @map("bank_name")
-  accountNumber String @db.VarChar(20) @map("account_number")
-  accountName   String @map("account_name")
-
-  // 🔥 UPDATED: Now uses DisbursementStatus instead of TransactionStatus
   status          DisbursementStatus @default(PENDING)
   requestedAt     DateTime           @default(now()) @map("requested_at") @db.Timestamptz()
   approvedById    String?            @db.Uuid @map("approved_by_id")
   processedAt     DateTime?          @map("processed_at") @db.Timestamptz()
   rejectionReason String?            @map("rejection_reason")
+  adminNote       String?            @map("admin_note")
 
-  // 🔥 NEW: Admin can leave a note when transferring or rejecting
-  adminNote String? @map("admin_note")
-
-  user       User             @relation(fields: [userId], references: [id])
-  cycle      InvestmentCycle? @relation(fields: [relatedCycleId], references: [id])
-  approvedBy User?            @relation("ApprovedDisbursements", fields: [approvedById], references: [id])
+  user        User             @relation(fields: [userId], references: [id])
+  bankAccount BankAccount      @relation(fields: [bankAccountId], references: [id])
+  cycle       InvestmentCycle? @relation(fields: [relatedCycleId], references: [id])
+  approvedBy  User?            @relation("ApprovedDisbursements", fields: [approvedById], references: [id])
 
   @@map("disbursement_requests")
 }
 
 model EmergencyDisbursementRequest {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid @map("user_id")
-  reason      String
-  amountKobo  BigInt   @map("amount_kobo")
+  id            String             @id @default(uuid()) @db.Uuid
+  userId        String             @db.Uuid @map("user_id")
+  bankAccountId String             @db.Uuid @map("bank_account_id")
+  reason        String
+  amountKobo    BigInt             @map("amount_kobo")
 
-  bankName      String @map("bank_name")       // 🔥 NEW: needed for manual transfer
-  accountNumber String @db.VarChar(20) @map("account_number") // 🔥 NEW
-  accountName   String @map("account_name")    // 🔥 NEW
-
-  // 🔥 UPDATED: Now uses DisbursementStatus, same flow as normal disbursements
   status          DisbursementStatus @default(PENDING)
   requestedAt     DateTime           @default(now()) @map("requested_at") @db.Timestamptz()
-  approvedById    String?            @db.Uuid @map("approved_by_id")  // 🔥 NEW
+  approvedById    String?            @db.Uuid @map("approved_by_id") 
   processedAt     DateTime?          @map("processed_at") @db.Timestamptz()
-  rejectionReason String?            @map("rejection_reason")          // 🔥 NEW
-  adminNote       String?            @map("admin_note")                // 🔥 NEW
+  rejectionReason String?            @map("rejection_reason")          
+  adminNote       String?            @map("admin_note")                
 
-  user       User  @relation(fields: [userId], references: [id])
-  approvedBy User? @relation("ApprovedEmergencyDisbursements", fields: [approvedById], references: [id]) // 🔥 NEW
+  user        User        @relation(fields: [userId], references: [id])
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id])
+  approvedBy  User?       @relation("ApprovedEmergencyDisbursements", fields: [approvedById], references: [id]) 
 
   @@map("emergency_disbursement_requests")
 }

@@ -15,6 +15,8 @@ import type { WalletBalance as Wallet } from "@/store/modules/wallet/Wallet.type
 import ShareCounter from "./ShareCounter"
 import InvestmentSummaryCard from "./InvestmentSummaryCard"
 
+import { usePurchaseSharesMutation } from "@/store/modules/cycle/cycleApi"
+
 interface InvestmentCheckoutFormProps {
   cycle: Cycle
   wallet: Wallet
@@ -22,52 +24,37 @@ interface InvestmentCheckoutFormProps {
 
 const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) => {
   const router = useRouter()
+  const [purchaseShares, { isLoading: isPurchasing }] = usePurchaseSharesMutation()
   const [shares, setShares] = useState(0)
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const pricePerShareNaira = Number(cycle.pricePerShareKobo) / 100
   const totalInvestment = pricePerShareNaira * shares
   const walletBalanceNaira = Number(wallet.balanceKobo) / 100
   const remainingBalance = walletBalanceNaira - totalInvestment
   const hasSufficientFunds = remainingBalance >= 0
-  const canSubmit = shares > 0 && hasSufficientFunds && termsAccepted && !isSubmitting
+  const canSubmit = shares > 0 && hasSufficientFunds && termsAccepted && !isPurchasing
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!canSubmit) return
 
-    setIsSubmitting(true)
-
     try {
-      // TODO: Replace with real API call to create investment
-      // const response = await createInvestmentMutation({
-      //   cycleId: cycle.id,
-      //   shares,
-      //   amount: Math.round(totalInvestment * 100), // Convert back to Kobo
-      // }).unwrap()
-
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      console.log("Investment payload:", {
+      await purchaseShares({
         cycleId: cycle.id,
-        shares,
-        amountInvestedNaira: totalInvestment,
-        amountInvestedKobo: Math.round(totalInvestment * 100),
-      })
+        sharesRequested: shares,
+      }).unwrap()
 
       toast.success("🎉 Investment Successful!", {
         description: `You've invested ₦${totalInvestment.toLocaleString()} in ${cycle.cycleName}`,
       })
 
       router.push("/user/dashboard")
-    } catch (error) {
+    } catch (error: any) {
       toast.error("Investment Failed", {
-        description: "Something went wrong. Please try again.",
+        description: error?.data?.message || "Something went wrong. Please try again.",
       })
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -162,11 +149,12 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
                     >
                       I understand and agree that these funds will be locked until
                       the cycle reaches maturity on{" "}
-                      {cycle.endDate && new Date(cycle.endDate).toLocaleDateString("en-US", {
-                        month: "long",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
+                      {(cycle.activeEndsAt || cycle.fundingClosesAt) &&
+                        new Date(cycle.activeEndsAt || cycle.fundingClosesAt!).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
                       . I acknowledge the risks associated with this investment.
                     </Label>
                   </div>

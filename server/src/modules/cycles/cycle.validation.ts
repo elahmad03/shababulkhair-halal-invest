@@ -2,32 +2,52 @@ import { z } from "zod";
 
 export const uuidParam = z.string().uuid({ message: "Invalid ID format" });
 
+const isoDate = z.string().datetime({ message: "Must be a valid ISO 8601 datetime string" });
+
 // ── Create Cycle ─────────────────────────────────────────────────────────────
 
-export const createCycleSchema = z.object({
-  cycleName: z
-    .string({ error: (issue) => issue.input === undefined ? "Cycle name is required" : "Cycle name must be a string" })
-    .min(3, { message: "Cycle name must be at least 3 characters" })
-    .max(100, { message: "Cycle name cannot exceed 100 characters" })
-    .trim(),
+export const createCycleSchema = z
+  .object({
+    cycleName: z
+      .string({
+        error: (issue) =>
+          issue.input === undefined ? "Cycle name is required" : "Cycle name must be a string",
+      })
+      .min(3, { message: "Cycle name must be at least 3 characters" })
+      .max(100, { message: "Cycle name cannot exceed 100 characters" })
+      .trim(),
 
-  description: z.string().max(1000, { message: "Description too long" }).trim().optional(),
+    description: z.string().max(1000, { message: "Description too long" }).trim().optional(),
 
-  durationDays: z
-    .number()
-    .int({ message: "Duration must be an integer" })
-    .positive({ message: "Duration must be positive" })
-    .default(90),
+    pricePerShareNaira: z
+      .number()
+      .positive({ message: "Price per share must be positive" })
+      .max(10_000_000, { message: "Price per share too large" })
+      .default(10_000), // Default ₦10,000 = 1,000,000 kobo
 
-  pricePerShareNaira: z
-    .number()
-    .positive({ message: "Price per share must be positive" })
-    .max(10_000_000, { message: "Price per share too large" })
-    .default(10_000), // Default ₦10,000 = 1,000,000 kobo
-
-  startDate: z.string().datetime({ message: "startDate must be an ISO 8601 datetime string" }).optional(),
-  endDate: z.string().datetime({ message: "endDate must be an ISO 8601 datetime string" }).optional(),
-});
+    fundingOpensAt: isoDate.optional(),
+    fundingClosesAt: isoDate.optional(),
+    activeStartsAt: isoDate.optional(),
+    activeEndsAt: isoDate.optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.fundingOpensAt && data.fundingClosesAt) {
+        return new Date(data.fundingOpensAt) < new Date(data.fundingClosesAt);
+      }
+      return true;
+    },
+    { message: "Funding close date must be after opening date", path: ["fundingClosesAt"] }
+  )
+  .refine(
+    (data) => {
+      if (data.activeStartsAt && data.activeEndsAt) {
+        return new Date(data.activeStartsAt) < new Date(data.activeEndsAt);
+      }
+      return true;
+    },
+    { message: "Active end date must be after start date", path: ["activeEndsAt"] }
+  );
 
 // ── Update Cycle (PENDING only) ───────────────────────────────────────────────
 
@@ -35,7 +55,11 @@ export const updateCycleSchema = z
   .object({
     cycleName: z.string().min(3).max(100).trim().optional(),
     description: z.string().max(1000).trim().optional(),
-    durationDays: z.number().int().positive().optional(),
+    
+    fundingOpensAt: isoDate.optional(),
+    fundingClosesAt: isoDate.optional(),
+    activeStartsAt: isoDate.optional(),
+    activeEndsAt: isoDate.optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update",
@@ -53,12 +77,6 @@ export const updateCycleStatusSchema = z.object({
           : "Status must be PENDING, OPEN_FOR_INVESTMENT, ACTIVE, CLOSING, or COMPLETED",
     }
   ),
-  durationDays: z
-    .number()
-    .int()
-    .positive()
-    .optional()
-    .describe("Optional duration in days when activating cycle"),
 });
 
 // ── Profit Distribution ──────────────────────────────────────────────────────

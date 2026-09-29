@@ -21,7 +21,6 @@ router.get("/", CycleController.listCycles);
 /**
  * GET /cycles/my-history
  * All cycles the authenticated member has invested in
- * ⚠️ MUST come BEFORE /:id route to avoid being matched as param
  */
 router.get("/my-history", CycleController.getMemberInvestmentHistory);
 

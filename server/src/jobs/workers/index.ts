@@ -1,6 +1,7 @@
 import { kycAuditWorker, kycCleanupWorker } from "./kyc.worker";
+import { autoInvestWorker } from "./autoInvest.worker";
 
-const workers = [kycCleanupWorker, kycAuditWorker];
+const workers = [kycCleanupWorker, kycAuditWorker, autoInvestWorker];
 
 const shutdown = async () => {
   console.log("[workers] Graceful shutdown initiated...");
@@ -20,7 +21,8 @@ const shutdown = async () => {
     ]);
   } catch (err) {
     console.error("[workers] Shutdown error or timeout:", err);
-    // Force exit after timeout
+    console.log("[workers] Forcing exit due to shutdown failure.");
+    process.exit(1);
   }
 
   console.log("[workers] All workers closed.");

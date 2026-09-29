@@ -14,8 +14,10 @@ export interface Cycle {
   cycleName: string;
   status: CycleStatus | string;
   pricePerShareKobo: string;
-  startDate: string | null;
-  endDate: string | null;
+  fundingOpensAt: string | null;
+  fundingClosesAt: string | null;
+  activeStartsAt: string | null;
+  activeEndsAt: string | null;
   description?: string | null;
   totalProfitRealizedKobo?: string;
   investorProfitPoolKobo?: string;
@@ -51,8 +53,10 @@ export interface ShareholderInvestment {
     id: string;
     cycleName: string;
     status: CycleStatus | string;
-    startDate: string | null;
-    endDate: string | null;
+    fundingOpensAt: string | null;
+    fundingClosesAt: string | null;
+    activeStartsAt: string | null;
+    activeEndsAt: string | null;
     profitDistributionStatus?: string;
   };
 }
@@ -100,21 +104,24 @@ export interface CycleInvestmentsResponse {
 export interface CreateCycleRequest {
   cycleName: string;
   pricePerShareNaira?: number;
-  durationDays?: number;
-  startDate?: string;
-  endDate?: string;
+  fundingOpensAt?: string;
+  fundingClosesAt?: string;
+  activeStartsAt?: string;
+  activeEndsAt?: string;
   description?: string;
 }
 
 export interface UpdateCycleRequest {
   cycleName?: string;
   description?: string;
-  durationDays?: number;
+  fundingOpensAt?: string;
+  fundingClosesAt?: string;
+  activeStartsAt?: string;
+  activeEndsAt?: string;
 }
 
 export interface UpdateCycleStatusRequest {
   status: CycleStatus;
-  durationDays?: number;
 }
 
 export interface PurchaseSharesRequest {

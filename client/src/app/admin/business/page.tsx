@@ -13,7 +13,6 @@ import { useGetVenturesByCycleQuery } from "@/store/modules/venture/ventureApi"
 import { AlertCircle, TrendingUp } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import type { Cycle } from "@/store/modules/cycle/cycle.types"
-import type { Venture } from "@/store/modules/venture/venture.types"
 
 const BusinessManagementPage = () => {
   const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null)

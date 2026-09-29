@@ -12,7 +12,7 @@ export function ActiveCyclesTab() {
   const { data: historyResponse, isLoading: historyLoading, isError: historyError, error: historyErrorData } = useGetMemberInvestmentHistoryQuery();
   const { data: cyclesResponse, isLoading: cyclesLoading } = useListCyclesQuery({ page: 1, limit: 50 });
 
-  const userInvestments = historyResponse?.data?.filter(inv => inv.status === 'ACTIVE') ?? [];
+  const userInvestments = historyResponse?.data?.filter(inv => inv.cycle?.status === 'ACTIVE') ?? [];
   const allCycles = cyclesResponse?.data?.data ?? [];
 
   const isLoading = historyLoading || cyclesLoading;
@@ -28,7 +28,7 @@ export function ActiveCyclesTab() {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-muted-foreground">Loading your active investments...</p>
         </div>
       </div>
@@ -43,9 +43,9 @@ export function ActiveCyclesTab() {
         : "Failed to load investments. Please try again.";
     
     return (
-      <Alert variant="destructive" className="border-red-200 bg-red-50">
-        <AlertCircle className="h-4 w-4 text-red-600" />
-        <AlertDescription className="text-red-800">
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
           {errorMessage}
         </AlertDescription>
       </Alert>
@@ -64,11 +64,13 @@ export function ActiveCyclesTab() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <section aria-label="Active Investments" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {userInvestments.map((investment) => {
-        const cycle = allCycles.find(c => c.id === investment.cycleId);
+        const cycle = allCycles.find(c => c.id === investment.cycleId) ?? investment.cycle;
 
         if (!cycle) return null;
+
+        const maturityDate = investment.cycle?.activeEndsAt || cycle.activeEndsAt;
 
         return (
           <CycleCard
@@ -78,20 +80,20 @@ export function ActiveCyclesTab() {
             details={[
               {
                 label: 'My Investment',
-                value: formatCurrency(Number(investment.totalInvestedKobo) / 100),
+                value: formatCurrency(Number(investment.amountInvestedKobo)),
               },
               {
                 label: 'Shares Held',
-                value: investment.sharesOwned.toLocaleString(),
+                value: Number(investment.sharesAllocated).toLocaleString(),
               },
               {
                 label: 'Share Price',
-                value: formatCurrency(Number(cycle.pricePerShareKobo) / 100),
+                value: formatCurrency(Number(cycle.pricePerShareNaira)),
               },
               {
-                label: 'Cycle End Date',
-                value: cycle.endDate
-                  ? new Date(cycle.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                label: 'Cycle Maturity',
+                value: maturityDate
+                  ? new Date(maturityDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                   : '-',
               },
             ]}
@@ -101,6 +103,6 @@ export function ActiveCyclesTab() {
           />
         );
       })}
-    </div>
+    </section>
   );
 }

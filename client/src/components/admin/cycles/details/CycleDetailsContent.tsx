@@ -56,9 +56,6 @@ export default function CycleDetailsContent({
           <h2 className="text-3xl font-bold text-slate-900">
             {cycleDetails.name}
           </h2>
-          <p className="text-sm text-slate-600 mt-1">
-            Cycle ID: {cycleDetails.id}
-          </p>
         </div>
 
         <StatusBadge status={cycleDetails.status} />

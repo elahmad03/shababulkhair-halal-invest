@@ -5,12 +5,16 @@ import { Download, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { generateInvestmentReceiptPDF } from "@/lib/utils/Pdfgenerator"
-import type { ShareholderInvestment, InvestmentCycle, User } from "@/db/types"
+import type { ShareholderInvestment, Cycle } from "@/store/modules/cycle/cycle.types"
+
+interface UserProfileSimple {
+  fullName: string;
+}
 
 interface DownloadReceiptButtonProps {
   investment: ShareholderInvestment
-  cycle: InvestmentCycle
-  user: User
+  cycle: Cycle
+  user: UserProfileSimple
   pricePerShare: bigint
 }
 
@@ -27,16 +31,16 @@ const DownloadReceiptButton = ({
     try {
       await generateInvestmentReceiptPDF({
         investmentId: investment.id,
-        cycleName: cycle.name,
-        cycleStatus: cycle.status ?? "",
+        cycleName: cycle.cycleName,
+        cycleStatus: String(cycle.status ?? ""),
         userName: user.fullName,
-        shares: investment.shares,
+        shares: BigInt(investment.sharesAllocated || "0"),
         pricePerShare,
-        amountInvested: investment.amountInvested,
-        profitEarned: investment.profitEarned ?? 0n,
-        investedAt: investment.createdAt,
-        cycleStartDate: cycle.startDate,
-        cycleEndDate: cycle.endDate,
+        amountInvested: BigInt(investment.amountInvestedKobo || "0"),
+        profitEarned: BigInt(investment.profitEarnedKobo || "0"),
+        investedAt: new Date(investment.createdAt),
+        cycleStartDate: cycle.fundingOpensAt ? new Date(cycle.fundingOpensAt) : null,
+        cycleEndDate: cycle.activeEndsAt ? new Date(cycle.activeEndsAt) : null,
       })
       toast.success("Receipt Downloaded", {
         description: "Your investment receipt has been saved as PDF",

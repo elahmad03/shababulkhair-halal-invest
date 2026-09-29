@@ -54,7 +54,7 @@ export function OpenCyclesTab() {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-emerald-600" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-muted-foreground">Loading investment cycles...</p>
         </div>
       </div>
@@ -69,9 +69,9 @@ export function OpenCyclesTab() {
         : "Failed to load cycles. Please try again.";
     
     return (
-      <Alert variant="destructive" className="border-red-200 bg-red-50">
-        <AlertCircle className="h-4 w-4 text-red-600" />
-        <AlertDescription className="text-red-800">
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
           {errorMessage}
         </AlertDescription>
       </Alert>
@@ -90,7 +90,7 @@ export function OpenCyclesTab() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <section aria-label="Open Investment Cycles" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {openCycles.map((cycle) => (
         <CycleCard
           key={cycle.id}
@@ -98,24 +98,23 @@ export function OpenCyclesTab() {
           status="OPEN_FOR_INVESTMENT"
           details={[
             {
-              label: "Investment Window",
-              value: formatDateRange(cycle.startDate, cycle.endDate),
+              label: "Funding Window",
+              value: formatDateRange(cycle.fundingOpensAt, cycle.fundingClosesAt),
             },
             {
               label: "Cycle Duration",
-              value: calculateDuration(cycle.startDate, cycle.endDate),
+              value: calculateDuration(cycle.activeStartsAt, cycle.activeEndsAt),
             },
             {
               label: "Share Price",
               value: formatCurrency(Number(cycle.pricePerShareKobo)),
             },
-
           ]}
           buttonText="Invest Now"
           buttonVariant="default"
           onButtonClick={() => handleInvestNow(cycle.id)}
         />
       ))}
-    </div>
+    </section>
   );
 }

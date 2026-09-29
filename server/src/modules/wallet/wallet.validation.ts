@@ -1,27 +1,26 @@
 import { z } from "zod";
 
-// Minimum deposit: 10,000 NGN (the API receives NGN, server converts to kobo)
 const MINIMUM_DEPOSIT_NGN = 10_000;
 
 export const initializeDepositSchema = z.object({
-  amountKobo: z.number()
-    .int("Amount must be a whole number")
+  amountNaira: z.number()
     .min(MINIMUM_DEPOSIT_NGN, `Minimum deposit is ₦${MINIMUM_DEPOSIT_NGN}`),
 });
 
 export const withdrawSchema = z.object({
   amountKobo: z.number()
-    .int("Amount must be a whole number")
+    .int("Amount must be a whole number (in kobo)")
     .positive("Amount must be greater than zero"),
   disbursementType: z.enum(["WALLET_BALANCE", "PROFIT_ONLY", "FULL_DIVESTMENT"]),
-  bankName: z.string().min(1, "Bank name is required"),
-  accountNumber: z.string().min(1, "Account number is required"),
-  accountName: z.string().min(1, "Account name is required"),
+  // Replaced hardcoded bank fields with the new relational ID
+  bankAccountId: z.string().min(1, "Please select a bank account"), 
 });
 
 export const adminAdjustSchema = z.object({
   userId: z.string().uuid("Invalid user ID"),
-  amountKobo: z.number().int("Amount must be a whole number").refine(n => n !== 0, "Amount cannot be zero"),
+  amountKobo: z.number()
+    .int("Amount must be a whole number (in kobo)")
+    .refine(n => n !== 0, "Amount cannot be zero"),
   narration: z.string().min(1, "Narration is required"),
 });
 
@@ -38,13 +37,16 @@ export const listWithdrawalsSchema = z.object({
 
 export const resolveWithdrawalSchema = z.object({
   status: z.enum(["APPROVED", "REJECTED"]),
-  rejectionReason: z.string().optional(),
+  adminNotes: z.string().optional(),
 }).refine((data) => {
-  if (data.status === "REJECTED" && !data.rejectionReason) {
+  if (data.status === "REJECTED" && (!data.adminNotes || data.adminNotes.trim() === "")) {
     return false;
   }
   return true;
-}, { message: "Rejection reason is required when rejecting a withdrawal" });
+}, { 
+  message: "Admin notes are required when rejecting a withdrawal",
+  path: ["adminNotes"]
+});
 
 export type InitializeDepositInput = z.infer<typeof initializeDepositSchema>;
 export type WithdrawInput = z.infer<typeof withdrawSchema>;
