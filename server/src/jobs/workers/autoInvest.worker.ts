@@ -22,9 +22,9 @@
  */
 
 import { Worker, Job } from "bullmq";
-import redis from "../../config/redis";
 import CycleService from "../../modules/cycles/cycle.service";
 import { prisma } from "../../config/prisma";
+import { bullmqRedis } from "../../config/redis";
 
 interface AutoInvestJobData {
   cycleId: string;
@@ -120,7 +120,7 @@ export const autoInvestWorker = new Worker<AutoInvestJobData>(
     return { processed, skipped, errors };
   },
   {
-    connection: redis,
+    connection: bullmqRedis,
     // One concurrent job at a time — prevents two runs from racing on the same cycle
     concurrency: 1,
   }
