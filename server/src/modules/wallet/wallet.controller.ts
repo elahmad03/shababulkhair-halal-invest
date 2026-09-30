@@ -9,7 +9,7 @@ import {
   resolveWithdrawalSchema 
 } from "./wallet.validation";
 import { catchAsync } from "../../utils/catchAsync";
-import { errorResponse, successResponse } from "../../utils/response";
+import { successResponse } from "../../utils/response";
 import { AuthenticatedRequest } from "../../common/middleware/auth.middleware";
 
 export const getWalletSummary = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -33,11 +33,11 @@ export const getAdminWallet = catchAsync(async (req: AuthenticatedRequest, res: 
 });
 
 export const initializeDeposit = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const { amountKobo } = initializeDepositSchema.parse(req.body);
+  const { amountNaira } = initializeDepositSchema.parse(req.body);
   const userId = req.user!.userId;
   const userEmail = req.user!.email;
 
-  const data = await WalletService.initializeDeposit(userId, amountKobo, userEmail);
+  const data = await WalletService.initializeDeposit(userId, amountNaira, userEmail);
   res.status(200).json(successResponse(data, "Deposit initialized successfully"));
 });
 
@@ -67,10 +67,10 @@ export const adminAdjust = catchAsync(async (req: AuthenticatedRequest, res: Res
 
 export const resolveWithdrawal = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const { status, rejectionReason } = resolveWithdrawalSchema.parse(req.body);
+  const { status, adminNotes } = resolveWithdrawalSchema.parse(req.body);
   const adminId = req.user!.userId;
 
-  const result = await WalletService.resolveWithdrawal(id, adminId, status, rejectionReason);
+  const result = await WalletService.resolveWithdrawal(id, adminId, status, adminNotes);
   res.status(200).json(successResponse(result, `Withdrawal ${status.toLowerCase()} successfully`));
 });
 

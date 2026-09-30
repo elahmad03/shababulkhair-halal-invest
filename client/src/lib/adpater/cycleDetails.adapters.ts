@@ -27,8 +27,8 @@ export const mapCycleDetailsToUI = (data: any): CycleDetails => {
   // Map ventures from the server response
   const ventures = (data.businessVentures || []).map((v: any) => ({
     id: v.id,
-    managedBy: v.managedBy?.firstName + ' ' + v.managedBy?.lastName || 'Unknown',
-    ventureName: v.ventureName,
+    managedBy: v.managedBy ? `${v.managedBy.firstName || ''} ${v.managedBy.lastName || ''}`.trim() : 'Unknown',
+    ventureName: v.companyName || v.ventureName || 'Unnamed Venture',
     allocatedAmount: BigInt(v.allocatedAmountKobo || 0),
     profitRealized: BigInt(v.profitRealizedKobo || 0),
   }));
@@ -40,8 +40,10 @@ export const mapCycleDetailsToUI = (data: any): CycleDetails => {
 
   return {
     id: data.id,
-    name: data.cycleName, // Server field is cycleName
-    status: mapStatus(data.status), // Server status is UPPERCASE: PENDING, OPEN_FOR_INVESTMENT, ACTIVE, COMPLETED
+    name: data.cycleName,
+    status: mapStatus(data.status),
+    rawStatus: data.status,
+    profitDistributionStatus: data.profitDistributionStatus,
     
     // Core metrics
     totalCapitalInvested,
@@ -63,4 +65,4 @@ export const mapCycleDetailsToUI = (data: any): CycleDetails => {
     investors,
     ventures,
   };
-}
+};

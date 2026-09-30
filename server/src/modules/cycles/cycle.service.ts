@@ -1,39 +1,87 @@
 /**
- * cycle.service.ts — lifecycle + share purchases only
+ * cycle.service.ts — Investment Cycle lifecycle and share investments
  * Ventures → venture.service.ts | Ledger → ledger.service.ts
  */
 
 import {
-  CycleStatus, DistributionStatus,
-  TransactionStatus, TransactionType,
+  CycleStatus,
+  DistributionStatus,
+  Prisma,
+  TransactionStatus,
+  TransactionType,
 } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { notifyCycleOpened, notifyCycleClosed } from "./cycle.notifications";
-import type { CreateCycleInput, CompleteCycleInput, UpdateCycleStatusInput, DistributeProfitInput } from "./cycle.validators";
+import type {
+  CreateCycleInput,
+  UpdateCycleInput,
+  CompleteCycleInput,
+  UpdateCycleStatusInput,
+  DistributeProfitInput,
+} from "./cycle.validation";
+import { autoInvestQueue } from "../../jobs/queues/autoInvest.queue";
 import { toKobo } from "../shared/money";
 import { serializeBigInts } from "../shared/serializer";
 
-
 export default class CycleService {
-
   // ── CREATE ────────────────────────────────────────────────────────────────
 
   static async createCycle(input: CreateCycleInput) {
     const cycle = await prisma.investmentCycle.create({
       data: {
-        cycleName:         input.cycleName,
-        pricePerShareKobo: toKobo(input.pricePerShareNaira),
-        startDate:         input.startDate ? new Date(input.startDate) : null,
-        endDate:           input.endDate   ? new Date(input.endDate)   : null,
-        description:       input.description ?? null,
-        status:            CycleStatus.PENDING,
+        cycleName: input.cycleName,
+        pricePerShareKobo: toKobo(input.pricePerShareNaira ?? 10_000),
+        fundingOpensAt: input.fundingOpensAt ? new Date(input.fundingOpensAt) : null,
+        fundingClosesAt: input.fundingClosesAt ? new Date(input.fundingClosesAt) : null,
+        activeStartsAt: input.activeStartsAt ? new Date(input.activeStartsAt) : null,
+        activeEndsAt: input.activeEndsAt ? new Date(input.activeEndsAt) : null,
+        description: input.description ?? null,
+        status: CycleStatus.PENDING,
       },
     });
     return serializeBigInts(cycle);
   }
 
-  // 🔥 NEW: Generic status transition handler (PENDING → OPEN_FOR_INVESTMENT → ACTIVE → CLOSING → COMPLETED)
-  static async updateCycleStatus(cycleId: string, input: UpdateCycleStatusInput, adminId: string) {
+  // ── UPDATE (PENDING only) ─────────────────────────────────────────────────
+
+  static async updateCycle(cycleId: string, input: UpdateCycleInput) {
+    const cycle = await prisma.investmentCycle.findUnique({ where: { id: cycleId } });
+    if (!cycle) throw new Error("Cycle not found");
+    if (cycle.status !== CycleStatus.PENDING) {
+      throw new Error(
+        `Cannot update cycle details — only PENDING cycles can be edited (current status: "${cycle.status}")`
+      );
+    }
+
+    const updated = await prisma.investmentCycle.update({
+      where: { id: cycleId },
+      data: {
+        ...(input.cycleName && { cycleName: input.cycleName }),
+        ...(input.description !== undefined && { description: input.description }),
+        ...(input.fundingOpensAt !== undefined && { 
+          fundingOpensAt: input.fundingOpensAt ? new Date(input.fundingOpensAt) : null 
+        }),
+        ...(input.fundingClosesAt !== undefined && { 
+          fundingClosesAt: input.fundingClosesAt ? new Date(input.fundingClosesAt) : null 
+        }),
+        ...(input.activeStartsAt !== undefined && { 
+          activeStartsAt: input.activeStartsAt ? new Date(input.activeStartsAt) : null 
+        }),
+        ...(input.activeEndsAt !== undefined && { 
+          activeEndsAt: input.activeEndsAt ? new Date(input.activeEndsAt) : null 
+        }),
+      },
+    });
+    return serializeBigInts(updated);
+  }
+
+  // ── STATUS TRANSITIONS ────────────────────────────────────────────────────
+
+  static async updateCycleStatus(
+    cycleId: string,
+    input: UpdateCycleStatusInput,
+    adminId: string
+  ) {
     const cycle = await prisma.investmentCycle.findUnique({
       where: { id: cycleId },
       include: { investments: true },
@@ -45,12 +93,20 @@ export default class CycleService {
     }
 
     // Validate forward-only transitions
-    const statusOrder = [CycleStatus.PENDING, CycleStatus.OPEN_FOR_INVESTMENT, CycleStatus.ACTIVE, CycleStatus.CLOSING, CycleStatus.COMPLETED];
+    const statusOrder = [
+      CycleStatus.PENDING,
+      CycleStatus.OPEN_FOR_INVESTMENT,
+      CycleStatus.ACTIVE,
+      CycleStatus.CLOSING,
+      CycleStatus.COMPLETED,
+    ];
     const currentIndex = statusOrder.indexOf(cycle.status);
     const targetIndex = statusOrder.indexOf(input.status as CycleStatus);
 
     if (targetIndex <= currentIndex) {
-      throw new Error(`Cannot transition from ${cycle.status} to ${input.status} — transitions must be forward only`);
+      throw new Error(
+        `Cannot transition from ${cycle.status} to ${input.status} — transitions must be forward only`
+      );
     }
 
     // PENDING → OPEN_FOR_INVESTMENT
@@ -59,36 +115,52 @@ export default class CycleService {
         where: { id: cycleId },
         data: { status: CycleStatus.OPEN_FOR_INVESTMENT },
       });
+
+      // Fire-and-forget: notify members (never throws)
       notifyCycleOpened({
         cycleId: updated.id,
         cycleName: updated.cycleName,
         pricePerShareKobo: updated.pricePerShareKobo,
-        endDate: updated.endDate,
+        endDate: updated.fundingClosesAt ?? updated.activeEndsAt,
       });
+
+      // Fire-and-forget: enqueue auto-invest job for opted-in members.
+      // jobId = cycleId ensures this job is deduplicated — safe if called twice.
+      autoInvestQueue
+        .add(
+          "auto-invest",
+          { cycleId: updated.id },
+          {
+            jobId: `auto-invest:${updated.id}`,
+            attempts: 3,
+            backoff: { type: "exponential", delay: 5000 },
+          }
+        )
+        .catch((err) => {
+          console.error(
+            `[CycleService] Failed to enqueue autoInvest job for cycle ${updated.id}:`,
+            err
+          );
+        });
+
       return serializeBigInts(updated);
     }
 
     // OPEN_FOR_INVESTMENT → ACTIVE
     if (cycle.status === CycleStatus.OPEN_FOR_INVESTMENT && input.status === CycleStatus.ACTIVE) {
-      if (cycle.investments.length === 0) {
-        throw new Error("Cannot activate a cycle with no investors");
+      const activeCycle = await prisma.investmentCycle.findFirst({
+        where: { status: CycleStatus.ACTIVE, id: { not: cycleId } },
+      });
+      if (activeCycle) {
+        throw new Error(
+          `Another cycle ("${activeCycle.cycleName}") is already ACTIVE. Only one cycle can be ACTIVE at a time.`
+        );
       }
-
-      const durationDays = input.durationDays || 90; // default 90 days
-      const startDate = new Date();
-      const endDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
       const updated = await prisma.investmentCycle.update({
         where: { id: cycleId },
-        data: {
-          status: CycleStatus.ACTIVE,
-          startDate,
-          endDate,
-        },
+        data: { status: CycleStatus.ACTIVE },
       });
-
-      // 🔥 TODO: Queue AutoInvestJob here via BullMQ
-      // await autoInvestQueue.add({ cycleId }, { delay: 0 });
 
       notifyCycleClosed({
         cycleId: updated.id,
@@ -105,26 +177,27 @@ export default class CycleService {
         data: { status: CycleStatus.CLOSING },
       });
 
-      // Notify all investors that disbursement window is open
-      const investors = cycle.investments;
-      for (const inv of investors) {
-        await prisma.notification.create({
-          data: {
-            userId: inv.userId,
-            title: "Disbursement Window Open",
-            message: `${updated.cycleName} is closing. Please review your disbursement options.`,
-            link: `/user/cycles/${cycleId}`,
-          },
-        });
+      // Notify all investors
+      const notificationData = cycle.investments.map((inv) => ({
+        userId: inv.userId,
+        title: "Disbursement Window Open",
+        message: `${updated.cycleName} is closing. Please review your disbursement options.`,
+        link: `/user/cycles/${cycleId}`,
+      }));
+
+      if (notificationData.length > 0) {
+        await prisma.notification.createMany({ data: notificationData });
       }
 
       return serializeBigInts(updated);
     }
 
-    // CLOSING → COMPLETED (only if profit distribution is completed first)
+    // CLOSING → COMPLETED
     if (cycle.status === CycleStatus.CLOSING && input.status === CycleStatus.COMPLETED) {
       if (cycle.profitDistributionStatus !== DistributionStatus.COMPLETED) {
-        throw new Error("Cannot complete cycle — profit distribution must be completed first");
+        throw new Error(
+          "Cannot complete cycle — profit distribution must be finalized and recorded first"
+        );
       }
 
       const updated = await prisma.investmentCycle.update({
@@ -132,318 +205,362 @@ export default class CycleService {
         data: { status: CycleStatus.COMPLETED },
       });
 
-      // 🔥 TODO: Queue SettlementJob here via BullMQ
-      // await settlementQueue.add({ cycleId }, { delay: 0 });
-
       return serializeBigInts(updated);
     }
 
     throw new Error(`Unsupported status transition from ${cycle.status} to ${input.status}`);
   }
 
-  // 🔥 NEW: Distribute profit and record in ProfitDistribution
-  static async distributeProfit(cycleId: string, adminId: string, input: DistributeProfitInput) {
-    const cycle = await prisma.investmentCycle.findUnique({
-      where: { id: cycleId },
-      include: { investments: true },
-    });
+  // ── PROFIT DISTRIBUTION & PAYOUT ───────────────────────────────────────────
 
-    if (!cycle) throw new Error("Cycle not found");
-    if (cycle.status !== CycleStatus.CLOSING) {
-      throw new Error(`Cannot distribute profit — cycle status must be CLOSING, current status is ${cycle.status}`);
-    }
-    if (cycle.profitDistributionStatus === DistributionStatus.COMPLETED) {
-      throw new Error("Profit already distributed for this cycle");
-    }
-
-    const totalProfit = cycle.totalProfitRealizedKobo;
-    const investorPercentage = BigInt(Math.round(input.investorProfitPercentage * 100)) / 100n; // Store as decimal
-    const orgPercentage = 100n - investorPercentage;
-
-    const investorPoolKobo = (totalProfit * BigInt(Math.round(input.investorProfitPercentage * 100))) / 10000n;
-    const orgShareKobo = totalProfit - investorPoolKobo;
-
-    // Create ProfitDistribution record
-    const distribution = await prisma.profitDistribution.create({
-      data: {
-        cycleId,
-        authorisedById: adminId,
-        investorProfitPercentage: input.investorProfitPercentage,
-        orgProfitPercentage: Number(orgPercentage),
-        totalProfitKobo: totalProfit,
-        investorProfitPoolKobo: investorPoolKobo,
-        orgProfitShareKobo: orgShareKobo,
-        notes: input.notes ?? null,
-      },
-    });
-
-    // Update ShareholderInvestments with profit earned
-    for (const inv of cycle.investments) {
-      const profitShare = (investorPoolKobo * inv.sharesAllocated) / cycle.investments.reduce((sum, i) => sum + i.sharesAllocated, 0n);
-      await prisma.shareholderInvestment.update({
-        where: { id: inv.id },
-        data: { profitEarnedKobo: profitShare },
-      });
-    }
-
-    // Update cycle with profit distribution status
-    const updated = await prisma.investmentCycle.update({
-      where: { id: cycleId },
-      data: {
-        profitDistributionStatus: DistributionStatus.COMPLETED,
-        totalProfitRealizedKobo: totalProfit,
-        investorProfitPoolKobo: investorPoolKobo,
-        orgProfitShareKobo: orgShareKobo,
-      },
-    });
-
-    return serializeBigInts({ cycle: updated, distribution });
-  }
-
-  // ── OPEN (PENDING → OPEN_FOR_INVESTMENT) ─────────────────────────────────
-
-  static async openCycle(cycleId: string) {
-    const cycle = await prisma.investmentCycle.findUnique({ where: { id: cycleId } });
-
-    if (!cycle) throw new Error("Cycle not found");
-    if (cycle.status !== CycleStatus.PENDING) {
-      throw new Error(
-        `Cannot open cycle — current status is "${cycle.status}". Only PENDING cycles can be opened.`
-      );
-    }
-
-    const updated = await prisma.investmentCycle.update({
-      where: { id: cycleId },
-      data:  { status: CycleStatus.OPEN_FOR_INVESTMENT },
-    });
-
-    // Fire-and-forget — notification failure must never affect cycle state
-    notifyCycleOpened({
-      cycleId:           updated.id,
-      cycleName:         updated.cycleName,
-      pricePerShareKobo: updated.pricePerShareKobo,
-      endDate:           updated.endDate,
-    });
-
-    return serializeBigInts(updated);
-  }
-
-  // ── ACTIVATE (OPEN_FOR_INVESTMENT → ACTIVE) ───────────────────────────────
-
-  static async activateCycle(cycleId: string) {
-    const cycle = await prisma.investmentCycle.findUnique({
-      where:   { id: cycleId },
-      include: { investments: { select: { id: true } } },
-    });
-
-    if (!cycle) throw new Error("Cycle not found");
-    if (cycle.status !== CycleStatus.OPEN_FOR_INVESTMENT) {
-      throw new Error(`Cannot activate cycle — current status is "${cycle.status}".`);
-    }
-    if (cycle.investments.length === 0) {
-      throw new Error("Cannot activate a cycle with no investors.");
-    }
-
-    const updated = await prisma.investmentCycle.update({
-      where: { id: cycleId },
-      data:  { status: CycleStatus.ACTIVE },
-    });
-
-    notifyCycleClosed({ cycleId: updated.id, cycleName: updated.cycleName });
-
-    return serializeBigInts(updated);
-  }
-
-  // ── COMPLETE (ACTIVE → COMPLETED + distribute profits) ───────────────────
-
-  static async completeCycle(cycleId: string, adminId: string, input: CompleteCycleInput) {
-    const cycle = await prisma.investmentCycle.findUnique({
-      where:   { id: cycleId },
-      include: { investments: true },
-    });
-
-    if (!cycle)                                                   throw new Error("Cycle not found");
-    if (cycle.status !== CycleStatus.ACTIVE)                     throw new Error(`Cannot complete cycle — status is "${cycle.status}".`);
-    if (cycle.profitDistributionStatus === DistributionStatus.COMPLETED) throw new Error("Profit already distributed.");
-    if (cycle.investments.length === 0)                          throw new Error("No investors found.");
-
-    const totalShares = cycle.investments.reduce((s, i) => s + i.sharesAllocated, 0n);
-    if (totalShares === 0n) throw new Error("Total shares allocated is zero.");
-
-    const totalProfit      = cycle.totalProfitRealizedKobo;
-    const investorPoolKobo = (totalProfit * BigInt(Math.round(input.investorProfitPercent))) / 100n;
-    const orgShareKobo     = totalProfit - investorPoolKobo;
-
-    const payouts = cycle.investments.map((inv) => ({
-      userId:       inv.userId,
-      investmentId: inv.id,
-      capitalKobo:  inv.amountInvestedKobo,
-      profitKobo:   (investorPoolKobo * inv.sharesAllocated) / totalShares,
-      get totalKobo() { return this.capitalKobo + this.profitKobo; },
-    }));
-
-    await prisma.$transaction(
-      async (tx) => {
-        // Re-check inside tx — prevents concurrent double-completion
-        const locked = await tx.investmentCycle.findUnique({
-          where:  { id: cycleId },
-          select: { status: true, profitDistributionStatus: true },
-        });
-        if (
-          locked?.status !== CycleStatus.ACTIVE ||
-          locked?.profitDistributionStatus === DistributionStatus.COMPLETED
-        ) {
-          throw new Error("Cycle state changed concurrently — aborting.");
-        }
-
-        for (const p of payouts) {
-          await tx.wallet.upsert({
-            where:  { userId: p.userId },
-            create: { userId: p.userId, balanceKobo: p.totalKobo, lockedBalanceKobo: 0n },
-            update: { balanceKobo: { increment: p.totalKobo } },
-          });
-
-          await tx.transaction.create({
-            data: {
-              userId: p.userId, transactionType: TransactionType.CAPITAL_RETURN,
-              amountKobo: p.capitalKobo, transactionStatus: TransactionStatus.COMPLETED,
-              narration: `Capital return — ${cycle.cycleName}`,
-              relatedEntityType: "INVESTMENT_CYCLE", relatedEntityId: cycleId,
-            },
-          });
-
-          if (p.profitKobo > 0n) {
-            await tx.transaction.create({
-              data: {
-                userId: p.userId, transactionType: TransactionType.PROFIT_DISTRIBUTION,
-                amountKobo: p.profitKobo, transactionStatus: TransactionStatus.COMPLETED,
-                narration: `Profit distribution — ${cycle.cycleName}`,
-                relatedEntityType: "INVESTMENT_CYCLE", relatedEntityId: cycleId,
-              },
-            });
-          }
-
-          await tx.shareholderInvestment.update({
-            where: { id: p.investmentId },
-            data:  { profitEarnedKobo: p.profitKobo },
-          });
-        }
-
-        await tx.investmentCycle.update({
-          where: { id: cycleId },
-          data: {
-            status:                   CycleStatus.COMPLETED,
-            investorProfitPoolKobo:   investorPoolKobo,
-            orgProfitShareKobo:       orgShareKobo,
-            profitDistributionStatus: DistributionStatus.COMPLETED,
-          },
-        });
-      },
-      { timeout: 30_000, isolationLevel: "Serializable" }
-    );
-
-    return {
-      cycleId,
-      totalProfitKobo:  totalProfit.toString(),
-      investorPoolKobo: investorPoolKobo.toString(),
-      orgShareKobo:     orgShareKobo.toString(),
-      investorsPaid:    payouts.length,
-    };
-  }
-
-  // ── PURCHASE SHARES ───────────────────────────────────────────────────────
-
-  static async purchaseShares(
-    userId: string, cycleId: string, quantity: number, idempotencyKey: string
+  static async distributeProfit(
+    cycleId: string,
+    adminId: string,
+    input: DistributeProfitInput
   ) {
     return await prisma.$transaction(async (tx) => {
-      const exists = await tx.idempotencyKey.findUnique({ where: { key: idempotencyKey } });
-      if (exists) throw new Error("Duplicate request detected");
-
-      await tx.idempotencyKey.create({
-        data: { key: idempotencyKey, userId, requestMethod: "POST", requestPath: "/cycles/shares/purchase" },
-      });
-
       const cycle = await tx.investmentCycle.findUnique({
-        where:  { id: cycleId },
-        select: { id: true, status: true, pricePerShareKobo: true, cycleName: true },
+        where: { id: cycleId },
+        include: { investments: true, businessVentures: true },
       });
 
       if (!cycle) throw new Error("Cycle not found");
-      if (cycle.status !== CycleStatus.OPEN_FOR_INVESTMENT) {
-        throw new Error(`Cycle is not open for investment — status is "${cycle.status}"`);
+      if (cycle.status !== CycleStatus.CLOSING) {
+        throw new Error(
+          `Cannot distribute profit — cycle status must be CLOSING, current status is "${cycle.status}"`
+        );
+      }
+      if (cycle.profitDistributionStatus === DistributionStatus.COMPLETED) {
+        throw new Error("Profit already distributed for this cycle");
       }
 
-      const qty       = BigInt(quantity);
-      const totalCost = cycle.pricePerShareKobo * qty;
-      const wallet    = await tx.wallet.findUnique({ where: { userId } });
+      // Aggregate realized profits from all business ventures if cycle total is zero
+      let totalProfit = cycle.totalProfitRealizedKobo;
+      if (totalProfit === 0n && cycle.businessVentures.length > 0) {
+        totalProfit = cycle.businessVentures.reduce(
+          (sum, v) => sum + v.profitRealizedKobo,
+          0n
+        );
+      }
 
-      if (!wallet)                        throw new Error("Wallet not found. Please fund your account first.");
-      if (wallet.balanceKobo < totalCost) throw new Error(
-        `Insufficient funds. Required: ₦${(Number(totalCost)/100).toLocaleString()}, ` +
-        `Available: ₦${(Number(wallet.balanceKobo)/100).toLocaleString()}`
-      );
+      // Percentage calculation via basis points (e.g. 80.5% -> 8050 bps)
+      const investorBps = BigInt(Math.round(input.investorProfitPercentage * 100));
+      const totalBps = 10000n;
 
-      await tx.wallet.update({ where: { userId }, data: { balanceKobo: { decrement: totalCost } } });
+      const investorPoolKobo = (totalProfit * investorBps) / totalBps;
+      const orgShareKobo = totalProfit - investorPoolKobo;
+      const orgPercentage = 100 - input.investorProfitPercentage;
 
-      const existing = await tx.shareholderInvestment.findUnique({
-        where: { userId_cycleId: { userId, cycleId } },
-      });
-
-      const investment = existing
-        ? await tx.shareholderInvestment.update({
-            where: { userId_cycleId: { userId, cycleId } },
-            data:  { sharesAllocated: { increment: qty }, amountInvestedKobo: { increment: totalCost } },
-          })
-        : await tx.shareholderInvestment.create({
-            data: { userId, cycleId, sharesAllocated: qty, amountInvestedKobo: totalCost },
-          });
-
-      await tx.transaction.create({
+      // 1. Create ProfitDistribution audit record
+      const distribution = await tx.profitDistribution.create({
         data: {
-          userId, transactionType: TransactionType.SHARE_PURCHASE,
-          amountKobo: totalCost, transactionStatus: TransactionStatus.COMPLETED,
-          narration: `${quantity} share(s) in ${cycle.cycleName}`,
-          relatedEntityType: "INVESTMENT_CYCLE", relatedEntityId: cycleId,
+          cycleId,
+          authorisedById: adminId,
+          investorProfitPercentage: input.investorProfitPercentage,
+          orgProfitPercentage: orgPercentage,
+          totalProfitKobo: totalProfit,
+          investorProfitPoolKobo: investorPoolKobo,
+          orgProfitShareKobo: orgShareKobo,
+          notes: input.notes ?? null,
         },
       });
 
-      return serializeBigInts({
-        investmentId:       investment.id,
-        sharesAllocated:    investment.sharesAllocated,
-        amountInvestedKobo: investment.amountInvestedKobo,
-        pricePerShareKobo:  cycle.pricePerShareKobo,
-        totalCostKobo:      totalCost,
+      // 2. Calculate and distribute profit + unlock capital to member wallets
+      const totalShares = cycle.investments.reduce(
+        (sum, i) => sum + i.sharesAllocated,
+        0n
+      );
+
+      for (const inv of cycle.investments) {
+        const profitShare =
+          totalShares > 0n ? (investorPoolKobo * inv.sharesAllocated) / totalShares : 0n;
+
+        // Update shareholder record
+        await tx.shareholderInvestment.update({
+          where: { id: inv.id },
+          data: { profitEarnedKobo: profitShare },
+        });
+
+        // Move initial locked balance back to liquid balance + credit profit yield
+        const totalPayout = inv.amountInvestedKobo + profitShare;
+        await tx.wallet.update({
+          where: { userId: inv.userId },
+          data: {
+            lockedBalanceKobo: { decrement: inv.amountInvestedKobo },
+            balanceKobo: { increment: totalPayout },
+          },
+        });
+
+        // Record profit transaction log
+        if (profitShare > 0n) {
+          await tx.transaction.create({
+            data: {
+              userId: inv.userId,
+              transactionType: TransactionType.PROFIT_DISTRIBUTION,
+              amountKobo: profitShare,
+              transactionStatus: TransactionStatus.COMPLETED,
+              narration: `Profit yield from ${cycle.cycleName}`,
+              relatedEntityType: "INVESTMENT_CYCLE",
+              relatedEntityId: cycleId,
+            },
+          });
+        }
+      }
+
+      // 3. Mark cycle as distribution completed
+      const updated = await tx.investmentCycle.update({
+        where: { id: cycleId },
+        data: {
+          profitDistributionStatus: DistributionStatus.COMPLETED,
+          totalProfitRealizedKobo: totalProfit,
+          investorProfitPoolKobo: investorPoolKobo,
+          orgProfitShareKobo: orgShareKobo,
+        },
       });
-    }, { isolationLevel: "Serializable" });
+
+      return serializeBigInts({ cycle: updated, distribution });
+    });
+  }
+
+  // ── HELPER SHORTCUTS ──────────────────────────────────────────────────────
+
+  static async openCycle(cycleId: string, adminId: string) {
+    return this.updateCycleStatus(
+      cycleId,
+      { status: CycleStatus.OPEN_FOR_INVESTMENT },
+      adminId
+    );
+  }
+
+  static async activateCycle(cycleId: string, adminId: string) {
+    return this.updateCycleStatus(
+      cycleId,
+      { status: CycleStatus.ACTIVE },
+      adminId
+    );
+  }
+
+  static async completeCycle(
+    cycleId: string,
+    adminId: string,
+    input: CompleteCycleInput
+  ) {
+    const cycle = await prisma.investmentCycle.findUnique({ where: { id: cycleId } });
+    if (!cycle) throw new Error("Cycle not found");
+
+    if (cycle.status === CycleStatus.ACTIVE) {
+      await this.updateCycleStatus(cycleId, { status: CycleStatus.CLOSING }, adminId);
+    }
+
+    if (cycle.profitDistributionStatus !== DistributionStatus.COMPLETED) {
+      await this.distributeProfit(cycleId, adminId, {
+        investorProfitPercentage: input.investorProfitPercent,
+        notes: "Automated distribution during completion",
+      });
+    }
+
+    return this.updateCycleStatus(cycleId, { status: CycleStatus.COMPLETED }, adminId);
+  }
+
+  // ── SHARE PURCHASE / INVEST ───────────────────────────────────────────────
+
+  static async purchaseShares(
+    userId: string,
+    cycleId: string,
+    quantity: number,
+    idempotencyKey?: string
+  ) {
+    return await prisma.$transaction(
+      async (tx) => {
+        if (idempotencyKey) {
+          const keyRecord = await tx.idempotencyKey.findUnique({
+            where: { key: idempotencyKey },
+          });
+
+          if (keyRecord) {
+            if (keyRecord.responseBody) {
+              return keyRecord.responseBody; // Return cached response safely
+            }
+            throw new Error("Transaction is currently being processed. Please wait.");
+          }
+
+          await tx.idempotencyKey.create({
+            data: {
+              key: idempotencyKey,
+              userId,
+              requestMethod: "POST",
+              requestPath: `/cycles/${cycleId}/invest`,
+            },
+          });
+        }
+
+        const cycle = await tx.investmentCycle.findUnique({
+          where: { id: cycleId },
+          select: { id: true, status: true, pricePerShareKobo: true, cycleName: true },
+        });
+
+        if (!cycle) throw new Error("Cycle not found");
+        if (cycle.status !== CycleStatus.OPEN_FOR_INVESTMENT) {
+          throw new Error(
+            `Cycle is not open for investment — status is "${cycle.status}"`
+          );
+        }
+
+        const qty = BigInt(quantity);
+        const totalCost = cycle.pricePerShareKobo * qty;
+        const wallet = await tx.wallet.findUnique({ where: { userId } });
+
+        if (!wallet) {
+          throw new Error("Wallet not found. Please fund your account first.");
+        }
+        if (wallet.balanceKobo < totalCost) {
+          throw new Error("Insufficient wallet balance for this share purchase.");
+        }
+
+        // Lock funds
+        await tx.wallet.update({
+          where: { userId },
+          data: {
+            balanceKobo: { decrement: totalCost },
+            lockedBalanceKobo: { increment: totalCost },
+          },
+        });
+
+        const existing = await tx.shareholderInvestment.findUnique({
+          where: { userId_cycleId: { userId, cycleId } },
+        });
+
+        const investment = existing
+          ? await tx.shareholderInvestment.update({
+              where: { userId_cycleId: { userId, cycleId } },
+              data: {
+                sharesAllocated: { increment: qty },
+                amountInvestedKobo: { increment: totalCost },
+              },
+            })
+          : await tx.shareholderInvestment.create({
+              data: {
+                userId,
+                cycleId,
+                sharesAllocated: qty,
+                amountInvestedKobo: totalCost,
+              },
+            });
+
+        await tx.transaction.create({
+          data: {
+            userId,
+            transactionType: TransactionType.SHARE_PURCHASE,
+            amountKobo: totalCost,
+            transactionStatus: TransactionStatus.COMPLETED,
+            narration: `${quantity} share(s) in ${cycle.cycleName}`,
+            relatedEntityType: "INVESTMENT_CYCLE",
+            relatedEntityId: cycleId,
+          },
+        });
+
+        const result = serializeBigInts({
+          investment,
+          investmentId: investment.id,
+          sharesAllocated: investment.sharesAllocated,
+          amountInvestedKobo: investment.amountInvestedKobo,
+          pricePerShareKobo: cycle.pricePerShareKobo,
+          totalCostKobo: totalCost,
+        });
+
+        // Save result payload to idempotency record
+        if (idempotencyKey) {
+          const jsonSafe = JSON.parse(
+            JSON.stringify(result, (_key, val) =>
+              typeof val === "bigint" ? val.toString() : val
+            )
+          ) as Prisma.InputJsonValue;
+
+          await tx.idempotencyKey.update({
+            where: { key: idempotencyKey },
+            data: {
+              responseCode: 200,
+              responseBody: jsonSafe,
+            },
+          });
+        }
+
+        return result;
+      },
+      { isolationLevel: "Serializable" }
+    );
   }
 
   // ── QUERIES ───────────────────────────────────────────────────────────────
 
-  static async listCycles(page = 1, limit = 10) {
+  static async listCycles(page = 1, limit = 10, status?: CycleStatus) {
     const skip = (page - 1) * limit;
+    const where = status ? { status } : {};
     const [cycles, total] = await prisma.$transaction([
       prisma.investmentCycle.findMany({
-        orderBy: { createdAt: "desc" }, skip, take: limit,
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
         select: {
-          id: true, cycleName: true, status: true, pricePerShareKobo: true,
-          startDate: true, endDate: true, description: true,
-          totalProfitRealizedKobo: true, profitDistributionStatus: true, createdAt: true,
+          id: true,
+          cycleName: true,
+          status: true,
+          pricePerShareKobo: true,
+          fundingOpensAt: true,
+          fundingClosesAt: true,
+          activeStartsAt: true,
+          activeEndsAt: true,
+          description: true,
+          totalProfitRealizedKobo: true,
+          investorProfitPoolKobo: true,
+          orgProfitShareKobo: true,
+          profitDistributionStatus: true,
+          createdAt: true,
           _count: { select: { investments: true, businessVentures: true } },
         },
       }),
-      prisma.investmentCycle.count(),
+      prisma.investmentCycle.count({ where }),
     ]);
-    return { data: serializeBigInts(cycles), meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+
+    const serialized = serializeBigInts(cycles);
+    return {
+      cycles: serialized,
+      data: serialized,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   static async getCycleById(cycleId: string) {
     const cycle = await prisma.investmentCycle.findUnique({
-      where:   { id: cycleId },
+      where: { id: cycleId },
       include: {
-        investments: { include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } } },
-        businessVentures: { include: { managedBy: { select: { id: true, firstName: true, lastName: true } } } },
-        organizationalLedgers: { include: { recordedBy: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { date: "desc" } },
+        investments: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+        businessVentures: {
+          include: {
+            managedBy: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
+          },
+        },
+        organizationalLedgers: {
+          include: {
+            recordedBy: {
+              select: { id: true, firstName: true, lastName: true },
+            },
+          },
+          orderBy: { date: "desc" },
+        },
       },
     });
     if (!cycle) throw new Error("Cycle not found");
@@ -452,21 +569,79 @@ export default class CycleService {
 
   static async getMemberPosition(userId: string, cycleId: string) {
     const [investment, cycle] = await prisma.$transaction([
-      prisma.shareholderInvestment.findUnique({ where: { userId_cycleId: { userId, cycleId } } }),
-      prisma.investmentCycle.findUnique({ where: { id: cycleId }, select: { pricePerShareKobo: true, cycleName: true, status: true } }),
+      prisma.shareholderInvestment.findUnique({
+        where: { userId_cycleId: { userId, cycleId } },
+      }),
+      prisma.investmentCycle.findUnique({
+        where: { id: cycleId },
+        select: { pricePerShareKobo: true, cycleName: true, status: true },
+      }),
     ]);
     if (!cycle) throw new Error("Cycle not found");
-    return serializeBigInts({ invested: investment ?? null, cycle });
+    return serializeBigInts({
+      investment: investment ?? null,
+      invested: investment ?? null,
+      cycle,
+    });
   }
 
   static async getMemberInvestmentHistory(userId: string) {
     const investments = await prisma.shareholderInvestment.findMany({
-      where:   { userId },
+      where: { userId },
       orderBy: { createdAt: "desc" },
       include: {
-        cycle: { select: { id: true, cycleName: true, status: true, startDate: true, endDate: true, profitDistributionStatus: true } },
+        cycle: {
+          select: {
+            id: true,
+            cycleName: true,
+            status: true,
+            fundingOpensAt: true,
+            fundingClosesAt: true,
+            activeStartsAt: true,
+            activeEndsAt: true,
+            profitDistributionStatus: true,
+          },
+        },
       },
     });
     return serializeBigInts(investments);
+  }
+
+  static async getCycleInvestments(cycleId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [investments, total, aggregate] = await prisma.$transaction([
+      prisma.shareholderInvestment.findMany({
+        where: { cycleId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.shareholderInvestment.count({ where: { cycleId } }),
+      prisma.shareholderInvestment.aggregate({
+        where: { cycleId },
+        _sum: { amountInvestedKobo: true, sharesAllocated: true },
+      }),
+    ]);
+
+    return serializeBigInts({
+      investments,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      totalInvestedKobo: aggregate._sum.amountInvestedKobo ?? 0n,
+      totalSharesAllocated: aggregate._sum.sharesAllocated ?? 0n,
+    });
   }
 }

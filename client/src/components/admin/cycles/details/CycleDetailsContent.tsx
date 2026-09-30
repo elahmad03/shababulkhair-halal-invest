@@ -56,9 +56,6 @@ export default function CycleDetailsContent({
           <h2 className="text-3xl font-bold text-slate-900">
             {cycleDetails.name}
           </h2>
-          <p className="text-sm text-slate-600 mt-1">
-            Cycle ID: {cycleDetails.id}
-          </p>
         </div>
 
         <StatusBadge status={cycleDetails.status} />
@@ -93,6 +90,12 @@ function StatusBadge({ status }: { status: string }) {
       text: "text-blue-700",
       border: "border-blue-200",
       icon: "⚡",
+    },
+    closing: {
+      bg: "bg-amber-50",
+      text: "text-amber-800",
+      border: "border-amber-200",
+      icon: "📢",
     },
     completed: {
       bg: "bg-green-50",

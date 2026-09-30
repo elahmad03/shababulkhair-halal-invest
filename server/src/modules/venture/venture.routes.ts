@@ -16,7 +16,7 @@ const router = Router();
 
 // All venture routes: authenticated + admin/committee only
 router.use(authMiddleware);
-router.use(authorizeRoles("ADMIN", "COMMITTEE"));
+router.use(authorizeRoles("ADMIN"));
 
 /**
  * GET /ventures/cycle/:cycleId

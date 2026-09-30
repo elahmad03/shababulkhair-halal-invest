@@ -5,15 +5,29 @@ import { AuthenticatedRequest } from "../../common/middleware/auth.middleware";
 import CycleService from "./cycle.service";
 import {
   createCycleSchema,
-  purchaseSharesSchema,
-  recordVentureProfitSchema,
-  completeCycleSchema,
-  createVentureSchema,
-  recordLedgerEntrySchema,
+  updateCycleSchema,
   updateCycleStatusSchema,
   distributeProfitSchema,
-} from "./cycle.validators";
-// PATCH /cycles/:id/status — generic status transition (admin only)
+  completeCycleSchema,
+  investSchema,
+  paginationQuerySchema,
+} from "./cycle.validation";
+
+// ── ADMIN CONTROLLERS ─────────────────────────────────────────────────────────
+
+export const createCycle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const input = createCycleSchema.parse(req.body);
+  const cycle = await CycleService.createCycle(input);
+  res.status(201).json(successResponse(cycle, "Investment cycle created successfully"));
+});
+
+export const updateCycle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const input = updateCycleSchema.parse(req.body);
+  const cycle = await CycleService.updateCycle(id, input);
+  res.status(200).json(successResponse(cycle, "Cycle details updated"));
+});
+
 export const updateCycleStatus = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   const adminId = req.user!.userId;
@@ -22,36 +36,26 @@ export const updateCycleStatus = catchAsync(async (req: AuthenticatedRequest, re
   res.status(200).json(successResponse(result, `Cycle status updated to ${input.status}`));
 });
 
-// POST /cycles/:id/distribute-profit — profit distribution step (admin only)
+export const openCycle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const adminId = req.user!.userId;
+  const cycle = await CycleService.openCycle(id, adminId);
+  res.status(200).json(successResponse(cycle, "Cycle is now open for investment"));
+});
+
+export const activateCycle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const adminId = req.user!.userId;
+  const cycle = await CycleService.activateCycle(id, adminId);
+  res.status(200).json(successResponse(cycle, "Cycle activated — investment window closed"));
+});
+
 export const distributeProfit = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   const adminId = req.user!.userId;
   const input = distributeProfitSchema.parse(req.body);
   const result = await CycleService.distributeProfit(id, adminId, input);
   res.status(200).json(successResponse(result, "Profit distributed and recorded"));
-});
-
-// ============================================================
-// ADMIN — CYCLE LIFECYCLE
-// ============================================================
-
-export const createCycle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const input = createCycleSchema.parse(req.body);
-  const cycle = await CycleService.createCycle(input);
-  res.status(201).json(successResponse(cycle, "Investment cycle created successfully"));
-});
-
-export const openCycle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const { id } = req.params;
-  const adminId = req.user!.userId;
-  const cycle = await CycleService.openCycle(id);
-  res.status(200).json(successResponse(cycle, "Cycle is now open for investment"));
-});
-
-export const activateCycle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const { id } = req.params;
-  const cycle = await CycleService.activateCycle(id);
-  res.status(200).json(successResponse(cycle, "Cycle activated — investment window closed"));
 });
 
 export const completeCycle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
@@ -62,37 +66,58 @@ export const completeCycle = catchAsync(async (req: AuthenticatedRequest, res: R
   res.status(200).json(successResponse(result, "Cycle completed and profits distributed"));
 });
 
-// ============================================================
-// ADMIN — VENTURES & LEDGER
-// ============================================================
+export const getCycleInvestments = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.min(100, parseInt(req.query.limit as string) || 20);
+  const result = await CycleService.getCycleInvestments(id, page, limit);
+  res.status(200).json(successResponse(result, "Cycle investments retrieved"));
+});
 
-// ============================================================
-// MEMBER — SHARE PURCHASE
-// ============================================================
+// ── MEMBER CONTROLLERS ───────────────────────────────────────────────────────
 
 export const purchaseShares = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!.userId;
-  const { cycleId, quantity } = purchaseSharesSchema.parse(req.body);
+  const cycleId = req.params.id || req.body.cycleId;
 
-  // Idempotency key from client header — prevents double purchases on retry/double-click
-  const idempotencyKey = req.headers["idempotency-key"] as string | undefined;
-  if (!idempotencyKey) {
-    res.status(400).json(errorResponse("Idempotency-Key header is required"));
+  if (!cycleId) {
+    res.status(400).json(errorResponse("Cycle ID is required"));
     return;
   }
 
-  const result = await CycleService.purchaseShares(userId, cycleId, quantity, idempotencyKey);
+  const parsed = investSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json(errorResponse("Invalid shares quantity", parsed.error.format()));
+    return;
+  }
+
+  const shares =
+    parsed.data.sharesRequested ??
+    parsed.data.shares ??
+    parsed.data.quantity ??
+    1;
+
+  // Idempotency key from client header or generated fallback
+  const idempotencyKey =
+    (req.headers["idempotency-key"] as string) ||
+    req.body.idempotencyKey ||
+    `invest-${userId}-${cycleId}-${Date.now()}`;
+
+  const result = await CycleService.purchaseShares(
+    userId,
+    cycleId,
+    shares,
+    idempotencyKey
+  );
+
   res.status(200).json(successResponse(result, "Shares purchased successfully"));
 });
 
-// ============================================================
-// QUERIES
-// ============================================================
+// ── QUERIES ──────────────────────────────────────────────────────────────────
 
 export const listCycles = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const page  = Math.max(1, parseInt(req.query.page  as string) || 1);
-  const limit = Math.min(50, parseInt(req.query.limit as string) || 10);
-  const result = await CycleService.listCycles(page, limit);
+  const query = paginationQuerySchema.parse(req.query);
+  const result = await CycleService.listCycles(query.page, query.limit, query.status);
   res.status(200).json(successResponse(result, "Cycles retrieved"));
 });
 
@@ -103,7 +128,7 @@ export const getCycleById = catchAsync(async (req: AuthenticatedRequest, res: Re
 });
 
 export const getMemberPosition = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId  = req.user!.userId;
+  const userId = req.user!.userId;
   const { id: cycleId } = req.params;
   const result = await CycleService.getMemberPosition(userId, cycleId);
   res.status(200).json(successResponse(result, "Member position retrieved"));

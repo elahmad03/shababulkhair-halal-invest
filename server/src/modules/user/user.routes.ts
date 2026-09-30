@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authMiddleware, authorizeRoles } from "../../common/middleware/auth.middleware";
 import * as UserController from "./user.controller";
+import * as PreferenceController from "./preference.controller";
 
 const router = Router();
 
@@ -31,5 +32,11 @@ router.get("/admin/users/:id/transactions", authorizeRoles("ADMIN"), UserControl
 
 // GET /me - Get authenticated user's profile
 router.get("/me", UserController.getMe);
+
+// GET /me/preferences - Get user's investment preferences
+router.get("/me/preferences", PreferenceController.getMyPreferences);
+
+// PUT /me/preferences - Update user's investment preferences
+router.put("/me/preferences", PreferenceController.updateMyPreferences);
 
 export default router;

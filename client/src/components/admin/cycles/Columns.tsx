@@ -6,19 +6,20 @@ import { CycleStatusBadge } from "./CyclestatusBadge";
 import { CycleActionsDropdown } from "./CycleActionMenu";
 import { formatCurrency } from "@/lib/utils";
 
-export interface CycleWithStats {
+export type CycleWithStats = {
   id: string;
-  name: string; 
+  name: string;
   status: string;
   pricePerShare: bigint;
-
   totalInvested: bigint;
   investorCount: number;
-
-  startDate: string | null;
-  endDate: string | null;
+  fundingOpensAt: string | null;
+  fundingClosesAt: string | null;
+  activeStartsAt: string | null;
+  activeEndsAt: string | null;
   createdAt: string;
-}
+};
+
 export const columns: ColumnDef<CycleWithStats>[] = [
   {
     accessorKey: "name",
@@ -51,20 +52,21 @@ export const columns: ColumnDef<CycleWithStats>[] = [
     ),
   },
   {
-    id: "dateRange",
-    header: "Date Range",
+    id: "activeWindow",
+    header: "Active Window",
     cell: ({ row }) => {
-      const startDate = row.original.startDate;
-      const endDate = row.original.endDate;
+      // Replaced old startDate/endDate with the new active timeline fields
+      const start = row.original.activeStartsAt;
+      const end = row.original.activeEndsAt;
 
-      if (!startDate || !endDate) {
-        return <span className="text-muted-foreground">Not set</span>;
+      if (!start || !end) {
+        return <span className="text-muted-foreground text-sm">Not set</span>;
       }
 
       return (
-        <div className="text-sm">
-          {format(new Date(startDate), "MMM d")} -{" "}
-          {format(new Date(endDate), "MMM d, yyyy")}
+        <div className="text-sm whitespace-nowrap">
+          {format(new Date(start), "MMM d")} -{" "}
+          {format(new Date(end), "MMM d, yyyy")}
         </div>
       );
     },

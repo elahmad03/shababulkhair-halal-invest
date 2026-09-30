@@ -117,5 +117,8 @@ export function formatName(name: string): string {
  */
 export function ngnToApiAmount(ngnAmount: string | number): number {
   const amount = typeof ngnAmount === 'string' ? parseFloat(ngnAmount) : ngnAmount;
-  return Number.isFinite(amount) ? Math.round(amount) : 0;
+  if (!Number.isFinite(amount)) {
+    throw new Error(`Invalid NGN amount: ${ngnAmount}`);
+  }
+  return Math.round(amount);
 }

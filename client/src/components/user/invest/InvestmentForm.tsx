@@ -9,10 +9,11 @@ import { Separator } from "@/components/ui/separator";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Minus, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import type { Cycle } from "@/store/modules/cycle/cycle.types";
+import type { WalletBalance as Wallet } from "@/store/modules/wallet/Wallet.types";
 
 interface InvestmentFormProps {
-  cycle: InvestmentCycle;
+  cycle: Cycle;
   wallet: Wallet;
 }
 

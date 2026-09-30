@@ -1,5 +1,6 @@
 "use client"
 
+import { use } from "react"
 import { notFound } from "next/navigation"
 import InvestmentCheckoutForm from "@/components/user/invest/InvestmentCheckoutForm"
 import { useGetCycleByIdQuery } from "@/store/modules/cycle/cycleApi"
@@ -12,13 +13,13 @@ interface InvestmentPageProps {
   }>
 }
 
-const InvestmentPage = async ({ params }: InvestmentPageProps) => {
-  const { cycleId } = await params
+export default function InvestmentPage({ params }: InvestmentPageProps) {
+  const { cycleId } = use(params)
 
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background">
       <InvestmentCheckoutFormWrapper cycleId={cycleId} />
-    </div>
+    </main>
   )
 }
 
@@ -38,15 +39,13 @@ function InvestmentCheckoutFormWrapper({ cycleId }: { cycleId: string }) {
     notFound()
   }
 
-  // Transform WalletSummary to Wallet format
   const wallet = {
-    id: 0,
-    userId: 0,
-    balance: BigInt(walletData.data.balanceKobo),
-    updatedAt: new Date().toISOString(),
+    balanceKobo: walletData.data.balanceKobo,
+    lockedBalanceKobo: walletData.data.lockedBalanceKobo,
+    totalKobo: (
+      BigInt(walletData.data.balanceKobo || "0") + BigInt(walletData.data.lockedBalanceKobo || "0")
+    ).toString(),
   }
 
   return <InvestmentCheckoutForm cycle={cycleData.data} wallet={wallet} />
 }
-
-export default InvestmentPage
