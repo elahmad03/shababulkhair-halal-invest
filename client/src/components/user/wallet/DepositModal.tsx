@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast, Toaster } from "sonner";
 import { Loader2 } from "lucide-react";
-import { ngnToApiAmount } from "@/lib/utils";
 
 export default function DepositModal({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
   const [amount, setAmount] = useState("");
@@ -26,9 +25,8 @@ export default function DepositModal({ open, onOpenChange }: { open: boolean, on
     }
 
     try {
-      // Convert NGN to API amount (server will convert to kobo)
-      const amountForApi = ngnToApiAmount(numAmount);
-      const res = await initializeDeposit({ amountKobo: amountForApi }).unwrap();
+        // Send NGN value — server converts to kobo at its boundary
+      const res = await initializeDeposit({ amountNaira: numAmount }).unwrap();
      
        if (res.data && res.data.authorizationUrl) {
          // Redirect to Paystack checkout page
@@ -63,7 +61,7 @@ export default function DepositModal({ open, onOpenChange }: { open: boolean, on
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               disabled={isLoading}
-              min="1000"
+              min="10000"
             />
           </div>
           

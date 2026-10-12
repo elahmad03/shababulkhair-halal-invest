@@ -12,7 +12,6 @@ export const withdrawSchema = z.object({
     .int("Amount must be a whole number (in kobo)")
     .positive("Amount must be greater than zero"),
   disbursementType: z.enum(["WALLET_BALANCE", "PROFIT_ONLY", "FULL_DIVESTMENT"]),
-  // Replaced hardcoded bank fields with the new relational ID
   bankAccountId: z.string().min(1, "Please select a bank account"), 
 });
 

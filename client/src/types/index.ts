@@ -40,10 +40,12 @@ export interface User {
   updatedAt: string;
 }
 
-// Returned from login / verifyOtp — subset of User
+// Returned from login / verifyOtp — subset of User.
+// Server returns firstName + lastName (not a combined name field).
 export interface AuthUser {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   role: Role;
   isEmailVerified: boolean;
@@ -58,6 +60,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   phoneNumber: string;
+  termsAccepted: boolean;
 }
 
 export interface RegisterResponse {
@@ -70,13 +73,14 @@ export interface LoginRequest {
   password: string;
 }
 
-// Login returns either full auth or needs verification
+// Login returns either full auth (verified) or a needVerification flag (unverified).
+// Both branches arrive as 200 wrapped in { success, data } by successResponse().
+// The refresh token is set as an HttpOnly cookie — it is NOT in the JSON body.
 export type LoginResponse =
   | {
       message: string;
       user: AuthUser;
       accessToken: string;
-      refreshToken: string;
     }
   | {
       message: string;

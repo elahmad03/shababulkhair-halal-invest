@@ -32,6 +32,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import VerifyOtpModal from "@/components/auth/VerifyOtpModal";
 
 import { useLoginMutation } from "@/store/modules/auth/authApi";
+import { useAppSelector } from "@/store/hooks";
+import { selectCurrentUser } from "@/store/modules/auth/authSlice";
 import type { ApiError, LoginRequest } from "@/types";
 
 // -------------------------
@@ -55,6 +57,7 @@ export default function SignInPage() {
   } | null>(null);
 
   const [login, { isLoading }] = useLoginMutation();
+  const currentUser = useAppSelector(selectCurrentUser);
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -64,7 +67,10 @@ export default function SignInPage() {
   const onSubmit = async (values: LoginForm) => {
     setServerError(null);
     try {
-      const payload: LoginRequest = { email: values.email, password: values.password };
+      const payload: LoginRequest = {
+        email: values.email,
+        password: values.password,
+      };
       const response = await login(payload).unwrap();
       const data = response.data;
 
@@ -76,8 +82,9 @@ export default function SignInPage() {
 
       if ("user" in data) {
         toast.success("Successfully signed in!");
-        const dashboardUrl = data.user.role === "ADMIN" ? "/admin/dashboard" : "/user/dashboard";
-        await new Promise(resolve => setTimeout(resolve, 100));
+        const dashboardUrl =
+          data.user.role === "ADMIN" ? "/admin/dashboard" : "/user/dashboard";
+        await new Promise((resolve) => setTimeout(resolve, 100));
         router.push(dashboardUrl);
       } else {
         setServerError("Unexpected response from server. Please try again.");
@@ -85,7 +92,7 @@ export default function SignInPage() {
     } catch (err: unknown) {
       const error = err as ApiError;
       setServerError(
-        error.data?.message ?? "Something went wrong. Please try again."
+        error.data?.message ?? "Something went wrong. Please try again.",
       );
     }
   };
@@ -94,7 +101,10 @@ export default function SignInPage() {
     setShowOtpModal(false);
     setVerificationState(null);
     toast.success("Account verified successfully!");
-    router.push("/");
+    // currentUser is populated by authApi.verifyOtp's onQueryStarted dispatch
+    const dashboardUrl =
+      currentUser?.role === "ADMIN" ? "/admin/dashboard" : "/user/dashboard";
+    router.push(dashboardUrl);
   };
 
   return (
@@ -135,7 +145,10 @@ export default function SignInPage() {
                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                 className="overflow-hidden"
               >
-                <Alert variant="destructive" className="bg-destructive/10 border-destructive/20">
+                <Alert
+                  variant="destructive"
+                  className="bg-destructive/10 border-destructive/20"
+                >
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{serverError}</AlertDescription>
                 </Alert>
@@ -145,9 +158,9 @@ export default function SignInPage() {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }} 
-                animate={{ opacity: 1, x: 0 }} 
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
               >
                 <FormField
@@ -157,13 +170,13 @@ export default function SignInPage() {
                     <FormItem>
                       <FormLabel>Email Address</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="email" 
-                          placeholder="name@example.com" 
+                        <Input
+                          type="email"
+                          placeholder="name@example.com"
                           disabled={isLoading}
                           autoFocus
                           autoComplete="email"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -172,9 +185,9 @@ export default function SignInPage() {
                 />
               </motion.div>
 
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }} 
-                animate={{ opacity: 1, x: 0 }} 
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.25 }}
               >
                 <FormField
@@ -206,10 +219,16 @@ export default function SignInPage() {
                             type="button"
                             onClick={() => setShowPassword((v) => !v)}
                             disabled={isLoading}
-                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            aria-label={
+                              showPassword ? "Hide password" : "Show password"
+                            }
                             className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 transition-colors"
                           >
-                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            {showPassword ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
                           </button>
                         </div>
                       </FormControl>
@@ -219,16 +238,16 @@ export default function SignInPage() {
                 />
               </motion.div>
 
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }} 
-                animate={{ opacity: 1, y: 0 }} 
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
                 className="pt-2"
               >
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   size="lg"
-                  className="w-full font-semibold group" 
+                  className="w-full font-semibold group"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -249,7 +268,9 @@ export default function SignInPage() {
         </CardContent>
 
         <CardFooter className="flex flex-wrap justify-center gap-1 border-t bg-muted/30 py-6 px-6 sm:rounded-b-lg">
-          <span className="text-sm text-muted-foreground">Don&apos;t have an account?</span>
+          <span className="text-sm text-muted-foreground">
+            Don&apos;t have an account?
+          </span>
           <Link
             href="/sign-up"
             className="text-sm font-semibold text-primary hover:underline underline-offset-4"

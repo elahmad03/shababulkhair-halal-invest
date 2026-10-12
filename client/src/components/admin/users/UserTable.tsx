@@ -41,10 +41,6 @@ export function UserTableClient({
       user.email.toLowerCase().includes(filter.toLowerCase())
   );
 
-  // Transform User -> table row shape. `id` stays the real UUID string —
-  // it's what the detail page route and the API both expect. It was
-  // previously hashed into a fake number here purely for display, which
-  // broke navigation to /admin/users/[id] with a garbage id.
   const tableData = filteredUsers.map((user) => ({
     id: user.id,
     fullName: `${user.firstName} ${user.lastName}`,

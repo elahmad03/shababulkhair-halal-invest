@@ -18,6 +18,7 @@ interface RegisterInput {
   email: string;
   password: string;
   phoneNumber: string;
+  termsAccepted: boolean;
 }
 
 interface LoginInput {
@@ -84,6 +85,7 @@ export async function register(input: RegisterInput) {
       email: input.email,
       password: hashedPassword,
       phoneNumber: input.phoneNumber,
+      termsAcceptedAt: input.termsAccepted ? new Date() : undefined,
     },
     select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true, role: true, password: true, isEmailVerified: true },
   });

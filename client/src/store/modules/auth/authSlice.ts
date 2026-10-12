@@ -5,7 +5,8 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 // -------------------------
 export interface AuthUser {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   role: "USER" | "MEMBER" | "COMMITEE" | "ADMIN";
   isEmailVerified: boolean;

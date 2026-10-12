@@ -18,7 +18,12 @@ export type UserTableType = {
   id: string;
   fullName: string;
   email: string;
-  role: 'member' | 'committee' | 'admin';
-  kycStatus: 'pending' | 'verified' | 'failed';
-  createdAt: Date;
+  role: "member" | "committee" | "admin";
+  kycStatus:
+    | "NOT_SUBMITTED"
+    | "PENDING_REVIEW"
+    | "VERIFIED"
+    | "REJECTED";
+  hasKycDocuments: boolean;
+  createdAt: Date | string;
 };
