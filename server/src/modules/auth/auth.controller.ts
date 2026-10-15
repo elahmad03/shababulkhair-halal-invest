@@ -52,12 +52,12 @@ export const login = catchAsync(async (req: Request, res: Response) => {
   });
 
   if ("needVerification" in result) {
-    return res.status(401).json({
-      success: false,
-      message: result.message,
-      needVerification: true,
-      userId: result.userId,
-    });
+    return res.json(
+      successResponse(
+        { needVerification: true, userId: result.userId },
+        result.message
+      )
+    );
   }
 
   return res

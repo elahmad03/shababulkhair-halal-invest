@@ -25,7 +25,7 @@ export interface WalletSummary {
 }
 
 export interface InitializeDepositRequest {
-  amountKobo: number;
+  amountNaira: number;
 }
 
 export interface InitializeDepositResponse {

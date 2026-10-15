@@ -4,10 +4,13 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/user/AppSidebar";
 import Topbar from "@/components/layout/MobileHeader";
 import { AuthGuard } from "@/components/shared/AuthGuard";
+import { KycPrompt } from "@/components/shared/KycPrompt";
+import { KycGate } from "@/components/shared/KycGate";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard allowedRoles={["USER", "ADMIN","COMMITEE","MEMBER"]}>
+      <KycGate>
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         {/* Sidebar: show on md+ */}
@@ -18,10 +21,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top navigation bar */}
           <Topbar />
-          <main className="flex-1 p-4">{children}</main>
+          <main className="flex-1 p-4">
+            
+            {children}</main>
         </div>
       </div>
     </SidebarProvider>
+    </KycGate>
     </AuthGuard>
   );
 }

@@ -7,7 +7,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       className="relative min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-hidden"
       // Apply background image and styling
       style={{
-        backgroundImage: 'url("/images/auth-background.jpg")', // Path to your background image
+        backgroundImage: 'url("/logo.png")', // Path to your background image
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed', // Keeps background fixed during scroll

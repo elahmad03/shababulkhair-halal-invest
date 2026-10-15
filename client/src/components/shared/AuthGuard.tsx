@@ -9,6 +9,7 @@ import {
   selectIsInitialized, 
   selectCurrentUser 
 } from "@/store/modules/auth/authSlice";
+import { BrandLoader } from "./BrandLoader";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -49,9 +50,7 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
   // Show a loading screen while we wait for the AuthInitializer to finish
   if (!isInitialized) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
+     <BrandLoader variant="page" />
     );
   }
 

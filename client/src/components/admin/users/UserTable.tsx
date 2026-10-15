@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
-import { columns } from "./Columns";
+import { columns, type UserRow } from "./Columns";
 import type { User } from "@/store/modules/user/userApi";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -35,27 +35,24 @@ export function UserTableClient({
 }: UserTableClientProps) {
   const [filter, setFilter] = useState("");
 
-  const filteredUsers = users.filter(
-    (user) =>
-      `${user.firstName} ${user.lastName}`.toLowerCase().includes(filter.toLowerCase()) ||
-      user.email.toLowerCase().includes(filter.toLowerCase())
-  );
+  const query = filter.toLowerCase();
 
-  // Transform User -> table row shape. `id` stays the real UUID string —
-  // it's what the detail page route and the API both expect. It was
-  // previously hashed into a fake number here purely for display, which
-  // broke navigation to /admin/users/[id] with a garbage id.
-  const tableData = filteredUsers.map((user) => ({
-    id: user.id,
-    fullName: `${user.firstName} ${user.lastName}`,
-    email: user.email,
-    role: user.role.toLowerCase() as "member" | "committee" | "admin",
-    status: user.status,
-    kycStatus: (user.kyc?.status?.toLowerCase() || "pending") as "pending" | "verified" | "failed",
-    investments: user._count?.investments || 0,
-    createdAt: new Date(user.createdAt),
-    joinDate: new Date(user.createdAt).toLocaleDateString(),
-  }));
+  const tableData: UserRow[] = users
+    .filter(
+      (user) =>
+        `${user.firstName} ${user.lastName}`.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query)
+    )
+    .map((user) => ({
+      id: user.id,
+      fullName: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      kycStatus: user.kyc?.status,
+      investments: user._count?.investments ?? 0,
+      createdAt: user.createdAt,
+    }));
 
   if (isLoading) {
     return (

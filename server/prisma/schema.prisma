@@ -118,6 +118,7 @@ model User {
   status          AccountStatus @default(ACTIVE)
 
   isEmailVerified Boolean   @default(false) @map("is_email_verified")
+  termsAcceptedAt DateTime? @map("terms_accepted_at") @db.Timestamptz()
   emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz()
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()

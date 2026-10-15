@@ -35,7 +35,9 @@ export function Header() {
   const currentUser = {
     fullName: userDetail?.firstName 
       ? `${userDetail.firstName} ${userDetail.lastName || ""}`
-      : authUser?.name ?? "User",
+      : authUser
+        ? `${authUser.firstName} ${authUser.lastName || ""}`.trim() || "User"
+        : "User",
     profilePicture: userDetail?.avatarUrl || userDetail?.kyc?.avatarUrl,
   }
     
