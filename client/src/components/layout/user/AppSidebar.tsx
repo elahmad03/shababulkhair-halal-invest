@@ -2,23 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
+import {
   LayoutDashboard,
-  Recycle, 
+  Recycle,
   Wallet,
   TrendingUp,
-  Bell
+  Bell,
 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { useSidebar } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useGetMeQuery } from "@/store/modules/user/userApi";
 
 const items = [
   { title: "Dashboard", url: "/user/dashboard", icon: LayoutDashboard },
@@ -31,43 +37,87 @@ const items = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
+  const { data: me } = useGetMeQuery();
 
-  const handleLinkClick = () => {
-    // Close sidebar on mobile when link is clicked
-    setOpenMobile(false);
-  };
+  // Also highlights nested pages like /user/cycles/[id]
+  const isActive = (url: string) =>
+    pathname === url || pathname.startsWith(`${url}/`);
+
+  const initials = me
+    ? `${me.firstName?.[0] ?? ""}${me.lastName?.[0] ?? ""}`.toUpperCase()
+    : "";
 
   return (
-    <Sidebar className="w-64 bg-gray-900 dark:bg-gray-900 h-full">
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild>
+              <Link href="/user/dashboard" onClick={() => setOpenMobile(false)}>
+                <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
+                  M
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">Member Portal</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    Investments
+                  </span>
+                </div>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+
       <SidebarContent>
         <SidebarGroup>
+          <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map(({ title, url, icon: Icon }) => {
-                const isActive = pathname === url;
-                return (
-                  <SidebarMenuItem key={title}>
-                    <SidebarMenuButton asChild>
-                      <Link
-                        href={url}
-                        onClick={handleLinkClick}
-                        className={`flex items-center gap-3 px-4 py-2 rounded-md w-full font-medium transition-all
-                          ${isActive
-                            ? "bg-gradient-to-r from-emerald-600 to-green-500 text-white shadow-md"
-                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"}
-                        `}
-                      >
-                        <Icon className="w-5 h-5" />
-                        <span>{title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {items.map(({ title, url, icon: Icon }) => (
+                <SidebarMenuItem key={url}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(url)}
+                    tooltip={title}
+                    className="font-medium data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-sm"
+                  >
+                    <Link href={url} onClick={() => setOpenMobile(false)}>
+                      <Icon />
+                      <span>{title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" tooltip={me?.email}>
+              <Avatar className="size-8 rounded-lg">
+                <AvatarImage src={me?.avatarUrl} alt={me?.firstName} />
+                <AvatarFallback className="rounded-lg">
+                  {initials || "?"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">
+                  {me ? `${me.firstName} ${me.lastName}` : "Loading..."}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {me?.email}
+                </span>
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+
+      <SidebarRail />
     </Sidebar>
   );
 }

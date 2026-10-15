@@ -196,11 +196,15 @@
 //     </div>
 //   );
 // }
+import { KycPrompt } from '@/components/shared/KycPrompt'
 import React from 'react'
 
 function page() {
   return (
-    <div>page</div>
+    <div>
+      <KycPrompt href="/user/onboarding/kyc" />
+      dashboard page
+            </div>
   )
 }
 

@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import Image from "next/image";
-import { useSelector } from "react-redux";
-
 // UI Components
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
@@ -23,9 +21,6 @@ import NotificationDropdown from "@/components/user/notifications/NotificalDropd
 import { useLogoutMutation } from "@/store/modules/auth/authApi"
 import {
   useGetMeQuery,
-  useGetUserKycQuery,
-  useGetUserInvestmentsQuery,
-  useGetUserTransactionsQuery,
 } from "@/store/modules/user/userApi";
 
 import type { RootState } from "@/store"; // Uncomment and adjust path for strict typing
@@ -54,11 +49,11 @@ export default function Topbar() {
       // The actual token clearing happens instantly via onQueryStarted in your API slice
       await logoutUser().unwrap();
       setDropdownOpen(false);
-      router.push("/login");
+      router.push("/sign-in");
     } catch (error) {
       console.error("Logout failed to process on server, but local state was cleared.", error);
       // Failsafe: push to login anyway since local credentials are gone
-      router.push("/login"); 
+      router.push("/sign-in"); 
     }
   };
 

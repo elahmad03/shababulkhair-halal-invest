@@ -3,19 +3,17 @@
 import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
 import {
-  ArrowUpRight,
   CalendarDays,
-  CheckCircle2,
   Clock3,
-  FileCheck2,
   MoreHorizontal,
   ShieldAlert,
   ShieldCheck,
+  ShieldQuestion,
   UserRound,
   UserRoundX,
 } from "lucide-react";
 
-import { UserTableType } from "@/lib/types/dashboard";
+import type { User } from "@/store/modules/user/userApi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,64 +25,101 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type KycStatus =
-  | "NOT_SUBMITTED"
-  | "PENDING_REVIEW"
-  | "VERIFIED"
-  | "REJECTED";
+export type UserRow = {
+  id: string;
+  fullName: string;
+  email: string;
+  role: User["role"];
+  status: User["status"];
+  kycStatus?: string; // raw value from user.kyc?.status
+  investments: number;
+  createdAt: string;
+};
 
-const roleConfig: Record<
-  UserTableType["role"],
-  { label: string; className: string }
-> = {
-  admin: {
+const roleConfig: Record<User["role"], { label: string; className: string }> = {
+  ADMIN: {
     label: "Admin",
     className: "border-destructive/30 bg-destructive/10 text-destructive",
   },
-  committee: {
+  COMMITTEE: {
     label: "Committee",
     className: "border-primary/30 bg-primary/10 text-primary",
   },
-  member: {
+  MEMBER: {
     label: "Member",
     className: "border-border bg-muted text-muted-foreground",
   },
 };
 
-const kycConfig: Record<
-  KycStatus,
-  {
-    label: string;
-    icon: typeof ShieldCheck;
-    className: string;
-  }
-> = {
-  NOT_SUBMITTED: {
-    label: "Not submitted",
-    icon: ShieldAlert,
-    className: "border-border bg-muted text-muted-foreground",
-  },
-  PENDING_REVIEW: {
-    label: "Pending review",
-    icon: Clock3,
-    className:
-      "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  },
-  VERIFIED: {
-    label: "Verified",
-    icon: ShieldCheck,
+const statusConfig: Record<User["status"], { label: string; className: string }> = {
+  ACTIVE: {
+    label: "Active",
     className:
       "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   },
-  REJECTED: {
-    label: "Rejected",
-    icon: ShieldAlert,
-    className:
-      "border-destructive/30 bg-destructive/10 text-destructive",
+  SUSPENDED: {
+    label: "Suspended",
+    className: "border-destructive/30 bg-destructive/10 text-destructive",
+  },
+  DECEASED: {
+    label: "Deceased",
+    className: "border-border bg-muted text-muted-foreground",
   },
 };
 
-export const columns: ColumnDef<UserTableType>[] = [
+type KycBadge = {
+  label: string;
+  icon: typeof ShieldCheck;
+  className: string;
+};
+
+function getKycBadge(raw?: string): KycBadge {
+  if (!raw) {
+    return {
+      label: "Not submitted",
+      icon: ShieldAlert,
+      className: "border-border bg-muted text-muted-foreground",
+    };
+  }
+
+  const value = raw.toUpperCase();
+
+  if (value.includes("VERIF") || value.includes("APPROV")) {
+    return {
+      label: "Verified",
+      icon: ShieldCheck,
+      className:
+        "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    };
+  }
+
+  if (value.includes("REJECT") || value.includes("FAIL")) {
+    return {
+      label: "Rejected",
+      icon: ShieldAlert,
+      className: "border-destructive/30 bg-destructive/10 text-destructive",
+    };
+  }
+
+  if (value.includes("PEND") || value.includes("SUBMIT") || value.includes("REVIEW")) {
+    return {
+      label: "Pending review",
+      icon: Clock3,
+      className:
+        "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    };
+  }
+
+  // Unrecognised backend value: show it as-is rather than guessing
+  const pretty = raw.replace(/[_-]+/g, " ").toLowerCase();
+  return {
+    label: pretty.charAt(0).toUpperCase() + pretty.slice(1),
+    icon: ShieldQuestion,
+    className: "border-border bg-muted text-muted-foreground",
+  };
+}
+
+export const columns: ColumnDef<UserRow>[] = [
   {
     accessorKey: "fullName",
     header: "User",
@@ -119,10 +154,20 @@ export const columns: ColumnDef<UserTableType>[] = [
       const config = roleConfig[row.original.role];
 
       return (
-        <Badge
-          variant="outline"
-          className={config.className}
-        >
+        <Badge variant="outline" className={config.className}>
+          {config.label}
+        </Badge>
+      );
+    },
+  },
+  {
+    accessorKey: "status",
+    header: "Account status",
+    cell: ({ row }) => {
+      const config = statusConfig[row.original.status];
+
+      return (
+        <Badge variant="outline" className={config.className}>
           {config.label}
         </Badge>
       );
@@ -132,42 +177,23 @@ export const columns: ColumnDef<UserTableType>[] = [
     accessorKey: "kycStatus",
     header: "KYC verification",
     cell: ({ row }) => {
-      const status = row.original.kycStatus as KycStatus;
-      const config = kycConfig[status];
-      const Icon = config?.icon;
-
-      if (!config || !Icon) {
-        return (
-          <Badge variant="outline">
-            Unknown status
-          </Badge>
-        );
-      }
+      const config = getKycBadge(row.original.kycStatus);
+      const Icon = config.icon;
 
       return (
-        <div className="flex flex-col items-start gap-1.5">
-          <Badge
-            variant="outline"
-            className={config.className}
-          >
-            <Icon className="mr-1 size-3.5" />
-            {config.label}
-          </Badge>
-
-          {status === "PENDING_REVIEW" &&
-            row.original.hasKycDocuments && (
-              <Link
-                href={`/admin/kyc/${row.original.id}`}
-                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-              >
-                <FileCheck2 className="size-3.5" />
-                Verify KYC
-                <ArrowUpRight className="size-3" />
-              </Link>
-            )}
-        </div>
+        <Badge variant="outline" className={config.className}>
+          <Icon className="mr-1 size-3.5" />
+          {config.label}
+        </Badge>
       );
     },
+  },
+  {
+    accessorKey: "investments",
+    header: "Investments",
+    cell: ({ row }) => (
+      <span className="text-sm tabular-nums">{row.original.investments}</span>
+    ),
   },
   {
     accessorKey: "createdAt",
@@ -197,9 +223,6 @@ export const columns: ColumnDef<UserTableType>[] = [
     enableHiding: false,
     cell: ({ row }) => {
       const user = row.original;
-      const canReviewKyc =
-        user.kycStatus === "PENDING_REVIEW" &&
-        user.hasKycDocuments;
 
       return (
         <DropdownMenu>
@@ -225,29 +248,6 @@ export const columns: ColumnDef<UserTableType>[] = [
                 View profile
               </Link>
             </DropdownMenuItem>
-
-            {canReviewKyc && (
-              <DropdownMenuItem asChild>
-                <Link href={`/admin/kyc/${user.id}`}>
-                  <FileCheck2 className="mr-2 size-4" />
-                  Review KYC documents
-                </Link>
-              </DropdownMenuItem>
-            )}
-
-            {user.kycStatus === "VERIFIED" && (
-              <DropdownMenuItem disabled>
-                <CheckCircle2 className="mr-2 size-4" />
-                Identity verified
-              </DropdownMenuItem>
-            )}
-
-            {user.kycStatus === "REJECTED" && (
-              <DropdownMenuItem disabled>
-                <ShieldAlert className="mr-2 size-4" />
-                KYC rejected
-              </DropdownMenuItem>
-            )}
 
             <DropdownMenuSeparator />
 

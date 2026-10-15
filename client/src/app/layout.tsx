@@ -16,7 +16,7 @@ const IBMPlexSerif = localFont({
 
 export const metadata: Metadata = {
   title: "Shababulkhair Halal Investment Ltd ",
-  description: "no 1 fintech for sharia compliant",
+  description: "no 1 investment for sharia compliant business earn hala live halal",
 };
 
 export default function RootLayout({
