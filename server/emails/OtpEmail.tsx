@@ -14,23 +14,32 @@ import {
 interface OtpEmailProps {
   otp: string;
   expirationMinutes: number;
+  purpose?: "EMAIL_VERIFICATION" | "PASSWORD_RESET";
 }
 
-export const OtpEmail = ({ otp, expirationMinutes }: OtpEmailProps) => {
+export const OtpEmail = ({ otp, expirationMinutes, purpose = "EMAIL_VERIFICATION" }: OtpEmailProps) => {
   const date = new Date();
   const year = date.getFullYear();
+
+  const isPasswordReset = purpose === "PASSWORD_RESET";
 
   return (
     <Html>
       <Head />
-      <Preview>Your Shababul Khair Halal Investment LTD verification code</Preview>
+      <Preview>
+        {isPasswordReset
+          ? "Your Shababul Khair password reset code"
+          : "Your Shababul Khair Halal Investment LTD verification code"}
+      </Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={heading}>Shababul Khair Halal Investment LTD</Heading>
           <Section style={section}>
       
             <Text style={text}>
-              Assalamu Alaikum! Welcome to Shababul Khair Halal Investment LTD. Use the following one-time password (OTP) to complete your verification process:
+              {isPasswordReset
+                ? "Assalamu Alaikum! We received a request to reset your password for your Shababul Khair Halal Investment account. Use the following one-time password (OTP) to reset your password:"
+                : "Assalamu Alaikum! Welcome to Shababul Khair Halal Investment LTD. Use the following one-time password (OTP) to complete your verification process:"}
             </Text>
             
             <Text style={otpText}>{otp}</Text>
@@ -39,7 +48,9 @@ export const OtpEmail = ({ otp, expirationMinutes }: OtpEmailProps) => {
               This code will expire in {expirationMinutes} minutes.
             </Text>
             <Text style={text}>
-              If you did not request this verification, please ignore this email.
+              {isPasswordReset
+                ? "If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged."
+                : "If you did not request this verification, please ignore this email."}
             </Text>
           </Section>
           <Hr style={hr} />

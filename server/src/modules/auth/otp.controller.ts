@@ -4,6 +4,7 @@ import { successResponse } from "../../utils/response";
 import { verifyOtp, resendOtp, forgotPassword, resetPassword } from "./auth.services";
 import { BadRequestError } from "../../utils/errors";
 import { env } from "../../config";
+import { forgotPasswordSchema, resetPasswordSchema } from "./auth.validation";
 
 // POST /auth/otp/verify
 // Public — userId comes from register/login response, no token needed
@@ -47,22 +48,23 @@ export const resendOTP = catchAsync(async (req: Request, res: Response) => {
 // POST /auth/forgot-password
 // Public
 export const forgotPasswordHandler = catchAsync(async (req: Request, res: Response) => {
-  const { email } = req.body;
-  if (!email) throw new BadRequestError("Email is required");
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new BadRequestError(parsed.error.issues[0]?.message || "Invalid email address");
+  }
 
-  const result = await forgotPassword(email);
+  const result = await forgotPassword(parsed.data.email);
   res.json(successResponse(result));
 });
 
 // POST /auth/reset-password
-// Public — userId from forgot password response
+// Public — takes email (or userId), otp, and newPassword
 export const resetPasswordHandler = catchAsync(async (req: Request, res: Response) => {
-  const { userId, otp, newPassword } = req.body;
-
-  if (!userId || !otp || !newPassword) {
-    throw new BadRequestError("userId, otp and newPassword are required");
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    throw new BadRequestError(parsed.error.issues[0]?.message || "Invalid reset password payload");
   }
 
-  const result = await resetPassword(userId, otp, newPassword);
+  const result = await resetPassword(parsed.data);
   res.json(successResponse(result));
 });

@@ -59,7 +59,7 @@ async function issueTokenPair(
 
 async function generateAndSendOtp(userId: string, email: string, purpose: OtpPurpose) {
   const otp = await saveOTP(userId, purpose);
-  await sendOTPEmail(email, otp);
+  await sendOTPEmail(email, otp, purpose);
 }
 
 // -------------------------
@@ -202,8 +202,9 @@ export async function resendOtp(email: string, purpose: OtpPurpose = "EMAIL_VERI
 // Forgot Password
 // -------------------------
 export async function forgotPassword(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { email: normalizedEmail },
     select: { id: true, email: true },
   });
 
@@ -218,19 +219,64 @@ export async function forgotPassword(email: string) {
 // -------------------------
 // Reset Password
 // -------------------------
-export async function resetPassword(userId: string, otp: string, newPassword: string) {
-  const isValid = await verifyOTP(userId, otp, "PASSWORD_RESET");
-  if (!isValid) throw new ForbiddenError("Invalid or expired OTP");
+export async function resetPassword(
+  identifierOrInput:
+    | string
+    | { email?: string; userId?: string; otp: string; newPassword: string },
+  otpParam?: string,
+  newPasswordParam?: string
+) {
+  let email: string | undefined;
+  let userId: string | undefined;
+  let otp: string;
+  let newPassword: string;
+
+  if (typeof identifierOrInput === "object") {
+    email = identifierOrInput.email;
+    userId = identifierOrInput.userId;
+    otp = identifierOrInput.otp;
+    newPassword = identifierOrInput.newPassword;
+  } else {
+    if (identifierOrInput.includes("@")) {
+      email = identifierOrInput;
+    } else {
+      userId = identifierOrInput;
+    }
+    otp = otpParam!;
+    newPassword = newPasswordParam!;
+  }
+
+  let user = null;
+  if (email) {
+    const normalizedEmail = email.trim().toLowerCase();
+    user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true, email: true },
+    });
+  } else if (userId) {
+    user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true },
+    });
+  }
+
+  if (!user) {
+    await timingDelay();
+    throw new BadRequestError("Invalid or expired OTP");
+  }
+
+  const isValid = await verifyOTP(user.id, otp, "PASSWORD_RESET");
+  if (!isValid) throw new BadRequestError("Invalid or expired OTP");
 
   const hashedPassword = await hashSecret(newPassword);
 
   await prisma.user.update({
-    where: { id: userId },
+    where: { id: user.id },
     data: { password: hashedPassword },
   });
 
   // Revoke all active sessions — password changed, force re-login everywhere
-  await redisService.revokeAllUserTokens(userId);
+  await redisService.revokeAllUserTokens(user.id);
 
   return { message: "Password reset successful. Please log in again." };
 }
