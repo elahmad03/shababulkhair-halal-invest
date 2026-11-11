@@ -82,6 +82,8 @@ export const updateCycleStatusSchema = z.object({
 // ── Profit Distribution ──────────────────────────────────────────────────────
 
 export const distributeProfitSchema = z.object({
+  totalProfitNaira: z.number().positive().optional(),
+  totalProfitKobo: z.coerce.number().positive().optional(),
   investorProfitPercentage: z
     .number({
       error: (issue) =>

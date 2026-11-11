@@ -226,7 +226,7 @@ export default function SignUpPage() {
                   <FormItem>
                     <FormLabel>First Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Usman" disabled={isLoading} {...field} />
+                      <Input placeholder="" disabled={isLoading} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -241,7 +241,7 @@ export default function SignUpPage() {
                   <FormItem>
                     <FormLabel>Last Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Kabiru" disabled={isLoading} {...field} />
+                      <Input placeholder="" disabled={isLoading} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -259,7 +259,7 @@ export default function SignUpPage() {
                 <FormItem>
                   <FormLabel>Email Address</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="usman@example.com" disabled={isLoading} autoComplete="email" {...field} />
+                    <Input type="email" placeholder="" disabled={isLoading} autoComplete="email" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -276,7 +276,7 @@ export default function SignUpPage() {
                 <FormItem>
                   <FormLabel>Phone Number</FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="08012345678" disabled={isLoading} {...field} />
+                    <Input type="tel" placeholder="" disabled={isLoading} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -296,7 +296,7 @@ export default function SignUpPage() {
                     <div className="relative">
                       <Input
                         type={showPassword ? "text" : "password"}
-                        placeholder="Create a strong password"
+                        placeholder=""
                         className="pr-10"
                         disabled={isLoading}
                         autoComplete="new-password"
@@ -331,7 +331,7 @@ export default function SignUpPage() {
                     <div className="relative">
                       <Input
                         type={showConfirm ? "text" : "password"}
-                        placeholder="Repeat your password"
+                        placeholder=""
                         className="pr-10"
                         disabled={isLoading}
                         autoComplete="new-password"

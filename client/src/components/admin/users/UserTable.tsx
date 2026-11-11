@@ -46,10 +46,15 @@ export function UserTableClient({
     .map((user) => ({
       id: user.id,
       fullName: `${user.firstName} ${user.lastName}`,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
+      phoneNumber: user.phoneNumber,
       role: user.role,
       status: user.status,
+      isEmailVerified: user.isEmailVerified,
       kycStatus: user.kyc?.status,
+      kyc: user.kyc,
       investments: user._count?.investments ?? 0,
       createdAt: user.createdAt,
     }));

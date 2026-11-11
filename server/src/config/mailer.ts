@@ -39,10 +39,23 @@ async function sendEmail(to: string, subject: string, template: ReactElement) {
 // -------------------------
 // OTP
 // -------------------------
-export async function sendOTPEmail(email: string, otp: string) {
+export async function sendOTPEmail(
+  email: string,
+  otp: string,
+  purpose: "EMAIL_VERIFICATION" | "PASSWORD_RESET" = "EMAIL_VERIFICATION"
+) {
+  const subject =
+    purpose === "PASSWORD_RESET"
+      ? "Reset your Shababul Khair password"
+      : "Your Shababul Khair verification code";
+
   await sendEmail(
     email,
-    "Your Shababul Khair verification code",
-    OtpEmail({ otp, expirationMinutes: Number(env.OTP_EXPIRES_MINUTES) }) as ReactElement
+    subject,
+    OtpEmail({
+      otp,
+      expirationMinutes: Number(env.OTP_EXPIRES_MINUTES),
+      purpose,
+    }) as ReactElement
   );
 }

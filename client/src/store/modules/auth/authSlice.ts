@@ -8,7 +8,7 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   email: string;
-  role: "USER" | "MEMBER" | "COMMITEE" | "ADMIN";
+  role: "USER" | "MEMBER" | "COMMITTEE" | "ADMIN";
   isEmailVerified: boolean;
 }
 

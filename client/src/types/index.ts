@@ -2,7 +2,7 @@
 // BASE API WRAPPER — matches successResponse / errorResponse helpers
 // ============================================================
 
-export type Role = "USER" | "MEMBER" | "COMMITEE" | "ADMIN";
+export type Role = "USER" | "MEMBER" | "COMMITTEE" | "ADMIN";
 
 export type OtpPurpose = "EMAIL_VERIFICATION" | "PASSWORD_RESET";
 export interface ApiResponse<T> {
@@ -110,9 +110,10 @@ export interface ForgotPasswordRequest {
 }
 
 export interface ResetPasswordRequest {
-  userId: string;
+  email: string;
   otp: string;
   newPassword: string;
+  userId?: string;
 }
 
 export interface RefreshTokenResponse {

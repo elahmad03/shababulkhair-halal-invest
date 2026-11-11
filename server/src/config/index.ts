@@ -55,6 +55,7 @@ export const env = cleanEnv(process.env, {
 
   // Frontend client origin
   CLIENT_ORIGIN: str(),
+  ORIGIN_URL: str(),
 
    SMTP_HOST: str(),
   SMTP_PORT: num(),

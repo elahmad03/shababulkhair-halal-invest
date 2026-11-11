@@ -38,7 +38,7 @@ export const autoInvestWorker = new Worker<AutoInvestJobData>(
     // Verify cycle is still open before doing any per-user work
     const cycle = await prisma.investmentCycle.findUnique({
       where: { id: cycleId },
-      select: { id: true, pricePerShareKobo: true, status: true, cycleName: true },
+      select: { id: true, pricePerShareKobo: true, status: true, cycleName: true, createdAt: true },
     });
 
     if (!cycle) {
@@ -55,6 +55,22 @@ export const autoInvestWorker = new Worker<AutoInvestJobData>(
 
     if (cycle.pricePerShareKobo <= 0n) {
       console.error(`[AutoInvest] Cycle ${cycleId} has invalid pricePerShareKobo — aborting`);
+      return { processed: 0, skipped: 0, errors: 0 };
+    }
+
+    // Verify that the previous cycle (if any) is COMPLETED
+    const previousCycle = await prisma.investmentCycle.findFirst({
+      where: {
+        id: { not: cycleId },
+        createdAt: { lt: cycle.createdAt },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (previousCycle && previousCycle.status !== "COMPLETED") {
+      console.warn(
+        `[AutoInvest] Previous cycle ${previousCycle.id} is not COMPLETED (status: ${previousCycle.status}) — skipping auto-invest`
+      );
       return { processed: 0, skipped: 0, errors: 0 };
     }
 
@@ -88,9 +104,9 @@ export const autoInvestWorker = new Worker<AutoInvestJobData>(
           continue;
         }
 
-        // Stable idempotency key: same job + same user always maps to the same key
-        // If the job is retried, purchaseShares returns the cached result — no double-invest
-        const idempotencyKey = `auto-invest:${job.id}:${user.id}`;
+        // Stable idempotency key: same cycle + same user always maps to the same key
+        // Running it twice will NEVER double-invest
+        const idempotencyKey = `auto-invest:${cycleId}:${user.id}`;
 
         await CycleService.purchaseShares(
           user.id,

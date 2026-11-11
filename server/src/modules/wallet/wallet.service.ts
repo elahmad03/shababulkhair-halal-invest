@@ -2,7 +2,8 @@ import {
   TransactionStatus, 
   TransactionType, 
   DisbursementType,
-  DisbursementStatus
+  DisbursementStatus,
+  CycleStatus
 } from "@prisma/client";
 import crypto from "crypto";
 import { prisma } from "../../config/prisma";
@@ -219,6 +220,7 @@ export default class WalletService {
       amountKobo: number;
       disbursementType: "WALLET_BALANCE" | "PROFIT_ONLY" | "FULL_DIVESTMENT";
       bankAccountId: string;
+      relatedCycleId?: string;
     }
   ) {
     const amountKobo = BigInt(data.amountKobo);
@@ -226,7 +228,11 @@ export default class WalletService {
     return await prisma.$transaction(async (tx) => {
       const wallet = await tx.wallet.findUnique({ where: { userId } });
 
-      if (!wallet || wallet.balanceKobo < amountKobo) {
+      if (!wallet || wallet.balanceKobo === 0n) {
+        throw new Error("Nothing to withdraw");
+      }
+
+      if (wallet.balanceKobo < amountKobo) {
         throw new Error("Insufficient funds");
       }
 
@@ -248,6 +254,7 @@ export default class WalletService {
           amountKobo,
           disbursementType: data.disbursementType as DisbursementType,
           bankAccountId: data.bankAccountId,
+          relatedCycleId: data.relatedCycleId || null,
           status: DisbursementStatus.PENDING,
         },
       });
@@ -267,6 +274,52 @@ export default class WalletService {
     adminNotes?: string
   ) {
     return await prisma.$transaction(async (tx) => {
+      const existingRequest = await tx.disbursementRequest.findUnique({
+        where: { id: requestId },
+        include: { bankAccount: true, cycle: true },
+      });
+
+      if (!existingRequest) {
+        throw new Error("Withdrawal request not found");
+      }
+
+      if (existingRequest.status !== DisbursementStatus.PENDING) {
+        throw new Error("Invalid or already processed request");
+      }
+
+      if (status === "APPROVED") {
+        // Approval rule: nobody, including admin, can approve a request that touches locked capital (FULL_DIVESTMENT) until the related cycle is COMPLETED.
+        if (existingRequest.disbursementType === DisbursementType.FULL_DIVESTMENT) {
+          let relatedCycle = existingRequest.cycle;
+          if (!relatedCycle && existingRequest.relatedCycleId) {
+            relatedCycle = await tx.investmentCycle.findUnique({
+              where: { id: existingRequest.relatedCycleId },
+            });
+          }
+
+          if (relatedCycle) {
+            if (relatedCycle.status !== CycleStatus.COMPLETED) {
+              throw new Error("Cannot approve full divestment request until related cycle is COMPLETED");
+            }
+          } else {
+            // Check if user has active/closing investments in any cycle
+            const activeInvestment = await tx.shareholderInvestment.findFirst({
+              where: {
+                userId: existingRequest.userId,
+                cycle: {
+                  status: { in: [CycleStatus.OPEN_FOR_INVESTMENT, CycleStatus.ACTIVE, CycleStatus.CLOSING] },
+                },
+              },
+              include: { cycle: true },
+            });
+
+            if (activeInvestment && activeInvestment.cycle.status !== CycleStatus.COMPLETED) {
+              throw new Error("Cannot approve full divestment request until related cycle is COMPLETED");
+            }
+          }
+        }
+      }
+
       const dbStatus = status === "APPROVED" 
         ? DisbursementStatus.APPROVED 
         : DisbursementStatus.REJECTED;
@@ -288,42 +341,37 @@ export default class WalletService {
         throw new Error("Invalid or already processed request");
       }
 
-      const request = await tx.disbursementRequest.findUniqueOrThrow({
-        where: { id: requestId },
-        include: { bankAccount: true } 
-      });
-
       if (status === "APPROVED") {
         await tx.transaction.create({
           data: {
-            userId: request.userId,
+            userId: existingRequest.userId,
             transactionType: TransactionType.WITHDRAWAL,
-            amountKobo: request.amountKobo,
+            amountKobo: existingRequest.amountKobo,
             transactionStatus: TransactionStatus.COMPLETED,
-            narration: `Withdrawal to ${request.bankAccount.bankName} - ${request.bankAccount.accountNumber}`,
+            narration: `Withdrawal to ${existingRequest.bankAccount.bankName} - ${existingRequest.bankAccount.accountNumber}`,
             relatedEntityType: "DISBURSEMENT_REQUEST",
-            relatedEntityId: request.id,
+            relatedEntityId: existingRequest.id,
           },
         });
 
         await tx.wallet.update({
-          where: { userId: request.userId },
+          where: { userId: existingRequest.userId },
           data: {
-            lockedBalanceKobo: { decrement: request.amountKobo },
+            lockedBalanceKobo: { decrement: existingRequest.amountKobo },
           },
         });
       } else {
         await tx.wallet.update({
-          where: { userId: request.userId },
+          where: { userId: existingRequest.userId },
           data: {
-            lockedBalanceKobo: { decrement: request.amountKobo },
-            balanceKobo: { increment: request.amountKobo },
+            lockedBalanceKobo: { decrement: existingRequest.amountKobo },
+            balanceKobo: { increment: existingRequest.amountKobo },
           },
         });
       }
 
       return {
-        requestId: request.id,
+        requestId: existingRequest.id,
         status: status,
       };
     });

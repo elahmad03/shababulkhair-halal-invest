@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware, authorizeRoles } from "../../common/middleware/auth.middleware";
+import { authMiddleware, authorizeRoles, rejectRoles } from "../../common/middleware/auth.middleware";
 import * as WalletController from "./wallet.controller";
 
 const router = Router();
@@ -22,17 +22,19 @@ router.get(
   WalletController.getWalletSummary
 );
 
-// POST /api/wallet/deposit/initialize - Initialize Paystack deposit
+// POST /api/wallet/deposit/initialize - Initialize Paystack deposit (rejects COMMITTEE)
 router.post(
   "/deposit/initialize",
   authMiddleware,
+  rejectRoles("COMMITTEE"),
   WalletController.initializeDeposit
 );
 
-// POST /api/wallet/withdraw - Request withdrawal
+// POST /api/wallet/withdraw - Request withdrawal (rejects COMMITTEE)
 router.post(
   "/withdraw",
   authMiddleware,
+  rejectRoles("COMMITTEE"),
   WalletController.requestWithdrawal
 );
 

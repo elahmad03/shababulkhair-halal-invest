@@ -13,7 +13,7 @@ import { BrandLoader } from "./BrandLoader";
 
 interface AuthGuardProps {
   children: React.ReactNode;
-  allowedRoles?: Array<"USER" | "ADMIN"| "MEMBER"|"COMMITEE">; // Pass roles if the route is restricted
+  allowedRoles?: Array<"USER" | "ADMIN"| "MEMBER"|"COMMITTEE">;
 }
 
 export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {

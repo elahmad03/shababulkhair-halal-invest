@@ -13,6 +13,7 @@ export const withdrawSchema = z.object({
     .positive("Amount must be greater than zero"),
   disbursementType: z.enum(["WALLET_BALANCE", "PROFIT_ONLY", "FULL_DIVESTMENT"]),
   bankAccountId: z.string().min(1, "Please select a bank account"), 
+  relatedCycleId: z.string().uuid().optional(),
 });
 
 export const adminAdjustSchema = z.object({

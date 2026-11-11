@@ -14,6 +14,7 @@
 
 import { CycleStatus } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import { ForbiddenError, NotFoundError, BadRequestError } from "../../utils/errors";
 import type { CreateVentureInput, UpdateVentureInput } from "./venture.validators";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -323,6 +324,7 @@ export default class VentureService {
       where:   { id: ventureId },
       include: {
         managedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+        agreementUploadedBy: { select: { id: true, firstName: true, lastName: true } },
         cycle: {
           select: {
             id: true, cycleName: true, status: true,
@@ -332,8 +334,300 @@ export default class VentureService {
       },
     });
 
-    if (!venture) throw new Error("Venture not found");
+    if (!venture) throw new NotFoundError("Venture not found");
 
     return serializeBigInts(venture);
+  }
+
+  /** List all ventures across platform */
+  static async listVentures(page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+
+    const [ventures, total] = await Promise.all([
+      prisma.businessVenture.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          managedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+          agreementUploadedBy: { select: { id: true, firstName: true, lastName: true } },
+          cycle: { select: { id: true, cycleName: true, status: true } },
+        },
+      }),
+      prisma.businessVenture.count(),
+    ]);
+
+    const totalAllocatedKobo = ventures.reduce((s, v) => s + v.allocatedAmountKobo, 0n);
+    const totalExpectedKobo = ventures.reduce((s, v) => s + v.expectedProfitKobo, 0n);
+    const totalRealizedKobo = ventures.reduce((s, v) => s + v.profitRealizedKobo, 0n);
+
+    return serializeBigInts({
+      data: ventures,
+      summary: {
+        count: total,
+        totalAllocatedKobo,
+        totalExpectedKobo,
+        totalRealizedKobo,
+      },
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  }
+
+  /** List investors for a venture (via its cycle's investments) */
+  static async getVentureInvestors(ventureId: string, page = 1, limit = 20) {
+    const venture = await prisma.businessVenture.findUnique({
+      where: { id: ventureId },
+      select: { id: true, cycleId: true },
+    });
+
+    if (!venture) throw new NotFoundError("Venture not found");
+
+    const skip = (page - 1) * limit;
+
+    const [investments, total, aggregate] = await Promise.all([
+      prisma.shareholderInvestment.findMany({
+        where: { cycleId: venture.cycleId },
+        include: {
+          user: {
+            select: { id: true, firstName: true, lastName: true, email: true, phoneNumber: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.shareholderInvestment.count({ where: { cycleId: venture.cycleId } }),
+      prisma.shareholderInvestment.aggregate({
+        where: { cycleId: venture.cycleId },
+        _sum: { amountInvestedKobo: true, sharesAllocated: true },
+      }),
+    ]);
+
+    return serializeBigInts({
+      ventureId,
+      cycleId: venture.cycleId,
+      investors: investments,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      totalInvestedKobo: aggregate._sum.amountInvestedKobo ?? 0n,
+      totalSharesAllocated: aggregate._sum.sharesAllocated ?? 0n,
+    });
+  }
+
+  // ── AGREEMENT RECEIPT ─────────────────────────────────────────────────────
+
+  /** Admin only: upload or replace agreement receipt */
+  static async uploadAgreementReceipt(ventureId: string, adminId: string, receiptUrl: string) {
+    const venture = await prisma.businessVenture.findUnique({ where: { id: ventureId } });
+    if (!venture) throw new NotFoundError("Venture not found");
+
+    const updated = await prisma.businessVenture.update({
+      where: { id: ventureId },
+      data: {
+        agreementReceiptUrl: receiptUrl,
+        agreementUploadedById: adminId,
+        agreementUploadedAt: new Date(),
+      },
+      include: {
+        agreementUploadedBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    return serializeBigInts(updated);
+  }
+
+  /** Any authenticated user: view agreement receipt */
+  static async getAgreementReceipt(ventureId: string) {
+    const venture = await prisma.businessVenture.findUnique({
+      where: { id: ventureId },
+      select: {
+        id: true,
+        companyName: true,
+        agreementReceiptUrl: true,
+        agreementUploadedAt: true,
+        agreementUploadedById: true,
+        agreementUploadedBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    if (!venture) throw new NotFoundError("Venture not found");
+
+    return serializeBigInts(venture);
+  }
+
+  // ── VENTURE PROFIT ENTRIES (COMMITTEE STRICT / ADMIN) ──────────────────────
+
+  /**
+   * Create a VentureProfitEntry.
+   * If role is COMMITTEE, recordedById MUST be req.user.userId.
+   */
+  static async createProfitEntry(
+    ventureId: string,
+    userId: string,
+    userRole: string,
+    input: { amountNaira?: number; amountKobo?: number; note?: string }
+  ) {
+    const amountKobo = input.amountKobo !== undefined
+      ? BigInt(input.amountKobo)
+      : toKobo(input.amountNaira ?? 0);
+
+    if (amountKobo <= 0n) throw new BadRequestError("Amount must be greater than zero");
+
+    return await prisma.$transaction(async (tx) => {
+      const venture = await tx.businessVenture.findUnique({
+        where: { id: ventureId },
+        include: { cycle: { select: { id: true, status: true } } },
+      });
+
+      if (!venture) throw new NotFoundError("Venture not found");
+
+      if (venture.cycle.status !== CycleStatus.ACTIVE) {
+        throw new BadRequestError(`Profit entries can only be added to ventures in ACTIVE cycles.`);
+      }
+
+      const entry = await tx.ventureProfitEntry.create({
+        data: {
+          ventureId,
+          recordedById: userId,
+          amountKobo,
+          note: input.note || null,
+        },
+        include: {
+          recordedBy: { select: { id: true, firstName: true, lastName: true, role: true } },
+        },
+      });
+
+      // Update venture profitRealizedKobo and cycle total
+      const updatedVenture = await tx.businessVenture.update({
+        where: { id: ventureId },
+        data: { profitRealizedKobo: { increment: amountKobo } },
+      });
+
+      const allVentures = await tx.businessVenture.findMany({
+        where: { cycleId: venture.cycleId },
+        select: { profitRealizedKobo: true },
+      });
+
+      const newCycleTotal = allVentures.reduce((s, v) => s + v.profitRealizedKobo, 0n);
+
+      await tx.investmentCycle.update({
+        where: { id: venture.cycleId },
+        data: { totalProfitRealizedKobo: newCycleTotal },
+      });
+
+      return serializeBigInts({
+        entry,
+        ventureProfitRealizedKobo: updatedVenture.profitRealizedKobo,
+        cycleTotalProfitRealizedKobo: newCycleTotal,
+      });
+    });
+  }
+
+  /**
+   * Edit a VentureProfitEntry.
+   * If role is COMMITTEE, verify entry.recordedById === userId.
+   */
+  static async updateProfitEntry(
+    entryId: string,
+    userId: string,
+    userRole: string,
+    input: { amountNaira?: number; amountKobo?: number; note?: string }
+  ) {
+    return await prisma.$transaction(async (tx) => {
+      const entry = await tx.ventureProfitEntry.findUnique({
+        where: { id: entryId },
+        include: {
+          venture: {
+            include: { cycle: { select: { id: true, status: true } } },
+          },
+        },
+      });
+
+      if (!entry) throw new NotFoundError("Profit entry not found");
+
+      if (userRole === "COMMITTEE" && entry.recordedById !== userId) {
+        throw new ForbiddenError("You can only edit your own profit entries");
+      }
+
+      if (entry.venture.cycle.status !== CycleStatus.ACTIVE) {
+        throw new BadRequestError("Cannot edit profit entries for a non-active cycle");
+      }
+
+      let diffKobo = 0n;
+      let newAmountKobo = entry.amountKobo;
+
+      if (input.amountNaira !== undefined || input.amountKobo !== undefined) {
+        newAmountKobo = input.amountKobo !== undefined
+          ? BigInt(input.amountKobo)
+          : toKobo(input.amountNaira ?? 0);
+
+        if (newAmountKobo <= 0n) throw new BadRequestError("Amount must be greater than zero");
+        diffKobo = newAmountKobo - entry.amountKobo;
+      }
+
+      const updatedEntry = await tx.ventureProfitEntry.update({
+        where: { id: entryId },
+        data: {
+          amountKobo: newAmountKobo,
+          ...(input.note !== undefined && { note: input.note }),
+        },
+        include: {
+          recordedBy: { select: { id: true, firstName: true, lastName: true } },
+        },
+      });
+
+      if (diffKobo !== 0n) {
+        await tx.businessVenture.update({
+          where: { id: entry.ventureId },
+          data: { profitRealizedKobo: { increment: diffKobo } },
+        });
+
+        const allVentures = await tx.businessVenture.findMany({
+          where: { cycleId: entry.venture.cycleId },
+          select: { profitRealizedKobo: true },
+        });
+
+        const newCycleTotal = allVentures.reduce((s, v) => s + v.profitRealizedKobo, 0n);
+
+        await tx.investmentCycle.update({
+          where: { id: entry.venture.cycleId },
+          data: { totalProfitRealizedKobo: newCycleTotal },
+        });
+      }
+
+      return serializeBigInts(updatedEntry);
+    });
+  }
+
+  /**
+   * Read profit entries:
+   * If role is COMMITTEE, returns only entries recorded by that user.
+   * If role is ADMIN, returns all entries for the venture.
+   */
+  static async getProfitEntries(ventureId: string, userId: string, userRole: string) {
+    const venture = await prisma.businessVenture.findUnique({ where: { id: ventureId } });
+    if (!venture) throw new NotFoundError("Venture not found");
+
+    const whereCondition: any = { ventureId };
+    if (userRole === "COMMITTEE") {
+      whereCondition.recordedById = userId;
+    }
+
+    const entries = await prisma.ventureProfitEntry.findMany({
+      where: whereCondition,
+      orderBy: { createdAt: "desc" },
+      include: {
+        recordedBy: { select: { id: true, firstName: true, lastName: true, role: true } },
+      },
+    });
+
+    return serializeBigInts(entries);
   }
 }

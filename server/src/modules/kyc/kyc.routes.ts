@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { KycController } from "./kyc.controller";
-import { authMiddleware, authorizeRoles } from "../../common/middleware/auth.middleware";
+import { authMiddleware, authorizeRoles, rejectRoles } from "../../common/middleware/auth.middleware";
 
 const router = Router();
 
 // ── User routes ───────────────────────────────────────────────────────────────
 router.get("/signature", authMiddleware, KycController.getUploadSignature);
-router.post("/",         authMiddleware, KycController.submit);
+router.post("/",         authMiddleware, rejectRoles("COMMITTEE"), KycController.submit);
 router.get("/me",        authMiddleware, KycController.me);
 
 // ── Admin routes ─────────────

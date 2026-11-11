@@ -32,6 +32,12 @@ enum KycStatus {
   @@map("kyc_status")
 }
 
+enum VerificationTokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+  @@map("verification_token_type")
+}
+
 enum TransactionType {
   DEPOSIT
   SHARE_PURCHASE
@@ -148,18 +154,44 @@ model User {
 
   authorisedDistributions ProfitDistribution[]
 
+  editedLogs                UserEditLog[]            @relation("UserTargetLogs")
+  adminUserEditLogs         UserEditLog[]            @relation("UserAdminLogs")
+  uploadedVentureAgreements BusinessVenture[]        @relation("VentureAgreementUploadedBy")
+  recordedVentureProfits    VentureProfitEntry[]
+  distributionItems         ProfitDistributionItem[]
+
   @@index([email])
   @@map("users")
 }
 
 model VerificationToken {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String                @id @default(uuid()) @db.Uuid
   identifier String
-  token      String   @unique
-  expiresAt  DateTime @map("expires_at") @db.Timestamptz()
+  token      String                @unique
+  type       VerificationTokenType @default(EMAIL_VERIFY)
+  expiresAt  DateTime              @map("expires_at") @db.Timestamptz()
+  usedAt     DateTime?             @map("used_at") @db.Timestamptz()
 
   @@index([identifier])
   @@map("verification_tokens")
+}
+
+model UserEditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  targetUserId String   @db.Uuid @map("target_user_id")
+  editedById   String   @db.Uuid @map("edited_by_id")
+  field        String
+  oldValue     String?  @map("old_value")
+  newValue     String?  @map("new_value")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  targetUser User @relation("UserTargetLogs", fields: [targetUserId], references: [id], onDelete: Cascade)
+  editedBy   User @relation("UserAdminLogs", fields: [editedById], references: [id])
+
+  @@index([targetUserId])
+  @@index([editedById])
+  @@index([createdAt])
+  @@map("user_edit_logs")
 }
 
 model KycProfile {
@@ -321,8 +353,8 @@ model ProfitDistribution {
   cycleId                 String   @unique @db.Uuid @map("cycle_id")
   authorisedById          String   @db.Uuid @map("authorised_by_id")
 
-  investorProfitPercentage Decimal @map("investor_profit_percentage")
-  orgProfitPercentage      Decimal @map("org_profit_percentage")     
+  investorProfitPercentage Decimal @map("investor_profit_percentage") @db.Decimal(5, 2)
+  orgProfitPercentage      Decimal @map("org_profit_percentage") @db.Decimal(5, 2)     
 
   totalProfitKobo          BigInt  @map("total_profit_kobo")
   investorProfitPoolKobo   BigInt  @map("investor_profit_pool_kobo")
@@ -331,10 +363,26 @@ model ProfitDistribution {
   notes       String?  
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-  cycle        InvestmentCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
-  authorisedBy User            @relation(fields: [authorisedById], references: [id])
+  cycle        InvestmentCycle          @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  authorisedBy User                     @relation(fields: [authorisedById], references: [id])
+  items        ProfitDistributionItem[]
 
   @@map("profit_distributions")
+}
+
+model ProfitDistributionItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  distributionId String   @db.Uuid @map("distribution_id")
+  userId         String   @db.Uuid @map("user_id")
+  investedKobo   BigInt   @map("invested_kobo")
+  payoutKobo     BigInt   @map("payout_kobo")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  distribution ProfitDistribution @relation(fields: [distributionId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id])
+
+  @@unique([distributionId, userId])
+  @@map("profit_distribution_items")
 }
 
 model ShareholderInvestment {
@@ -384,13 +432,36 @@ model BusinessVenture {
   profitRealizedKobo  BigInt        @default(0) @map("profit_realized_kobo")
   status              VentureStatus @default(FUNDED) @map("venture_status")
 
+  agreementReceiptUrl   String?   @map("agreement_receipt_url")
+  agreementUploadedById String?   @db.Uuid @map("agreement_uploaded_by_id")
+  agreementUploadedAt   DateTime? @map("agreement_uploaded_at") @db.Timestamptz()
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz() 
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()      
 
-  cycle     InvestmentCycle @relation(fields: [cycleId], references: [id])
-  managedBy User            @relation(fields: [managedById], references: [id])
+  cycle               InvestmentCycle      @relation(fields: [cycleId], references: [id])
+  managedBy           User                 @relation(fields: [managedById], references: [id])
+  agreementUploadedBy User?                @relation("VentureAgreementUploadedBy", fields: [agreementUploadedById], references: [id])
+  profitEntries       VentureProfitEntry[]
 
   @@map("business_ventures")
+}
+
+model VentureProfitEntry {
+  id           String   @id @default(uuid()) @db.Uuid
+  ventureId    String   @db.Uuid @map("venture_id")
+  recordedById String   @db.Uuid @map("recorded_by_id")
+  amountKobo   BigInt   @map("amount_kobo")
+  note         String?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  venture    BusinessVenture @relation(fields: [ventureId], references: [id], onDelete: Cascade)
+  recordedBy User            @relation(fields: [recordedById], references: [id])
+
+  @@index([ventureId])
+  @@index([recordedById])
+  @@map("venture_profit_entries")
 }
 
 // ====================================================================================

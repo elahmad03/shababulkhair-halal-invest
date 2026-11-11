@@ -52,3 +52,14 @@ export function authorizeRoles(...roles: string[]): RequestHandler {
     next();
   };
 }
+
+export function rejectRoles(...roles: string[]): RequestHandler {
+  return (req: AuthenticatedRequest, res, next) => {
+    if (req.user && roles.includes(req.user.role)) {
+      res.status(403).json({ message: "Forbidden: role not permitted for this action" });
+      return;
+    }
+
+    next();
+  };
+}

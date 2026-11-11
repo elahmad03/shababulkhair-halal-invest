@@ -19,6 +19,7 @@ import paystackWebhookRoutes from "./webhook/paystack.webhook";
 import ventureRoutes from "./modules/venture/venture.routes";
 import cycleRoutes from "./modules/cycles/cycle.routes";
 import userRoutes from "./modules/user/user.routes";
+import ledgerRoutes from "./modules/ledger/ledger.routes";
 
 // ─── Create app ───────────────────────────────────────────────────────────────
 const app = express();
@@ -160,6 +161,7 @@ app.use(`${API}/wallet`, walletRoutes);
 app.use(`${API}/cycles`, cycleRoutes);
 app.use(`${API}/ventures`, ventureRoutes);
 app.use(`${API}/users`, userRoutes);
+app.use(`${API}/ledger`, ledgerRoutes);
 
 // ─── Global error handler — MUST be last ─────────────────────────────────────
 app.use(errorHandler);

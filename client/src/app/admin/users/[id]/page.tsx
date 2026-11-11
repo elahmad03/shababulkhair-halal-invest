@@ -72,7 +72,7 @@ export default function AdminUserDetailPage() {
 
         {/* Right column */}
         <main className="lg:col-span-2">
-          <UserFinancialsTabs userId={user.id} currency={currency} />
+          <UserFinancialsTabs userId={user.id} currency={currency} user={user} />
         </main>
       </div>
     </div>

@@ -7,6 +7,7 @@ export {
   useGetUserTransactionsQuery,
   useGetMeQuery,
   useUpdateUserStatusMutation,
+  useEditUserMutation,
   type User,
   type UserDetail,
   type UserKyc,
@@ -14,4 +15,10 @@ export {
   type Transaction,
   type ListUsersResponse,
   type UserTransactionsResponse,
+  type EditUserInput,
+  type UserRole,
+  type AccountStatus,
+  type KycStatusType,
+  type UserEditLogItem,
+  type KycVersionItem,
 } from "./userApi";
