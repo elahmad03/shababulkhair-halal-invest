@@ -63,8 +63,35 @@ export const recordProfitSchema = z.object({
     .max(1_000_000_000, { error: "Amount too large" }),
 });
 
+// ── Agreement Receipt ────────────────────────────────────────────────────────
+
+export const uploadReceiptSchema = z.object({
+  agreementReceiptUrl: z.string().url({ error: "Invalid receipt URL format" }),
+});
+
+// ── Venture Profit Entries (Committee / Admin) ────────────────────────────────
+
+export const createProfitEntrySchema = z.object({
+  amountNaira: z.number().positive().optional(),
+  amountKobo: z.coerce.number().positive().optional(),
+  note: z.string().optional(),
+}).refine((data) => data.amountNaira !== undefined || data.amountKobo !== undefined, {
+  message: "Either amountNaira or amountKobo is required",
+});
+
+export const updateProfitEntrySchema = z.object({
+  amountNaira: z.number().positive().optional(),
+  amountKobo: z.coerce.number().positive().optional(),
+  note: z.string().optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+  message: "At least one field must be provided for update",
+});
+
 // ── Inferred types ────────────────────────────────────────────────────────────
 
-export type CreateVentureInput  = z.infer<typeof createVentureSchema>;
-export type UpdateVentureInput  = z.infer<typeof updateVentureSchema>;
-export type RecordProfitInput   = z.infer<typeof recordProfitSchema>;
+export type CreateVentureInput        = z.infer<typeof createVentureSchema>;
+export type UpdateVentureInput        = z.infer<typeof updateVentureSchema>;
+export type RecordProfitInput         = z.infer<typeof recordProfitSchema>;
+export type UploadReceiptInput        = z.infer<typeof uploadReceiptSchema>;
+export type CreateProfitEntryInput    = z.infer<typeof createProfitEntrySchema>;
+export type UpdateProfitEntryInput    = z.infer<typeof updateProfitEntrySchema>;

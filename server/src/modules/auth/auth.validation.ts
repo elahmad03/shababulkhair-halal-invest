@@ -21,14 +21,14 @@ export const loginSchema = z.object({
 });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email("Please provide a valid email address"),
+  email: z.string().trim().email("Please provide a valid email address"),
 });
 
 export const resetPasswordSchema = z
   .object({
-    email: z.string().email("Please provide a valid email address").optional(),
+    email: z.string().trim().email("Please provide a valid email address").optional(),
     userId: z.string().uuid("Invalid user ID").optional(),
-    otp: z.string().regex(/^\d{6}$/, "OTP must be exactly 6 digits"),
+    otp: z.string().trim().regex(/^\d{6}$/, "OTP must be exactly 6 digits"),
     newPassword: z.string().min(8, "Password must be at least 8 characters"),
   })
   .refine((data) => Boolean(data.email || data.userId), {

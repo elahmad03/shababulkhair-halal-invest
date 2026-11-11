@@ -3,7 +3,7 @@ import { catchAsync } from "../../utils/catchAsync";
 import { successResponse, errorResponse } from "../../utils/response";
 import { AuthenticatedRequest } from "../../common/middleware/auth.middleware";
 import UserService from "./user.service";
-import { updateUserStatusSchema } from "./user.validators";
+import { updateUserStatusSchema, editUserSchema } from "./user.validators";
 
 // ── List all users ────────────────────────────────────────────────────────────
 
@@ -46,6 +46,15 @@ export const updateUserStatus = catchAsync(async (req: AuthenticatedRequest, res
   const { status } = updateUserStatusSchema.parse(req.body);
   const result = await UserService.updateUserStatus(id, status, req.user!.userId);
   res.status(200).json(successResponse(result, "User status updated"));
+});
+
+// ── Admin edit user fields ───────────────────────────────────────────────────
+
+export const editUser = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const parsed = editUserSchema.parse(req.body);
+  const result = await UserService.editUser(id, req.user!.userId, parsed);
+  res.status(200).json(successResponse(result, "User updated successfully"));
 });
 
 // ── Get user investments ──────────────────────────────────────────────────────

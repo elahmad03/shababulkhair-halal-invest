@@ -9,6 +9,7 @@ import {
   Prisma,
   TransactionStatus,
   TransactionType,
+  LedgerEntryType,
 } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { notifyCycleOpened, notifyCycleClosed } from "./cycle.notifications";
@@ -200,12 +201,39 @@ export default class CycleService {
         );
       }
 
-      const updated = await prisma.investmentCycle.update({
-        where: { id: cycleId },
-        data: { status: CycleStatus.COMPLETED },
-      });
+      return await prisma.$transaction(async (tx) => {
+        // Release locked capital for each shareholder as CAPITAL_RETURN
+        for (const inv of cycle.investments) {
+          if (inv.amountInvestedKobo > 0n) {
+            await tx.wallet.update({
+              where: { userId: inv.userId },
+              data: {
+                lockedBalanceKobo: { decrement: inv.amountInvestedKobo },
+                balanceKobo: { increment: inv.amountInvestedKobo },
+              },
+            });
 
-      return serializeBigInts(updated);
+            await tx.transaction.create({
+              data: {
+                userId: inv.userId,
+                transactionType: TransactionType.CAPITAL_RETURN,
+                amountKobo: inv.amountInvestedKobo,
+                transactionStatus: TransactionStatus.COMPLETED,
+                narration: `Capital return from completed cycle: ${cycle.cycleName}`,
+                relatedEntityType: "INVESTMENT_CYCLE",
+                relatedEntityId: cycleId,
+              },
+            });
+          }
+        }
+
+        const updated = await tx.investmentCycle.update({
+          where: { id: cycleId },
+          data: { status: CycleStatus.COMPLETED },
+        });
+
+        return serializeBigInts(updated);
+      });
     }
 
     throw new Error(`Unsupported status transition from ${cycle.status} to ${input.status}`);
@@ -234,30 +262,80 @@ export default class CycleService {
         throw new Error("Profit already distributed for this cycle");
       }
 
-      // Aggregate realized profits from all business ventures if cycle total is zero
-      let totalProfit = cycle.totalProfitRealizedKobo;
-      if (totalProfit === 0n && cycle.businessVentures.length > 0) {
+      const existingDist = await tx.profitDistribution.findUnique({ where: { cycleId } });
+      if (existingDist) {
+        throw new Error("Profit distribution record already exists for this cycle");
+      }
+
+      // Determine total profit
+      let totalProfit = 0n;
+      if (input.totalProfitKobo !== undefined) {
+        totalProfit = BigInt(input.totalProfitKobo);
+      } else if (input.totalProfitNaira !== undefined) {
+        totalProfit = toKobo(input.totalProfitNaira);
+      } else if (cycle.totalProfitRealizedKobo > 0n) {
+        totalProfit = cycle.totalProfitRealizedKobo;
+      } else if (cycle.businessVentures.length > 0) {
         totalProfit = cycle.businessVentures.reduce(
           (sum, v) => sum + v.profitRealizedKobo,
           0n
         );
       }
 
-      // Percentage calculation via basis points (e.g. 80.5% -> 8050 bps)
+      if (totalProfit <= 0n) {
+        throw new Error("Total profit must be greater than zero");
+      }
+
+      // Percentage calculation
       const investorBps = BigInt(Math.round(input.investorProfitPercentage * 100));
       const totalBps = 10000n;
 
-      const investorPoolKobo = (totalProfit * investorBps) / totalBps;
-      const orgShareKobo = totalProfit - investorPoolKobo;
-      const orgPercentage = 100 - input.investorProfitPercentage;
+      let investorPoolKobo = (totalProfit * investorBps) / totalBps;
+      let orgShareKobo = totalProfit - investorPoolKobo;
+      const orgPercentage = Number((100 - input.investorProfitPercentage).toFixed(2));
 
-      // 1. Create ProfitDistribution audit record
+      // Proportional split across all ShareholderInvestment rows by amountInvestedKobo
+      const totalInvestedKobo = cycle.investments.reduce(
+        (sum, i) => sum + i.amountInvestedKobo,
+        0n
+      );
+
+      let allocatedPayoutSum = 0n;
+      const investorPayouts = cycle.investments.map((inv) => {
+        const payout = totalInvestedKobo > 0n
+          ? (investorPoolKobo * inv.amountInvestedKobo) / totalInvestedKobo
+          : 0n;
+        allocatedPayoutSum += payout;
+        return {
+          inv,
+          payout,
+        };
+      });
+
+      // Handle rounding so payouts sum exactly to pool (remainder to largest holder or org)
+      const remainder = investorPoolKobo - allocatedPayoutSum;
+      if (remainder > 0n) {
+        if (investorPayouts.length > 0) {
+          let largestIdx = 0;
+          for (let i = 1; i < investorPayouts.length; i++) {
+            if (investorPayouts[i].inv.amountInvestedKobo > investorPayouts[largestIdx].inv.amountInvestedKobo) {
+              largestIdx = i;
+            }
+          }
+          investorPayouts[largestIdx].payout += remainder;
+        } else {
+          orgShareKobo += remainder;
+          investorPoolKobo -= remainder;
+        }
+      }
+
+      // 1. Create ProfitDistribution audit record with Decimal(5,2)
       const distribution = await tx.profitDistribution.create({
         data: {
           cycleId,
           authorisedById: adminId,
-          investorProfitPercentage: input.investorProfitPercentage,
-          orgProfitPercentage: orgPercentage,
+          investorProfitPercentage: new Prisma.Decimal(input.investorProfitPercentage.toFixed(2)),
+          orgProfitPercentage: new Prisma.Decimal(orgPercentage.toFixed(2)),
           totalProfitKobo: totalProfit,
           investorProfitPoolKobo: investorPoolKobo,
           orgProfitShareKobo: orgShareKobo,
@@ -265,39 +343,26 @@ export default class CycleService {
         },
       });
 
-      // 2. Calculate and distribute profit + unlock capital to member wallets
-      const totalShares = cycle.investments.reduce(
-        (sum, i) => sum + i.sharesAllocated,
-        0n
-      );
-
-      for (const inv of cycle.investments) {
-        const profitShare =
-          totalShares > 0n ? (investorPoolKobo * inv.sharesAllocated) / totalShares : 0n;
-
-        // Update shareholder record
+      // 2. Credit member wallets with profit only, record PROFIT_DISTRIBUTION txn, update profitEarnedKobo, create ProfitDistributionItem
+      for (const { inv, payout } of investorPayouts) {
         await tx.shareholderInvestment.update({
           where: { id: inv.id },
-          data: { profitEarnedKobo: profitShare },
+          data: { profitEarnedKobo: { increment: payout } },
         });
 
-        // Move initial locked balance back to liquid balance + credit profit yield
-        const totalPayout = inv.amountInvestedKobo + profitShare;
-        await tx.wallet.update({
-          where: { userId: inv.userId },
-          data: {
-            lockedBalanceKobo: { decrement: inv.amountInvestedKobo },
-            balanceKobo: { increment: totalPayout },
-          },
-        });
+        if (payout > 0n) {
+          await tx.wallet.update({
+            where: { userId: inv.userId },
+            data: {
+              balanceKobo: { increment: payout },
+            },
+          });
 
-        // Record profit transaction log
-        if (profitShare > 0n) {
           await tx.transaction.create({
             data: {
               userId: inv.userId,
               transactionType: TransactionType.PROFIT_DISTRIBUTION,
-              amountKobo: profitShare,
+              amountKobo: payout,
               transactionStatus: TransactionStatus.COMPLETED,
               narration: `Profit yield from ${cycle.cycleName}`,
               relatedEntityType: "INVESTMENT_CYCLE",
@@ -305,9 +370,37 @@ export default class CycleService {
             },
           });
         }
+
+        await tx.profitDistributionItem.create({
+          data: {
+            distributionId: distribution.id,
+            userId: inv.userId,
+            investedKobo: inv.amountInvestedKobo,
+            payoutKobo: payout,
+          },
+        });
       }
 
-      // 3. Mark cycle as distribution completed
+      // 3. Write org share as an INCOME row in OrganizationalLedger with running balance
+      const lastLedger = await tx.organizationalLedger.findFirst({
+        orderBy: { createdAt: "desc" },
+      });
+      const previousRunningBalance = lastLedger ? lastLedger.runningBalanceKobo : 0n;
+      const newRunningBalance = previousRunningBalance + orgShareKobo;
+
+      await tx.organizationalLedger.create({
+        data: {
+          entryType: LedgerEntryType.INCOME,
+          source: `Org profit share from cycle: ${cycle.cycleName}`,
+          amountKobo: orgShareKobo,
+          date: new Date(),
+          relatedCycleId: cycleId,
+          recordedById: adminId,
+          runningBalanceKobo: newRunningBalance,
+        },
+      });
+
+      // 4. Mark cycle as distribution completed
       const updated = await tx.investmentCycle.update({
         where: { id: cycleId },
         data: {

@@ -1,8 +1,12 @@
 // components/admin/users/user-kyc-card.tsx
-import { CalendarDays, IdCard, MapPin, Users } from "lucide-react";
+"use client";
+
+import { CalendarDays, IdCard, MapPin, Pencil, Users } from "lucide-react";
 import type { UserDetail } from "@/store/modules/user/userApi";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EditUserDialog } from "../EditUserDialog";
 import { formatDate, kycTone, resolveDocumentUrl, titleCase, toneClass } from "../utils";
 
 function Row({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value?: React.ReactNode }) {
@@ -52,7 +56,14 @@ export function UserKycCard({ user }: { user: UserDetail }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm text-muted-foreground">Verification</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-sm text-muted-foreground">Verification</CardTitle>
+          {kyc?.version !== undefined && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+              v{kyc.version}
+            </Badge>
+          )}
+        </div>
         <Badge className={toneClass(kycTone(kyc?.status))}>{titleCase(kyc?.status)}</Badge>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -82,6 +93,19 @@ export function UserKycCard({ user }: { user: UserDetail }) {
           <Row icon={Users} label="Next of kin" value={kyc?.nextOfKinName} />
           <Row icon={Users} label="Relationship" value={titleCase(kyc?.nextOfKinRelationship)} />
           <Row icon={Users} label="Next of kin phone" value={kyc?.nextOfKinPhone} />
+        </div>
+
+        <div className="border-t pt-2">
+          <EditUserDialog
+            user={user}
+            defaultTab="kyc"
+            trigger={
+              <Button variant="outline" size="sm" className="w-full gap-1.5">
+                <Pencil className="h-3.5 w-3.5" />
+                <span>Edit KYC details</span>
+              </Button>
+            }
+          />
         </div>
       </CardContent>
     </Card>

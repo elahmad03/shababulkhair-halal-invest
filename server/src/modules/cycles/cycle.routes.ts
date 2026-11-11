@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware, authorizeRoles } from "../../common/middleware/auth.middleware";
+import { authMiddleware, authorizeRoles, rejectRoles } from "../../common/middleware/auth.middleware";
 import * as CycleController from "./cycle.controller";
 
 const router = Router();
@@ -39,10 +39,10 @@ router.get("/:id/my-position", CycleController.getMemberPosition);
 
 /**
  * POST /cycles/:id/invest (and alias /shares/purchase)
- * Member buys shares in an OPEN_FOR_INVESTMENT cycle
+ * Member buys shares in an OPEN_FOR_INVESTMENT cycle (rejects COMMITTEE)
  */
-router.post("/:id/invest", CycleController.purchaseShares);
-router.post("/:id/shares/purchase", CycleController.purchaseShares);
+router.post("/:id/invest", rejectRoles("COMMITTEE"), CycleController.purchaseShares);
+router.post("/:id/shares/purchase", rejectRoles("COMMITTEE"), CycleController.purchaseShares);
 
 // ============================================================
 // ADMIN ROUTES

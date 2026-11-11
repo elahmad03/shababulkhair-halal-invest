@@ -8,6 +8,7 @@ import { TTL } from "../../services/redis.service";
 import { saveOTP, verifyOTP } from "./otp.service";
 import { sendOTPEmail } from "../../config/mailer";
 import { OtpPurpose } from "./auth.validation";
+import { logger } from "../../config/logger";
 
 // -------------------------
 // Types
@@ -57,9 +58,35 @@ async function issueTokenPair(
   return { accessToken, refreshToken };
 }
 
+import { VerificationTokenType } from '@prisma/client';
+
 async function generateAndSendOtp(userId: string, email: string, purpose: OtpPurpose) {
   const otp = await saveOTP(userId, purpose);
-  await sendOTPEmail(email, otp, purpose);
+  logger.info(`[Auth OTP] Generated OTP for ${email} (purpose: ${purpose}): ${otp}`);
+
+  try {
+    const tokenType = purpose === "PASSWORD_RESET" 
+      ? VerificationTokenType.PASSWORD_RESET 
+      : VerificationTokenType.EMAIL_VERIFY;
+
+    await prisma.verificationToken.create({
+      data: {
+        identifier: email.trim().toLowerCase(),
+        token: otp,
+        type: tokenType,
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      },
+    });
+  } catch (error) {
+    logger.warn(`[Auth VerificationToken] Could not persist verification token to DB:`, error);
+  }
+
+  try {
+    await sendOTPEmail(email, otp, purpose);
+  } catch (error) {
+    logger.error(`[Auth OTP] Failed to send email to ${email}:`, error);
+    throw error;
+  }
 }
 
 // -------------------------
@@ -164,6 +191,16 @@ export async function verifyOtp(userId: string, otp: string, purpose: OtpPurpose
       select: { id: true, firstName: true, lastName: true, email: true, role: true },
     });
 
+    await prisma.verificationToken.updateMany({
+      where: {
+        identifier: user.email.trim().toLowerCase(),
+        token: otp,
+        type: VerificationTokenType.EMAIL_VERIFY,
+        usedAt: null,
+      },
+      data: { usedAt: new Date() },
+    });
+
     // Issue tokens immediately — user is verified, log them in right away
     const tokens = await issueTokenPair(user.id, user.email, user.role);
 
@@ -203,14 +240,21 @@ export async function resendOtp(email: string, purpose: OtpPurpose = "EMAIL_VERI
 // -------------------------
 export async function forgotPassword(email: string) {
   const normalizedEmail = email.trim().toLowerCase();
-  const user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
+  const user = await prisma.user.findFirst({
+    where: {
+      email: {
+        equals: normalizedEmail,
+        mode: "insensitive",
+      },
+    },
     select: { id: true, email: true },
   });
 
   // Always succeed — prevents email enumeration
   if (user) {
     await generateAndSendOtp(user.id, user.email, "PASSWORD_RESET");
+  } else {
+    logger.warn(`[Forgot Password] Requested for non-existent email: ${normalizedEmail}`);
   }
 
   return { message: "If this email exists, a password reset OTP has been sent." };
@@ -249,8 +293,13 @@ export async function resetPassword(
   let user = null;
   if (email) {
     const normalizedEmail = email.trim().toLowerCase();
-    user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+    user = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: normalizedEmail,
+          mode: "insensitive",
+        },
+      },
       select: { id: true, email: true },
     });
   } else if (userId) {
@@ -273,6 +322,16 @@ export async function resetPassword(
   await prisma.user.update({
     where: { id: user.id },
     data: { password: hashedPassword },
+  });
+
+  await prisma.verificationToken.updateMany({
+    where: {
+      identifier: user.email.trim().toLowerCase(),
+      token: otp,
+      type: VerificationTokenType.PASSWORD_RESET,
+      usedAt: null,
+    },
+    data: { usedAt: new Date() },
   });
 
   // Revoke all active sessions — password changed, force re-login everywhere

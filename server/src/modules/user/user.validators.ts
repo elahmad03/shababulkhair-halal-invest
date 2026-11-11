@@ -13,5 +13,32 @@ export const listUsersQuerySchema = z.object({
   kycStatus: z.string().optional(),
 });
 
+export const editUserSchema = z.object({
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+  phoneNumber: z.string().optional(),
+  status: z.enum(["ACTIVE", "SUSPENDED", "DECEASED"]).optional(),
+  isEmailVerified: z.boolean().optional(),
+  // KYC fields matching database schema
+  streetAddress: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  stateRegion: z.string().optional(),
+  state: z.string().optional(),
+  countryCode: z.string().optional(),
+  country: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  governmentIdType: z.string().optional(),
+  idType: z.string().optional(),
+  nextOfKinName: z.string().optional(),
+  nextOfKinRelationship: z.string().optional(),
+  nextOfKinPhone: z.string().optional(),
+  kycStatus: z.enum(["NOT_SUBMITTED", "PENDING_REVIEW", "VERIFIED", "REJECTED"]).optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+  message: "At least one field must be provided for edit",
+});
+
 export type UpdateUserStatusInput = z.infer<typeof updateUserStatusSchema>;
 export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
+export type EditUserInput = z.infer<typeof editUserSchema>;

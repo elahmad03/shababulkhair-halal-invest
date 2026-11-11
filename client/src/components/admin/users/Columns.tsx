@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CalendarDays,
   Clock3,
   MoreHorizontal,
+  Pencil,
   ShieldAlert,
   ShieldCheck,
   ShieldQuestion,
@@ -24,14 +26,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EditUserDialog } from "./EditUserDialog";
 
 export type UserRow = {
   id: string;
   fullName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
+  phoneNumber?: string;
   role: User["role"];
   status: User["status"];
+  isEmailVerified?: boolean;
   kycStatus?: string; // raw value from user.kyc?.status
+  kyc?: User["kyc"];
   investments: number;
   createdAt: string;
 };
@@ -117,6 +125,51 @@ function getKycBadge(raw?: string): KycBadge {
     icon: ShieldQuestion,
     className: "border-border bg-muted text-muted-foreground",
   };
+}
+
+function UserRowActions({ user }: { user: UserRow }) {
+  const [showEditDialog, setShowEditDialog] = useState(false);
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-9 rounded-full"
+            aria-label={`Actions for ${user.fullName}`}
+          >
+            <MoreHorizontal className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+            Manage user
+          </DropdownMenuLabel>
+
+          <DropdownMenuItem asChild>
+            <Link href={`/admin/users/${user.id}`}>
+              <UserRound className="mr-2 size-4" />
+              View profile
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
+            <Pencil className="mr-2 size-4" />
+            Edit details
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <EditUserDialog
+        user={user}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+      />
+    </>
+  );
 }
 
 export const columns: ColumnDef<UserRow>[] = [
@@ -221,46 +274,6 @@ export const columns: ColumnDef<UserRow>[] = [
     id: "actions",
     header: "",
     enableHiding: false,
-    cell: ({ row }) => {
-      const user = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-9 rounded-full"
-              aria-label={`Actions for ${user.fullName}`}
-            >
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-              Manage user
-            </DropdownMenuLabel>
-
-            <DropdownMenuItem asChild>
-              <Link href={`/admin/users/${user.id}`}>
-                <UserRound className="mr-2 size-4" />
-                View profile
-              </Link>
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem
-              disabled
-              className="text-destructive focus:text-destructive"
-            >
-              <UserRoundX className="mr-2 size-4" />
-              Suspend user
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    cell: ({ row }) => <UserRowActions user={row.original} />,
   },
 ];

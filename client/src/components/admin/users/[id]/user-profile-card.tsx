@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, Loader2, Mail, Phone, ShieldCheck } from "lucide-react";
+import { AlertCircle, BadgeCheck, CheckCircle2, Loader2, Mail, Pencil, Phone, ShieldCheck } from "lucide-react";
 import { useUpdateUserStatusMutation, type UserDetail } from "@/store/modules/user/userApi";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { EditUserDialog } from "../EditUserDialog";
 import { accountTone, currencyForCountry, initials, money, resolveDocumentUrl, titleCase, toneClass } from "../utils";
 
 export function UserProfileCard({ user }: { user: UserDetail }) {
@@ -28,7 +29,6 @@ export function UserProfileCard({ user }: { user: UserDetail }) {
 
   const status = user.status;
   const isActive = status === "ACTIVE";
-  const isSuspended = status === "SUSPENDED";
   const isDeceased = status === "DECEASED";
   const currency = currencyForCountry(user.kyc?.countryCode);
   const avatarSrc = resolveDocumentUrl(user.kyc?.avatarUrl ?? user.avatarUrl);
@@ -85,61 +85,94 @@ export function UserProfileCard({ user }: { user: UserDetail }) {
           </span>
         </div>
 
-        {isDeceased ? (
-          <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-            This account is deceased. Deceased accounts are reinstated through the moderation flow, not
-            from here.
-          </p>
-        ) : (
-          <AlertDialog open={open} onOpenChange={setOpen}>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant={isActive ? "destructive" : "default"}
-                size="sm"
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-                {isActive ? "Suspend member" : "Activate member"}
+        <div className="flex flex-col gap-2">
+          {/* Edit user dialog */}
+          <EditUserDialog
+            user={user}
+            trigger={
+              <Button variant="outline" size="sm" className="w-full gap-1.5">
+                <Pencil className="h-3.5 w-3.5" />
+                <span>Edit member</span>
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {isActive ? "Suspend this member?" : "Activate this member?"}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {isActive
-                    ? `${user.firstName} ${user.lastName} will lose access to the platform until reactivated.`
-                    : `${user.firstName} ${user.lastName} will regain full access to the platform.`}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleConfirm();
-                  }}
+            }
+          />
+
+          {/* Suspend / activate toggle */}
+          {isDeceased ? (
+            <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              This account is deceased. Deceased accounts are reinstated through the moderation flow, not
+              from here.
+            </p>
+          ) : (
+            <AlertDialog open={open} onOpenChange={setOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant={isActive ? "destructive" : "default"}
+                  size="sm"
+                  className="w-full"
                   disabled={isLoading}
-                  className={isActive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
                 >
                   {isLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-                  Confirm
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
+                  {isActive ? "Suspend member" : "Activate member"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {isActive ? "Suspend this member?" : "Activate this member?"}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {isActive
+                      ? `${user.firstName} ${user.lastName} will lose access to the platform until reactivated.`
+                      : `${user.firstName} ${user.lastName} will regain full access to the platform.`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleConfirm();
+                    }}
+                    disabled={isLoading}
+                    className={isActive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+                  >
+                    {isLoading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                    Confirm
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
 
         {error && <p className="text-xs text-destructive">{error}</p>}
 
-        {["APPROVED", "VERIFIED"].includes((user.kyc?.status ?? "").toUpperCase()) && (
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <BadgeCheck className="h-3.5 w-3.5 text-emerald-500" />
-            Identity verified
-          </p>
-        )}
+        <div className="flex flex-col gap-1 border-t pt-3">
+          {["APPROVED", "VERIFIED"].includes((user.kyc?.status ?? "").toUpperCase()) ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <BadgeCheck className="h-3.5 w-3.5 text-emerald-500" />
+              Identity verified
+            </p>
+          ) : (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              Identity verification {user.kyc?.status ? titleCase(user.kyc.status) : "Pending"}
+            </p>
+          )}
+
+          {user.isEmailVerified ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              Email verified
+            </p>
+          ) : (
+            <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+              <AlertCircle className="h-3.5 w-3.5" />
+              Email unverified
+            </p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

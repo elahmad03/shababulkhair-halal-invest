@@ -1,138 +1,30 @@
 import { rootApi } from "@/store/rootApi";
+import type {
+  User,
+  UserDetail,
+  UserKyc,
+  Investment,
+  Transaction,
+  ListUsersResponse,
+  UserTransactionsResponse,
+  EditUserInput,
+} from "./User.types";
 
-export interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber?: string;
-  role: "ADMIN" | "COMMITTEE" | "MEMBER";
-  status: "ACTIVE" | "SUSPENDED" | "DECEASED";
-  walletAddress?: string;
-  avatarUrl?: string;
-  createdAt: string;
-  kyc?: {
-    status: string;
-    verificationDate?: string;
-    avatarUrl?: string;
-    idCardFrontUrl?: string;
-    idCardBackUrl?: string;
-    streetAddress?: string;
-    city?: string;
-    stateRegion?: string;
-    countryCode?: string;
-    dateOfBirth?: string;
-    governmentIdType?: string;
-    nextOfKinName?: string;
-    nextOfKinRelationship?: string;
-    nextOfKinPhone?: string;
-  };
-  _count?: {
-    investments: number;
-    ledgerEntries: number;
-  };
-}
-
-export interface UserDetail extends User {
-  updatedAt: string;
-  wallet?: {
-    id: string;
-    balance: number;
-    currency: string;
-  };
-}
-
-export interface UserKyc {
-  id: string;
-  status: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  postalCode?: string;
-  country?: string;
-  idType?: string;
-  idNumber?: string;
-  idDocumentUrl?: string;
-  proofOfAddressUrl?: string;
-  bankAccountName?: string;
-  bankAccountNumber?: string;
-  bankName?: string;
-  verificationDate?: string;
-  rejectionReason?: string;
-  submissionDate?: string;
-  createdAt: string;
-  updatedAt: string;
-  kycAuditLogs?: Array<{
-    id: string;
-    action: string;
-    comment?: string;
-    changedBy: string;
-    createdAt: string;
-  }>;
-}
-
-export interface Investment {
-  id: string;
-  ventureId: string;
-  venture: {
-    id: string;
-    name: string;
-    status: string;
-  };
-  cycleId: string;
-  cycle: {
-    id: string;
-    name: string;
-    status: string;
-  };
-  amount: number;
-  sharesAcquired: number;
-  investmentDate: string;
-  status: string;
-  createdAt: string;
-}
-
-export interface Transaction {
-  id: string;
-  transactionHash: string;
-  type: string;
-  status: string;
-  amount: number;
-  currency: string;
-  description: string;
-  relatedVenture?: {
-    id: string;
-    name: string;
-  };
-  relatedCycle?: {
-    id: string;
-    name: string;
-  };
-  createdAt: string;
-}
-
-export interface ListUsersResponse {
-  data: User[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
-
-export interface UserTransactionsResponse {
-  data: Transaction[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
+export type {
+  UserRole,
+  AccountStatus,
+  KycStatusType,
+  EditUserInput,
+  UserEditLogItem,
+  KycVersionItem,
+  User,
+  UserDetail,
+  UserKyc,
+  Investment,
+  Transaction,
+  ListUsersResponse,
+  UserTransactionsResponse,
+} from "./User.types";
 
 /**
  * Every endpoint on this backend wraps its payload like:
@@ -242,6 +134,19 @@ export const userApi = rootApi.injectEndpoints({
       invalidatesTags: ["Users"],
     }),
 
+    // ── Edit user details (Admin only)
+    editUser: builder.mutation<
+      UserDetail,
+      { id: string; data: EditUserInput }
+    >({
+      query: ({ id, data }) => ({
+        url: `/users/admin/users/${id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      transformResponse: unwrap<UserDetail>,
+      invalidatesTags: ["Users"],
+    }),
   }),
 });
 
@@ -253,4 +158,5 @@ export const {
   useGetUserTransactionsQuery,
   useGetMeQuery,
   useUpdateUserStatusMutation,
+  useEditUserMutation,
 } = userApi;
