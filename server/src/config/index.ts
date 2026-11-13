@@ -25,6 +25,7 @@ export const env = cleanEnv(process.env, {
 
   // Server configuration
   PORT: port({ default: 5000 }),
+  CORS_DEBUG: bool({ default: true }),
 
   // Database connection string
   DATABASE_URL: str(),

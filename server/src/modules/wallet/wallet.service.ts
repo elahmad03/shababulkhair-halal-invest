@@ -138,7 +138,7 @@ export default class WalletService {
       },
     });
     
-    const callbackUrl = `${env.CLIENT_ORIGIN}/payment/callback`;
+    const callbackUrl = `${env.ORIGIN_URL}/payment/callback`;
 
     const paystackData = await paystackInitialize(userEmail, amountKobo, transactionRef, callbackUrl);
 
@@ -189,7 +189,11 @@ export default class WalletService {
         where: { transactionRef: reference },
       });
 
-      if (BigInt(reportedAmountKobo) !== transaction.amountKobo) {
+      if (
+        typeof reportedAmountKobo !== "number" ||
+        !Number.isInteger(reportedAmountKobo) ||
+        BigInt(reportedAmountKobo) !== transaction.amountKobo
+      ) {
         console.warn(
           `Paystack webhook amount mismatch for ref=${reference}: ` +
             `expected=${transaction.amountKobo.toString()} reported=${reportedAmountKobo}`

@@ -37,7 +37,8 @@ app.use(
 // 3. CORS — handle preflight early
 const rawOrigins = env.CLIENT_ORIGIN
   .split(",")
-  .map((o) => o.trim().replace(/\/$/, ""));
+  .map((o) => o.trim().replace(/\/$/, ""))
+  ;
   
 
 const allowedOrigins = new Set(rawOrigins);
@@ -46,7 +47,7 @@ const allowedOrigins = new Set(rawOrigins);
 // ── CORS DEBUG ─────────────────────────────────────────────────────────────
 // Shows exactly what's in the allowlist and what each request sends.
 // Set CORS_DEBUG=true in your .env to enable. Remove in production.
-const CORS_DEBUG = env.NODE_ENV !== "production" || process.env.CORS_DEBUG === "true";
+const CORS_DEBUG = env.NODE_ENV !== "production" || env.CORS_DEBUG;
 
 if (CORS_DEBUG) {
   console.log("╔══════════════════════════════════════════════╗");
