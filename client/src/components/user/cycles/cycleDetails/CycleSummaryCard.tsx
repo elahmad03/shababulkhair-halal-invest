@@ -22,11 +22,11 @@ const CycleSummaryCard = ({ cycle, className }: CycleSummaryCardProps) => {
   const getStatusBadge = () => {
     switch (cycle.status) {
       case "OPEN_FOR_INVESTMENT":
-        return <Badge className="bg-emerald-600 text-white">Open for Investment</Badge>;
+        return <Badge variant="default">Open for Investment</Badge>;
       case "ACTIVE":
         return <Badge variant="secondary">Active</Badge>;
       case "CLOSING":
-        return <Badge className="bg-amber-600 text-white">Closing</Badge>;
+        return <Badge variant="outline" className="border-primary text-primary">Closing</Badge>;
       case "COMPLETED":
         return <Badge variant="outline">Completed</Badge>;
       default:

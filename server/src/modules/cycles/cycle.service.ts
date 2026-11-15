@@ -611,12 +611,25 @@ export default class CycleService {
           profitDistributionStatus: true,
           createdAt: true,
           _count: { select: { investments: true, businessVentures: true } },
+          investments: { select: { amountInvestedKobo: true } },
         },
       }),
       prisma.investmentCycle.count({ where }),
     ]);
 
-    const serialized = serializeBigInts(cycles);
+    const mapped = cycles.map((c) => {
+      const totalInvestedKobo = c.investments?.reduce(
+        (sum, inv) => sum + (inv.amountInvestedKobo ?? 0n),
+        0n
+      ) ?? 0n;
+      const { investments, ...rest } = c;
+      return {
+        ...rest,
+        totalInvestedKobo,
+      };
+    });
+
+    const serialized = serializeBigInts(mapped);
     return {
       cycles: serialized,
       data: serialized,
@@ -627,18 +640,31 @@ export default class CycleService {
     };
   }
 
-  static async getCycleById(cycleId: string) {
+  static async getCycleById(cycleId: string, userRole?: string) {
+    const isAdmin = userRole === "ADMIN";
     const cycle = await prisma.investmentCycle.findUnique({
       where: { id: cycleId },
       include: {
-        investments: {
-          include: {
-            user: {
-              select: { id: true, firstName: true, lastName: true, email: true },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-        },
+        ...(isAdmin
+          ? {
+              investments: {
+                include: {
+                  user: {
+                    select: { id: true, firstName: true, lastName: true, email: true },
+                  },
+                },
+                orderBy: { createdAt: "desc" },
+              },
+              organizationalLedgers: {
+                include: {
+                  recordedBy: {
+                    select: { id: true, firstName: true, lastName: true },
+                  },
+                },
+                orderBy: { date: "desc" },
+              },
+            }
+          : {}),
         businessVentures: {
           include: {
             managedBy: {
@@ -646,13 +672,8 @@ export default class CycleService {
             },
           },
         },
-        organizationalLedgers: {
-          include: {
-            recordedBy: {
-              select: { id: true, firstName: true, lastName: true },
-            },
-          },
-          orderBy: { date: "desc" },
+        _count: {
+          select: { investments: true, businessVentures: true },
         },
       },
     });
@@ -688,6 +709,7 @@ export default class CycleService {
             id: true,
             cycleName: true,
             status: true,
+            pricePerShareKobo: true,
             fundingOpensAt: true,
             fundingClosesAt: true,
             activeStartsAt: true,

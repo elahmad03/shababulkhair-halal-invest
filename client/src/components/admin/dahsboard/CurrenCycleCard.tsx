@@ -50,7 +50,7 @@ export function CurrentCycleCard({ data }: CurrentCycleProps) {
         <div className="grid grid-cols-2 gap-4 pt-2">
           <div>
             <p className="text-sm text-muted-foreground">Capital Raised</p>
-            <p className="font-semibold">{formatCurrency(parseInt(data.capitalRaisedKobo) / 100)}</p>
+            <p className="font-semibold">{formatCurrency(data.capitalRaisedKobo)}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Investors</p>

@@ -49,7 +49,7 @@ export function CyclesDataTable() {
       name: cycle.cycleName,
       status: cycle.status,
       pricePerShare: BigInt(cycle.pricePerShareKobo ?? 0),
-      totalInvested: BigInt(cycle.totalProfitRealizedKobo ?? 0),
+      totalInvested: BigInt(cycle.totalInvestedKobo ?? 0),
       investorCount: cycle._count?.investments ?? 0,
       
       // Updated timeline fields

@@ -42,7 +42,7 @@ const StickyInvestmentBar = ({ cycle }: StickyInvestmentBarProps) => {
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <Badge className="bg-emerald-600 text-white flex-shrink-0">
+            <Badge variant="default" className="flex-shrink-0">
               Open
             </Badge>
             <div className="min-w-0">

@@ -82,19 +82,42 @@ export const cycleApi = rootApi.injectEndpoints({
     // POST /cycles/:id/invest
     purchaseShares: build.mutation<
       ApiResponse<PurchaseSharesResponse>,
-      { cycleId: string; body: PurchaseSharesRequest }
+      {
+        cycleId: string;
+        body?: PurchaseSharesRequest;
+        sharesRequested?: number;
+        shares?: number;
+        quantity?: number;
+        idempotencyKey?: string;
+      }
     >({
-      query: ({ cycleId, body }) => ({
-        url: `/cycles/${cycleId}/invest`,
-        method: "POST",
-        body: {
-          sharesRequested: body.sharesRequested ?? body.shares ?? body.quantity,
-          idempotencyKey: body.idempotencyKey,
-        },
-        headers: body.idempotencyKey
-          ? { "Idempotency-Key": body.idempotencyKey }
-          : undefined,
-      }),
+      query: (arg) => {
+        const cycleId = arg.cycleId;
+        const sharesRequested =
+          arg.body?.sharesRequested ??
+          arg.body?.shares ??
+          arg.body?.quantity ??
+          arg.sharesRequested ??
+          arg.shares ??
+          arg.quantity ??
+          1;
+        const idempotencyKey =
+          arg.body?.idempotencyKey ??
+          arg.idempotencyKey ??
+          `invest-${cycleId}-${Date.now()}`;
+
+        return {
+          url: `/cycles/${cycleId}/invest`,
+          method: "POST",
+          body: {
+            sharesRequested,
+            idempotencyKey,
+          },
+          headers: {
+            "Idempotency-Key": idempotencyKey,
+          },
+        };
+      },
       invalidatesTags: ["Cycles", "Wallet", "Transactions"],
     }),
 

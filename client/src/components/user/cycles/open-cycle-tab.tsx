@@ -11,9 +11,10 @@ export function OpenCyclesTab() {
   const router = useRouter();
   const { data: response, isLoading, isError, error } = useListCyclesQuery({ page: 1, limit: 50 });
 
-  const openCycles = response?.data?.data?.filter(
-    (cycle) => cycle.status === "OPEN_FOR_INVESTMENT"
-  ) ?? [];
+  const rawList = response?.data?.cycles ?? response?.data?.data ?? [];
+  const openCycles = Array.isArray(rawList)
+    ? rawList.filter((cycle) => cycle.status === "OPEN_FOR_INVESTMENT")
+    : [];
 
   const formatDateRange = (start?: string | null, end?: string | null) => {
     if (!start || !end) return "-";

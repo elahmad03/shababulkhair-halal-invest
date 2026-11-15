@@ -12,13 +12,16 @@ export type CycleStatus =
 export interface Cycle {
   id: string;
   cycleName: string;
+  name?: string;
   status: CycleStatus | string;
   pricePerShareKobo: string;
+  pricePerShareNaira?: number;
   fundingOpensAt: string | null;
   fundingClosesAt: string | null;
   activeStartsAt: string | null;
   activeEndsAt: string | null;
   description?: string | null;
+  totalInvestedKobo?: string;
   totalProfitRealizedKobo?: string;
   investorProfitPoolKobo?: string;
   orgProfitShareKobo?: string;
@@ -53,6 +56,7 @@ export interface ShareholderInvestment {
     id: string;
     cycleName: string;
     status: CycleStatus | string;
+    pricePerShareKobo?: string;
     fundingOpensAt: string | null;
     fundingClosesAt: string | null;
     activeStartsAt: string | null;

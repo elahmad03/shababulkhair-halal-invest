@@ -1,6 +1,7 @@
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { CycleDetails } from "@/lib/types/cycle";
 import { VenturesTab } from "./VenturesTab";
 import { DistributionTab } from "./DistributionTabs";
@@ -14,72 +15,27 @@ interface CycleTabsProps {
 export function CycleTabs({ cycleData }: CycleTabsProps) {
   return (
     <Tabs defaultValue="investors" className="w-full space-y-6">
-      
       {/* Tabs Header with semantic styling */}
-      <TabsList
-        className="
-          grid w-full grid-cols-3 
-          bg-slate-100 
-          p-1 
-          rounded-lg
-          border border-slate-200
-        "
-      >
-        <TabsTrigger
-          value="investors"
-          className="
-            data-[state=active]:bg-white
-            data-[state=active]:text-slate-900
-            data-[state=active]:shadow-sm
-            data-[state=active]:border-b-2
-            data-[state=active]:border-blue-500
-            text-slate-600
-            font-medium
-            gap-2
-          "
-        >
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="investors" className="gap-2">
           <Users className="h-4 w-4" />
-          Investors
-          <span className="ml-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold">
+          <span>Investors</span>
+          <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
             {cycleData.numberOfInvestors}
-          </span>
+          </Badge>
         </TabsTrigger>
 
-        <TabsTrigger
-          value="ventures"
-          className="
-            data-[state=active]:bg-white
-            data-[state=active]:text-slate-900
-            data-[state=active]:shadow-sm
-            data-[state=active]:border-b-2
-            data-[state=active]:border-amber-500
-            text-slate-600
-            font-medium
-            gap-2
-          "
-        >
+        <TabsTrigger value="ventures" className="gap-2">
           <Briefcase className="h-4 w-4" />
-          Ventures
-          <span className="ml-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-xs font-semibold">
+          <span>Ventures</span>
+          <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
             {cycleData.ventureCount}
-          </span>
+          </Badge>
         </TabsTrigger>
 
-        <TabsTrigger
-          value="distribution"
-          className="
-            data-[state=active]:bg-white
-            data-[state=active]:text-slate-900
-            data-[state=active]:shadow-sm
-            data-[state=active]:border-b-2
-            data-[state=active]:border-green-500
-            text-slate-600
-            font-medium
-            gap-2
-          "
-        >
+        <TabsTrigger value="distribution" className="gap-2">
           <TrendingUp className="h-4 w-4" />
-          Profit
+          <span>Profit Distribution</span>
         </TabsTrigger>
       </TabsList>
 

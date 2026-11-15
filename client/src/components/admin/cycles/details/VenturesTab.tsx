@@ -1,15 +1,12 @@
-// components/admin/ventures-tab.tsx
-"use client"
+"use client";
 
-import { Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -17,40 +14,26 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { BusinessVenture, CycleStatus } from "@/lib/types/cycle"
-import { formatCurrency } from "@/lib/utils"
+} from "@/components/ui/table";
+import { BusinessVenture, CycleStatus } from "@/lib/types/cycle";
+import { formatCurrency } from "@/lib/utils";
 
 interface VenturesTabProps {
-  ventures: BusinessVenture[]
-  status: CycleStatus
+  ventures: BusinessVenture[];
+  status: CycleStatus;
 }
 
-export function VenturesTab({ ventures, status }: VenturesTabProps) {
-  const handleAddAllocation = () => {
-    // TODO: Implement add allocation
-    console.log("Adding allocation...")
-  }
-
+export function VenturesTab({ ventures }: VenturesTabProps) {
   return (
-    <Card className="border-amber-100 bg-amber-50">
+    <Card className="border bg-card text-card-foreground">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-amber-900">Business Ventures</CardTitle>
-            <CardDescription className="text-amber-700">
+            <CardTitle className="text-foreground">Business Ventures</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Capital allocation and venture performance
             </CardDescription>
           </div>
-          {status === "active" && (
-            <Button
-              onClick={handleAddAllocation}
-              className="bg-amber-600 hover:bg-amber-700 text-white border-0"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Allocation
-            </Button>
-          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -59,7 +42,7 @@ export function VenturesTab({ ventures, status }: VenturesTabProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Managed By</TableHead>
-                <TableHead>Venture/Company Name</TableHead>
+                <TableHead>Venture / Company Name</TableHead>
                 <TableHead>Allocated Amount</TableHead>
                 <TableHead>Profit Realized</TableHead>
               </TableRow>
@@ -68,12 +51,12 @@ export function VenturesTab({ ventures, status }: VenturesTabProps) {
               {ventures.length > 0 ? (
                 ventures.map((venture) => (
                   <TableRow key={venture.id}>
-                    <TableCell>{venture.managedBy}</TableCell>
+                    <TableCell className="font-medium">{venture.managedBy}</TableCell>
                     <TableCell>{venture.ventureName}</TableCell>
                     <TableCell>
                       {formatCurrency(venture.allocatedAmount)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-primary font-semibold">
                       {venture.profitRealized
                         ? `${formatCurrency(venture.profitRealized)}`
                         : "N/A"}
@@ -82,8 +65,8 @@ export function VenturesTab({ ventures, status }: VenturesTabProps) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
-                    No ventures allocated yet.
+                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                    No ventures allocated to this cycle yet.
                   </TableCell>
                 </TableRow>
               )}
@@ -92,5 +75,5 @@ export function VenturesTab({ ventures, status }: VenturesTabProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

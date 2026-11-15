@@ -199,7 +199,7 @@ const AddAllocationModal = ({
                   ) : (
                     activeCycles.map((cycle) => (
                       <SelectItem key={cycle.id} value={cycle.id}>
-                        {cycle.name}
+                        {cycle.cycleName || cycle.name}
                       </SelectItem>
                     ))
                   )}
