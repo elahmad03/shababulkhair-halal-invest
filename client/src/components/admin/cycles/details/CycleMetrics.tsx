@@ -13,55 +13,37 @@ export function CycleMetrics({ cycleData }: CycleMetricsProps) {
       title: "Total Capital Invested",
       value: formatCurrency(cycleData.totalCapitalInvested),
       icon: TrendingUp,
-      bgColor: "bg-blue-50",
-      iconColor: "text-blue-600",
-      borderColor: "border-blue-100",
       description: `${cycleData.totalSharesSold} shares sold`,
     },
     {
       title: "Number of Investors",
       value: cycleData.numberOfInvestors.toLocaleString(),
       icon: Users,
-      bgColor: "bg-emerald-50",
-      iconColor: "text-emerald-600",
-      borderColor: "border-emerald-100",
-      description: `Investor participation`,
+      description: "Investor participation",
     },
     {
       title: "Business Ventures",
       value: cycleData.ventureCount.toLocaleString(),
       icon: Briefcase,
-      bgColor: "bg-amber-50",
-      iconColor: "text-amber-600",
-      borderColor: "border-amber-100",
-      description: `Active ventures`,
+      description: "Allocated ventures",
     },
     {
       title: "Profit Realized",
       value: formatCurrency(cycleData.profitRealized),
       icon: Zap,
-      bgColor: "bg-green-50",
-      iconColor: "text-green-600",
-      borderColor: "border-green-100",
-      description: `Total profit generated`,
+      description: "Total profit generated",
     },
     {
-      title: "Investor Pool (80%)",
+      title: "Investor Profit Pool",
       value: formatCurrency(cycleData.investorPool),
       icon: PieChart,
-      bgColor: "bg-indigo-50",
-      iconColor: "text-indigo-600",
-      borderColor: "border-indigo-100",
-      description: `Distributed to investors`,
+      description: "Allocated to investors",
     },
     {
-      title: "Organizational Share (20%)",
+      title: "Organizational Share",
       value: formatCurrency(cycleData.organizationalShare),
       icon: Target,
-      bgColor: "bg-orange-50",
-      iconColor: "text-orange-600",
-      borderColor: "border-orange-100",
-      description: `Organizational allocation`,
+      description: "Organizational allocation",
     },
   ];
 
@@ -72,23 +54,25 @@ export function CycleMetrics({ cycleData }: CycleMetricsProps) {
         return (
           <Card
             key={index}
-            className={`border ${metric.borderColor} ${metric.bgColor} hover:shadow-lg transition-shadow`}
+            className="border bg-card text-card-foreground hover:shadow-md transition-shadow"
           >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-sm font-medium text-slate-700">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
                     {metric.title}
                   </CardTitle>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {metric.description}
                   </p>
                 </div>
-                <Icon className={`h-5 w-5 ${metric.iconColor}`} />
+                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-slate-900">
+              <p className="text-2xl font-bold text-foreground">
                 {metric.value}
               </p>
             </CardContent>

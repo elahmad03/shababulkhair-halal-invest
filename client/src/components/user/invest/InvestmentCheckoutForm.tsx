@@ -1,62 +1,66 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { ArrowLeft, Wallet as WalletIcon, Loader2 } from "lucide-react"
-import { formatCurrency } from "@/lib/utils"
-import { toast } from "sonner"
-import type { Cycle } from "@/store/modules/cycle/cycle.types"
-// import type { Wallet } from "@/store/modules/wallet/wallet.types"
-import type { WalletBalance as Wallet } from "@/store/modules/wallet/Wallet.types"
-import ShareCounter from "./ShareCounter"
-import InvestmentSummaryCard from "./InvestmentSummaryCard"
-
-import { usePurchaseSharesMutation } from "@/store/modules/cycle/cycleApi"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Wallet as WalletIcon, Loader2 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
+import type { Cycle } from "@/store/modules/cycle/cycle.types";
+import type { WalletBalance as Wallet } from "@/store/modules/wallet/Wallet.types";
+import ShareCounter from "./ShareCounter";
+import InvestmentSummaryCard from "./InvestmentSummaryCard";
+import { usePurchaseSharesMutation } from "@/store/modules/cycle/cycleApi";
 
 interface InvestmentCheckoutFormProps {
-  cycle: Cycle
-  wallet: Wallet
+  cycle: Cycle;
+  wallet: Wallet;
 }
 
 const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) => {
-  const router = useRouter()
-  const [purchaseShares, { isLoading: isPurchasing }] = usePurchaseSharesMutation()
-  const [shares, setShares] = useState(0)
-  const [termsAccepted, setTermsAccepted] = useState(false)
+  const router = useRouter();
+  const [purchaseShares, { isLoading: isPurchasing }] = usePurchaseSharesMutation();
+  const [shares, setShares] = useState(0);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
-  const pricePerShareNaira = Number(cycle.pricePerShareKobo) / 100
-  const totalInvestment = pricePerShareNaira * shares
-  const walletBalanceNaira = Number(wallet.balanceKobo) / 100
-  const remainingBalance = walletBalanceNaira - totalInvestment
-  const hasSufficientFunds = remainingBalance >= 0
-  const canSubmit = shares > 0 && hasSufficientFunds && termsAccepted && !isPurchasing
+  // Financial calculations entirely in Kobo using BigInt
+  const pricePerShareKobo = BigInt(cycle.pricePerShareKobo || "1000000");
+  const totalInvestmentKobo = pricePerShareKobo * BigInt(shares);
+  const walletBalanceKobo = BigInt(wallet.balanceKobo || "0");
+  const remainingBalanceKobo = walletBalanceKobo - totalInvestmentKobo;
+  const hasSufficientFunds = remainingBalanceKobo >= 0n;
+  const canSubmit = shares > 0 && hasSufficientFunds && termsAccepted && !isPurchasing;
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!canSubmit) return
+    if (!canSubmit) return;
+
+    const idempotencyKey = `invest-${cycle.id}-${Date.now()}`;
 
     try {
       await purchaseShares({
         cycleId: cycle.id,
-        sharesRequested: shares,
-      }).unwrap()
+        body: {
+          sharesRequested: shares,
+          idempotencyKey,
+        },
+      }).unwrap();
 
-      toast.success("🎉 Investment Successful!", {
-        description: `You've invested ₦${totalInvestment.toLocaleString()} in ${cycle.cycleName}`,
-      })
+      toast.success("Investment Successful!", {
+        description: `You've invested ${formatCurrency(totalInvestmentKobo)} in ${cycle.cycleName}`,
+      });
 
-      router.push("/user/dashboard")
+      router.push("/user/dashboard");
     } catch (error: any) {
       toast.error("Investment Failed", {
         description: error?.data?.message || "Something went wrong. Please try again.",
-      })
+      });
     }
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -76,7 +80,7 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
           Invest in {cycle.cycleName}
         </h1>
         <p className="text-muted-foreground">
-          Secure your shares at ₦{pricePerShareNaira.toLocaleString()} per share
+          Secure your shares at {formatCurrency(pricePerShareKobo)} per share
         </p>
       </div>
 
@@ -98,7 +102,7 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
                         Available to Invest
                       </p>
                       <p className="text-2xl font-bold text-primary">
-                        ₦{walletBalanceNaira.toLocaleString()}
+                        {formatCurrency(walletBalanceKobo)}
                       </p>
                     </div>
                   </div>
@@ -113,7 +117,7 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
                   How many shares?
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  ₦{pricePerShareNaira.toLocaleString()} per share
+                  {formatCurrency(pricePerShareKobo)} per share
                 </p>
               </CardHeader>
               <CardContent className="pt-8 pb-10">
@@ -124,9 +128,9 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
             {/* Mobile Summary (shown only on mobile) */}
             <div className="lg:hidden">
               <InvestmentSummaryCard
-                pricePerShareNaira={pricePerShareNaira}
+                pricePerShareKobo={pricePerShareKobo}
                 shares={shares}
-                walletBalanceNaira={walletBalanceNaira}
+                walletBalanceKobo={walletBalanceKobo}
               />
             </div>
 
@@ -163,13 +167,13 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
             </Card>
 
             {/* Submit Button (Mobile) */}
-            <div className="lg:hidden sticky bottom-0 bg-background dark:bg-background pt-4 pb-6 -mx-4 px-4 border-t border-border">
+            <div className="lg:hidden sticky bottom-0 bg-background pt-4 pb-6 -mx-4 px-4 border-t border-border">
               <Button
                 type="submit"
                 disabled={!canSubmit}
                 className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? (
+                {isPurchasing ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Processing...
@@ -177,12 +181,12 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
                 ) : (
                   <>
                     CONFIRM INVESTMENT
-                    {shares > 0 && ` (₦${totalInvestment.toLocaleString()})`}
+                    {shares > 0 && ` (${formatCurrency(totalInvestmentKobo)})`}
                   </>
                 )}
               </Button>
               {!canSubmit && shares > 0 && (
-                <p className="text-xs text-center text-destructive dark:text-destructive mt-2">
+                <p className="text-xs text-center text-destructive mt-2">
                   {!hasSufficientFunds
                     ? "Insufficient funds in wallet"
                     : !termsAccepted
@@ -197,9 +201,9 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
           <div className="hidden lg:block lg:col-span-5">
             <div className="sticky top-6 space-y-6">
               <InvestmentSummaryCard
-                pricePerShareNaira={pricePerShareNaira}
+                pricePerShareKobo={pricePerShareKobo}
                 shares={shares}
-                walletBalanceNaira={walletBalanceNaira}
+                walletBalanceKobo={walletBalanceKobo}
               />
 
               <Button
@@ -207,7 +211,7 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
                 disabled={!canSubmit}
                 className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
-                {isSubmitting ? (
+                {isPurchasing ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Processing...
@@ -215,13 +219,13 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
                 ) : (
                   <>
                     CONFIRM INVESTMENT
-                    {shares > 0 && ` (₦${totalInvestment.toLocaleString()})`}
+                    {shares > 0 && ` (${formatCurrency(totalInvestmentKobo)})`}
                   </>
                 )}
               </Button>
 
               {!canSubmit && shares > 0 && (
-                <p className="text-xs text-center text-destructive dark:text-destructive">
+                <p className="text-xs text-center text-destructive">
                   {!hasSufficientFunds
                     ? "Insufficient funds in wallet"
                     : !termsAccepted
@@ -234,7 +238,7 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
         </div>
       </form>
     </div>
-  )
-}
+  );
+};
 
-export default InvestmentCheckoutForm
+export default InvestmentCheckoutForm;

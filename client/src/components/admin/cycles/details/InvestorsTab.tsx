@@ -1,44 +1,64 @@
-// app/(admin)/cycles/[cycleId]/_components/investors-tab.tsx
-"use client"
+"use client";
 
-import { Download } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { InvestorsTable } from "./InvestorsTable"
-import { Investor } from "@/lib/types/cycle"
+import { Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { InvestorsTable } from "./InvestorsTable";
+import { Investor } from "@/lib/types/cycle";
 
 interface InvestorsTabProps {
-  investors: Investor[]
+  investors: Investor[];
 }
 
 export function InvestorsTab({ investors }: InvestorsTabProps) {
   const handleExportCSV = () => {
-    // TODO: Implement CSV export
-    console.log("Exporting to CSV...")
-  }
+    if (investors.length === 0) return;
+    const headers = ["Member Name", "Shares", "Amount Invested (NGN)", "Share %", "Profit Earned (NGN)"];
+    const rows = investors.map((inv) => [
+      inv.memberName,
+      inv.shares,
+      (Number(inv.amountInvested) / 100).toFixed(2),
+      inv.sharePercentage.toFixed(2),
+      inv.profitEarned ? (Number(inv.profitEarned) / 100).toFixed(2) : "0.00",
+    ]);
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `investors-${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
-    <Card className="border-blue-100 bg-blue-50">
+    <Card className="border bg-card text-card-foreground">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-blue-900">Investor List</CardTitle>
-            <CardDescription className="text-blue-700">
+            <CardTitle className="text-foreground">Investor List</CardTitle>
+            <CardDescription className="text-muted-foreground">
               {investors.length} shareholders in this cycle
             </CardDescription>
           </div>
-          <Button
-            onClick={handleExportCSV}
-            className="bg-blue-600 hover:bg-blue-700 text-white border-0"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Export to CSV
-          </Button>
+          {investors.length > 0 && (
+            <Button
+              onClick={handleExportCSV}
+              variant="outline"
+              size="sm"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
         <InvestorsTable data={investors} />
       </CardContent>
     </Card>
-  )
+  );
 }

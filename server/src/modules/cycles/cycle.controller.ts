@@ -123,7 +123,7 @@ export const listCycles = catchAsync(async (req: AuthenticatedRequest, res: Resp
 
 export const getCycleById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const cycle = await CycleService.getCycleById(id);
+  const cycle = await CycleService.getCycleById(id, req.user?.role);
   res.status(200).json(successResponse(cycle, "Cycle retrieved"));
 });
 

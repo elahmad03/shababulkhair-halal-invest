@@ -9,11 +9,21 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 
 export function ActiveCyclesTab() {
   const router = useRouter();
-  const { data: historyResponse, isLoading: historyLoading, isError: historyError, error: historyErrorData } = useGetMemberInvestmentHistoryQuery();
-  const { data: cyclesResponse, isLoading: cyclesLoading } = useListCyclesQuery({ page: 1, limit: 50 });
+  const {
+    data: historyResponse,
+    isLoading: historyLoading,
+    isError: historyError,
+    error: historyErrorData,
+  } = useGetMemberInvestmentHistoryQuery();
+  const { data: cyclesResponse, isLoading: cyclesLoading } = useListCyclesQuery({
+    page: 1,
+    limit: 50,
+  });
 
-  const userInvestments = historyResponse?.data?.filter(inv => inv.cycle?.status === 'ACTIVE') ?? [];
-  const allCycles = cyclesResponse?.data?.data ?? [];
+  const userInvestments =
+    historyResponse?.data?.filter((inv) => inv.cycle?.status === 'ACTIVE') ?? [];
+  const allCycles =
+    cyclesResponse?.data?.cycles ?? cyclesResponse?.data?.data ?? [];
 
   const isLoading = historyLoading || cyclesLoading;
   const isError = historyError;
@@ -37,17 +47,20 @@ export function ActiveCyclesTab() {
 
   // Error state
   if (isError) {
-    const errorMessage = 
-      error && 'data' in error && typeof error.data === 'object' && error.data !== null && 'message' in error.data
+    const errorMessage =
+      error &&
+      typeof error === 'object' &&
+      'data' in error &&
+      typeof error.data === 'object' &&
+      error.data !== null &&
+      'message' in error.data
         ? (error.data as { message: string }).message
-        : "Failed to load investments. Please try again.";
-    
+        : 'Failed to load investments. Please try again.';
+
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          {errorMessage}
-        </AlertDescription>
+        <AlertDescription>{errorMessage}</AlertDescription>
       </Alert>
     );
   }
@@ -66,11 +79,15 @@ export function ActiveCyclesTab() {
   return (
     <section aria-label="Active Investments" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {userInvestments.map((investment) => {
-        const cycle = allCycles.find(c => c.id === investment.cycleId) ?? investment.cycle;
+        const cycle = allCycles.find((c) => c.id === investment.cycleId) ?? investment.cycle;
 
         if (!cycle) return null;
 
         const maturityDate = investment.cycle?.activeEndsAt || cycle.activeEndsAt;
+        const pricePerShareKobo =
+          cycle.pricePerShareKobo ??
+          investment.cycle?.pricePerShareKobo ??
+          '1000000';
 
         return (
           <CycleCard
@@ -80,7 +97,7 @@ export function ActiveCyclesTab() {
             details={[
               {
                 label: 'My Investment',
-                value: formatCurrency(Number(investment.amountInvestedKobo)),
+                value: formatCurrency(investment.amountInvestedKobo),
               },
               {
                 label: 'Shares Held',
@@ -88,12 +105,16 @@ export function ActiveCyclesTab() {
               },
               {
                 label: 'Share Price',
-                value: formatCurrency(Number(cycle.pricePerShareNaira)),
+                value: formatCurrency(pricePerShareKobo),
               },
               {
                 label: 'Cycle Maturity',
                 value: maturityDate
-                  ? new Date(maturityDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  ? new Date(maturityDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })
                   : '-',
               },
             ]}

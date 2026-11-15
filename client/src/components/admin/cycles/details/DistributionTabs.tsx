@@ -36,12 +36,11 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
   const status = (cycleData.rawStatus || cycleData.status || "").toUpperCase();
   const isDistributed = cycleData.profitDistributionStatus === "COMPLETED";
 
-  // Profit calculations
-  const totalProfitKobo = Number(cycleData.profitRealized);
-  const totalProfitNaira = totalProfitKobo / 100;
-  const pct = parseFloat(investorPercentage) || 0;
-  const investorPoolNaira = (totalProfitNaira * pct) / 100;
-  const orgShareNaira = totalProfitNaira - investorPoolNaira;
+  // Profit calculations in Kobo (BigInt)
+  const totalProfitKobo = BigInt(cycleData.profitRealized || 0n);
+  const pct = Math.min(100, Math.max(0, parseFloat(investorPercentage) || 0));
+  const investorPoolKobo = (totalProfitKobo * BigInt(Math.round(pct * 100))) / 10000n;
+  const orgShareKobo = totalProfitKobo - investorPoolKobo;
 
   const handleDistributeProfit = async () => {
     if (pct < 0 || pct > 100) {
@@ -80,21 +79,21 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
     return (
       <div className="space-y-6">
         {!isDistributed ? (
-          <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/10">
+          <Card className="border bg-card text-card-foreground">
             <CardHeader>
-              <CardTitle className="text-amber-900 dark:text-amber-300">
+              <CardTitle className="text-foreground">
                 Finalize Profit Split
               </CardTitle>
-              <CardDescription className="text-amber-700 dark:text-amber-400">
+              <CardDescription className="text-muted-foreground">
                 Cycle is in CLOSING phase. Set the investor / organization split ratio before completing the cycle.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-background rounded-lg border">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/40 rounded-lg border">
                 <div>
                   <Label className="text-xs text-muted-foreground">Total Realized Profit</Label>
                   <p className="text-2xl font-bold text-foreground">
-                    {formatCurrency(totalProfitNaira)}
+                    {formatCurrency(totalProfitKobo)}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Sum of realized profits across all ventures
@@ -122,16 +121,16 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
                   <Label className="text-xs text-muted-foreground">
                     Investors Pool ({pct}%)
                   </Label>
-                  <p className="text-xl font-bold text-emerald-600">
-                    {formatCurrency(investorPoolNaira)}
+                  <p className="text-xl font-bold text-primary">
+                    {formatCurrency(investorPoolKobo)}
                   </p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">
                     Organization Share ({100 - pct}%)
                   </Label>
-                  <p className="text-xl font-bold text-blue-600">
-                    {formatCurrency(orgShareNaira)}
+                  <p className="text-xl font-bold text-foreground">
+                    {formatCurrency(orgShareKobo)}
                   </p>
                 </div>
               </div>
@@ -161,7 +160,7 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
               </div>
 
               <Button
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="w-full"
                 size="lg"
                 disabled={!confirmDistribution || isDistributing}
                 onClick={handleDistributeProfit}
@@ -172,42 +171,42 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/10">
+          <Card className="border bg-card text-card-foreground">
             <CardHeader>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                <CardTitle className="text-green-900 dark:text-green-300">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                <CardTitle className="text-foreground">
                   Profit Distribution Recorded
                 </CardTitle>
               </div>
-              <CardDescription className="text-green-700 dark:text-green-400">
+              <CardDescription className="text-muted-foreground">
                 Shareholder profits have been credited. You can now complete the cycle.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-3 gap-4 p-4 bg-background rounded-lg border">
+              <div className="grid grid-cols-3 gap-4 p-4 bg-muted/40 rounded-lg border">
                 <div>
                   <Label className="text-xs text-muted-foreground">Total Realized</Label>
-                  <p className="text-lg font-bold">
-                    {formatCurrency(Number(cycleData.profitRealized) / 100)}
+                  <p className="text-lg font-bold text-foreground">
+                    {formatCurrency(cycleData.profitRealized)}
                   </p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Investor Pool</Label>
-                  <p className="text-lg font-bold text-emerald-600">
-                    {formatCurrency(Number(cycleData.investorPool) / 100)}
+                  <p className="text-lg font-bold text-primary">
+                    {formatCurrency(cycleData.investorPool)}
                   </p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Organization Share</Label>
-                  <p className="text-lg font-bold text-blue-600">
-                    {formatCurrency(Number(cycleData.organizationalShare) / 100)}
+                  <p className="text-lg font-bold text-foreground">
+                    {formatCurrency(cycleData.organizationalShare)}
                   </p>
                 </div>
               </div>
 
               <Button
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full"
                 size="lg"
                 disabled={isCompleting}
                 onClick={handleCompleteCycle}
@@ -225,33 +224,33 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
   // 2. COMPLETED Phase — Final Record
   if (status === "COMPLETED") {
     return (
-      <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/10">
+      <Card className="border bg-card text-card-foreground">
         <CardHeader>
-          <CardTitle className="text-green-900 dark:text-green-300">
+          <CardTitle className="text-foreground">
             Distribution Summary
           </CardTitle>
-          <CardDescription className="text-green-700 dark:text-green-400">
+          <CardDescription className="text-muted-foreground">
             Final settled profit distribution record for this completed cycle.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-background rounded-lg border">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-muted/40 rounded-lg border">
             <div>
               <Label className="text-xs text-muted-foreground">Total Profit Realized</Label>
               <p className="text-xl font-bold text-foreground">
-                {formatCurrency(Number(cycleData.profitRealized) / 100)}
+                {formatCurrency(cycleData.profitRealized)}
               </p>
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Investor Pool</Label>
-              <p className="text-xl font-bold text-emerald-600">
-                {formatCurrency(Number(cycleData.investorPool) / 100)}
+              <p className="text-xl font-bold text-primary">
+                {formatCurrency(cycleData.investorPool)}
               </p>
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Organizational Share</Label>
-              <p className="text-xl font-bold text-blue-600">
-                {formatCurrency(Number(cycleData.organizationalShare) / 100)}
+              <p className="text-xl font-bold text-foreground">
+                {formatCurrency(cycleData.organizationalShare)}
               </p>
             </div>
           </div>
@@ -262,7 +261,7 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
 
   // 3. PENDING, OPEN, or ACTIVE Phase
   return (
-    <Card className="border-slate-200">
+    <Card className="border bg-card text-card-foreground">
       <CardContent className="py-12 text-center text-muted-foreground space-y-2">
         <p className="text-base font-medium text-foreground">
           Profit distribution is not available in {status} status.

@@ -107,7 +107,7 @@ export function CycleActionsDropdown({ cycle }: CycleActionsDropdownProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={handleOpenForInvestment}>
-            <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+            <CheckCircle className="mr-2 h-4 w-4 text-primary" />
             Open for Investment
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleViewDetails}>
@@ -130,7 +130,7 @@ export function CycleActionsDropdown({ cycle }: CycleActionsDropdownProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setShowActivateDialog(true)}>
-              <Play className="mr-2 h-4 w-4 text-blue-600" />
+              <Play className="mr-2 h-4 w-4 text-primary" />
               Activate Cycle
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleViewDetails}>
@@ -151,7 +151,7 @@ export function CycleActionsDropdown({ cycle }: CycleActionsDropdownProps) {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleMakeActive} className="bg-blue-600">
+              <AlertDialogAction onClick={handleMakeActive}>
                 Activate Cycle
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -177,7 +177,7 @@ export function CycleActionsDropdown({ cycle }: CycleActionsDropdownProps) {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setShowCloseWindowDialog(true)}>
-              <AlertCircle className="mr-2 h-4 w-4 text-amber-600" />
+              <AlertCircle className="mr-2 h-4 w-4 text-primary" />
               Open Closing Window
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -194,7 +194,7 @@ export function CycleActionsDropdown({ cycle }: CycleActionsDropdownProps) {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleMoveToClosing} className="bg-amber-600">
+              <AlertDialogAction onClick={handleMoveToClosing}>
                 Move to Closing
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -214,7 +214,7 @@ export function CycleActionsDropdown({ cycle }: CycleActionsDropdownProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={handleViewDetails}>
-            <TrendingUp className="mr-2 h-4 w-4 text-green-600" />
+            <TrendingUp className="mr-2 h-4 w-4 text-primary" />
             Distribute Profits & Complete
           </DropdownMenuItem>
         </DropdownMenuContent>

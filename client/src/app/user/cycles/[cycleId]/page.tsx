@@ -78,15 +78,15 @@ const CycleDetailsPageContent = ({
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "OPEN_FOR_INVESTMENT":
-        return { label: "Open for Investment", color: "bg-emerald-600 text-white" };
+        return { label: "Open for Investment", variant: "default" as const };
       case "ACTIVE":
-        return { label: "Active", color: "bg-primary text-primary-foreground" };
+        return { label: "Active", variant: "secondary" as const };
       case "CLOSING":
-        return { label: "Closing", color: "bg-amber-600 text-white" };
+        return { label: "Closing", variant: "outline" as const };
       case "COMPLETED":
-        return { label: "Completed", color: "bg-muted text-muted-foreground" };
+        return { label: "Completed", variant: "outline" as const };
       default:
-        return { label: "Pending", color: "bg-muted text-muted-foreground" };
+        return { label: "Pending", variant: "outline" as const };
     }
   };
 
@@ -131,7 +131,7 @@ const CycleDetailsPageContent = ({
               {/* Hero Section */}
               <Card className="border">
                 <CardHeader className="space-y-4">
-                  <Badge className={`${statusConfig.color} w-fit`}>
+                  <Badge variant={statusConfig.variant} className="w-fit">
                     {statusConfig.label}
                   </Badge>
                   <div>
@@ -222,10 +222,10 @@ const CycleDetailsPageContent = ({
               </Card>
 
               {/* Risk Disclosure */}
-              <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
+              <Card className="border-border bg-card">
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-amber-600" />
+                    <Shield className="h-5 w-5 text-primary" />
                     <CardTitle className="text-xl">Important Information</CardTitle>
                   </div>
                 </CardHeader>
