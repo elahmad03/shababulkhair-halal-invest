@@ -224,7 +224,7 @@ export default class WalletService {
       amountKobo: number;
       disbursementType: "WALLET_BALANCE" | "PROFIT_ONLY" | "FULL_DIVESTMENT";
       bankAccountId: string;
-      relatedCycleId?: string;
+      relatedCycleId?: string | undefined| null;
     }
   ) {
     const amountKobo = BigInt(data.amountKobo);
