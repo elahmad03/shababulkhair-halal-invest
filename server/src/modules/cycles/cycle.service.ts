@@ -286,13 +286,14 @@ export default class CycleService {
         throw new Error("Total profit must be greater than zero");
       }
 
-      // Percentage calculation
-      const investorBps = BigInt(Math.round(input.investorProfitPercentage * 100));
+      // Percentage calculation (normalized to basis points, max 2 decimal places)
+      const normalizedInvestorPct = Number(input.investorProfitPercentage.toFixed(2));
+      const investorBps = BigInt(Math.round(normalizedInvestorPct * 100));
       const totalBps = 10000n;
 
       let investorPoolKobo = (totalProfit * investorBps) / totalBps;
       let orgShareKobo = totalProfit - investorPoolKobo;
-      const orgPercentage = Number((100 - input.investorProfitPercentage).toFixed(2));
+      const orgPercentage = Number((100 - normalizedInvestorPct).toFixed(2));
 
       // Proportional split across all ShareholderInvestment rows by amountInvestedKobo
       const totalInvestedKobo = cycle.investments.reduce(
@@ -334,7 +335,7 @@ export default class CycleService {
         data: {
           cycleId,
           authorisedById: adminId,
-          investorProfitPercentage: new Prisma.Decimal(input.investorProfitPercentage.toFixed(2)),
+          investorProfitPercentage: new Prisma.Decimal(normalizedInvestorPct.toFixed(2)),
           orgProfitPercentage: new Prisma.Decimal(orgPercentage.toFixed(2)),
           totalProfitKobo: totalProfit,
           investorProfitPoolKobo: investorPoolKobo,

@@ -36,24 +36,53 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
   const status = (cycleData.rawStatus || cycleData.status || "").toUpperCase();
   const isDistributed = cycleData.profitDistributionStatus === "COMPLETED";
 
-  // Profit calculations in Kobo (BigInt)
+  // Parse and strictly validate percentage input with basis-point precision (max 2 decimal places)
   const totalProfitKobo = BigInt(cycleData.profitRealized || 0n);
-  const pct = Math.min(100, Math.max(0, parseFloat(investorPercentage) || 0));
-  const investorPoolKobo = (totalProfitKobo * BigInt(Math.round(pct * 100))) / 10000n;
-  const orgShareKobo = totalProfitKobo - investorPoolKobo;
+  const parsedPct = parseFloat(investorPercentage);
+  const decimalParts = investorPercentage.trim().split(".");
+  const hasValidPrecision = !decimalParts[1] || decimalParts[1].length <= 2;
+  const isValidPct =
+    investorPercentage.trim() !== "" &&
+    !isNaN(parsedPct) &&
+    isFinite(parsedPct) &&
+    parsedPct >= 0 &&
+    parsedPct <= 100 &&
+    hasValidPrecision;
+
+  // Projections: compute only when percentage and precision are valid; matches server basis points (1 bp = 0.01%)
+  const investorBps = isValidPct ? BigInt(Math.round(parsedPct * 100)) : 0n;
+  const investorPoolKobo = isValidPct ? (totalProfitKobo * investorBps) / 10000n : 0n;
+  const orgShareKobo = isValidPct ? totalProfitKobo - investorPoolKobo : 0n;
 
   const handleDistributeProfit = async () => {
-    if (pct < 0 || pct > 100) {
-      toast.error("Percentage must be between 0 and 100");
+    const rawPct = parseFloat(investorPercentage);
+    const decimals = investorPercentage.trim().split(".")[1];
+
+    if (
+      investorPercentage.trim() === "" ||
+      isNaN(rawPct) ||
+      !isFinite(rawPct) ||
+      rawPct < 0 ||
+      rawPct > 100
+    ) {
+      toast.error("Percentage must be a valid number between 0 and 100");
       return;
     }
+
+    if (decimals && decimals.length > 2) {
+      toast.error("Percentage precision cannot exceed 2 decimal places (basis points)");
+      return;
+    }
+
+    // Submit the exact normalized 2-decimal percentage matching the preview and DB Decimal(5,2)
+    const normalizedPct = Number(rawPct.toFixed(2));
 
     try {
       await distributeProfit({
         cycleId: cycleData.id,
         body: {
-          investorProfitPercentage: pct,
-          notes: notes || undefined,
+          investorProfitPercentage: normalizedPct,
+          notes: notes.trim() || undefined,
         },
       }).unwrap();
       toast.success("Profits distributed and recorded successfully!");
@@ -108,10 +137,18 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
                     type="number"
                     min="0"
                     max="100"
+                    step="0.01"
                     value={investorPercentage}
                     onChange={(e) => setInvestorPercentage(e.target.value)}
                     className="mt-1 font-semibold"
                   />
+                  {!isValidPct && (
+                    <p className="text-xs text-destructive mt-1">
+                      {!hasValidPrecision
+                        ? "Percentage cannot exceed 2 decimal places (basis points e.g. 80.25)"
+                        : "Percentage must be a valid number between 0 and 100"}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -119,18 +156,18 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
               <div className="grid grid-cols-2 gap-4 p-4 bg-muted/60 rounded-lg border">
                 <div>
                   <Label className="text-xs text-muted-foreground">
-                    Investors Pool ({pct}%)
+                    Investors Pool {isValidPct ? `(${parsedPct.toFixed(2)}%)` : ""}
                   </Label>
                   <p className="text-xl font-bold text-primary">
-                    {formatCurrency(investorPoolKobo)}
+                    {isValidPct ? formatCurrency(investorPoolKobo) : "—"}
                   </p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">
-                    Organization Share ({100 - pct}%)
+                    Organization Share {isValidPct ? `(${(100 - parsedPct).toFixed(2)}%)` : ""}
                   </Label>
                   <p className="text-xl font-bold text-foreground">
-                    {formatCurrency(orgShareKobo)}
+                    {isValidPct ? formatCurrency(orgShareKobo) : "—"}
                   </p>
                 </div>
               </div>
@@ -162,7 +199,7 @@ export function DistributionTab({ cycleData }: DistributionTabProps) {
               <Button
                 className="w-full"
                 size="lg"
-                disabled={!confirmDistribution || isDistributing}
+                disabled={!confirmDistribution || isDistributing || !isValidPct}
                 onClick={handleDistributeProfit}
               >
                 {isDistributing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

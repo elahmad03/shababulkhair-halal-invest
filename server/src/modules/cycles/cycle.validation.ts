@@ -92,7 +92,14 @@ export const distributeProfitSchema = z.object({
           : "Investor profit percentage must be a number",
     })
     .min(0, { message: "Investor profit percentage must be >= 0" })
-    .max(100, { message: "Investor profit percentage must be <= 100" }),
+    .max(100, { message: "Investor profit percentage must be <= 100" })
+    .refine(
+      (val) => {
+        const decimals = val.toString().split(".")[1];
+        return !decimals || decimals.length <= 2;
+      },
+      { message: "Investor profit percentage cannot exceed 2 decimal places" }
+    ),
 
   notes: z.string().max(500).optional(),
 });

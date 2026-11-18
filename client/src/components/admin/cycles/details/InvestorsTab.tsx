@@ -10,16 +10,40 @@ interface InvestorsTabProps {
   investors: Investor[];
 }
 
+/**
+ * Neutralizes formula triggers for CSV exports (OWASP CWE-1236 / CSV Injection).
+ * If a cell begins with '=', '+', '-', '@', '\t', or '\r', spreadsheet software
+ * interprets it as a formula. We prepend a single quote (') to force literal interpretation
+ * and escape internal double quotes.
+ */
+function sanitizeCsvCell(value: unknown): string {
+  if (value == null) return '""';
+  const str = String(value);
+  const formulaTriggers = ["=", "+", "-", "@", "\t", "\r"];
+  let safeStr = str;
+  if (formulaTriggers.some((prefix) => safeStr.startsWith(prefix))) {
+    safeStr = `'${safeStr}`;
+  }
+  return `"${safeStr.replace(/"/g, '""')}"`;
+}
+
 export function InvestorsTab({ investors }: InvestorsTabProps) {
   const handleExportCSV = () => {
     if (investors.length === 0) return;
-    const headers = ["Member Name", "Shares", "Amount Invested (NGN)", "Share %", "Profit Earned (NGN)"];
+    const headers = [
+      "Member Name",
+      "Shares",
+      "Amount Invested (NGN)",
+      "Share %",
+      "Profit Earned (NGN)",
+    ].map(sanitizeCsvCell);
+
     const rows = investors.map((inv) => [
-      inv.memberName,
-      inv.shares,
-      (Number(inv.amountInvested) / 100).toFixed(2),
-      inv.sharePercentage.toFixed(2),
-      inv.profitEarned ? (Number(inv.profitEarned) / 100).toFixed(2) : "0.00",
+      sanitizeCsvCell(inv.memberName),
+      sanitizeCsvCell(inv.shares),
+      sanitizeCsvCell((Number(inv.amountInvested) / 100).toFixed(2)),
+      sanitizeCsvCell(inv.sharePercentage.toFixed(2)),
+      sanitizeCsvCell(inv.profitEarned ? (Number(inv.profitEarned) / 100).toFixed(2) : "0.00"),
     ]);
 
     const csvContent =
