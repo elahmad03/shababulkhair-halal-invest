@@ -55,8 +55,9 @@ const AddAllocationModal = ({
   const [createVenture, { isLoading }] = useCreateVentureMutation()
 
   // Filter ACTIVE cycles only
-  const activeCycles = (cyclesData?.data?.cycles || []).filter(
-    (c) => c.status === "ACTIVE"
+  const rawCycles = cyclesData?.data?.cycles ?? cyclesData?.data?.data ?? []
+  const activeCycles = (Array.isArray(rawCycles) ? rawCycles : []).filter(
+    (c: any) => c.status === "ACTIVE"
   )
 
   const validateForm = (): boolean => {

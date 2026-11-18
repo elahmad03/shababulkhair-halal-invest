@@ -9,7 +9,7 @@ import CycleSummaryCard from "@/components/user/cycles/cycleDetails/CycleSummary
 import StickyInvestmentBar from "@/components/user/cycles/cycleDetails/StickyInvestmentbar";
 import FloatingInvestmentFooter from "@/components/user/cycles/cycleDetails/FloatingInvestmentFooter";
 import { useGetCycleByIdQuery } from "@/store/hooks";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDuration } from "@/lib/utils";
 import { format } from "date-fns";
 import {
   Calendar,
@@ -103,22 +103,6 @@ const CycleDetailsPageContent = ({
     }
   };
 
-  const calculateDuration = (startStr?: string | null, endStr?: string | null) => {
-    if (!startStr || !endStr) return "N/A";
-    try {
-      const start = new Date(startStr);
-      const end = new Date(endStr);
-      if (isNaN(start.getTime()) || isNaN(end.getTime())) return "N/A";
-      const diffTime = Math.abs(end.getTime() - start.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      const months = Math.floor(diffDays / 30);
-      if (months > 0) return `${months} Month${months > 1 ? "s" : ""}`;
-      return `${diffDays} Day${diffDays > 1 ? "s" : ""}`;
-    } catch {
-      return "N/A";
-    }
-  };
-
   return (
     <>
       <StickyInvestmentBar cycle={cycle} />
@@ -173,7 +157,7 @@ const CycleDetailsPageContent = ({
                       <div>
                         <p className="text-sm text-muted-foreground">Cycle Duration</p>
                         <p className="font-semibold">
-                          {calculateDuration(cycle.activeStartsAt, cycle.activeEndsAt)}
+                          {formatDuration(cycle.activeStartsAt, cycle.activeEndsAt, "N/A")}
                         </p>
                       </div>
                     </div>

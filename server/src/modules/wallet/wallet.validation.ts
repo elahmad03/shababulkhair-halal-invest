@@ -8,12 +8,12 @@ export const initializeDepositSchema = z.object({
 });
 
 export const withdrawSchema = z.object({
-  amountKobo: z.number()
+  amountKobo: z.coerce.number()
     .int("Amount must be a whole number (in kobo)")
     .positive("Amount must be greater than zero"),
-  disbursementType: z.enum(["WALLET_BALANCE", "PROFIT_ONLY", "FULL_DIVESTMENT"]),
+  disbursementType: z.enum(["WALLET_BALANCE", "PROFIT_ONLY", "FULL_DIVESTMENT"]).default("WALLET_BALANCE"),
   bankAccountId: z.string().min(1, "Please select a bank account"), 
-  relatedCycleId: z.string().uuid().optional(),
+  relatedCycleId: z.string().uuid().optional().nullable(),
 });
 
 export const adminAdjustSchema = z.object({

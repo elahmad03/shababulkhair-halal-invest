@@ -87,6 +87,7 @@ export const mapCycleDetailsToUI = (data: any): CycleDetails => {
     ventureName: v.companyName || v.ventureName || "Unnamed Venture",
     allocatedAmount: toKoboBigInt(v.allocatedAmountKobo),
     profitRealized: toKoboBigInt(v.profitRealizedKobo),
+    agreementReceiptUrl: v.agreementReceiptUrl || null,
   }));
 
   return {

@@ -37,10 +37,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Search, ChevronLeft, ChevronRight, MoreHorizontal, TrendingUp, Trash2 } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, MoreHorizontal, TrendingUp, Trash2, FileText, ListPlus } from "lucide-react"
 import { toast } from "sonner"
 import { useDeleteVentureMutation } from "@/store/modules/venture/ventureApi"
 import RecordProfitModal from "./RecordProfitModal"
+import UploadReceiptModal from "./UploadReceiptModal"
+import ProfitEntriesModal from "./ProfitEntriesModal"
 import type { Venture } from "@/store/modules/venture/venture.types"
 
 interface DataTableProps<TData, TValue> {
@@ -55,6 +57,8 @@ export function BusinessAllocationsTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [deleteVenture, { isLoading: isDeleting }] = useDeleteVentureMutation()
   const [profitModalOpen, setProfitModalOpen] = useState(false)
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false)
+  const [profitEntriesModalOpen, setProfitEntriesModalOpen] = useState(false)
   const [selectedVenture, setSelectedVenture] = useState<Venture | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [ventureToDelete, setVentureToDelete] = useState<Venture | null>(null)
@@ -79,6 +83,16 @@ export function BusinessAllocationsTable<TData, TValue>({
   const handleRecordProfit = (venture: Venture) => {
     setSelectedVenture(venture)
     setProfitModalOpen(true)
+  }
+
+  const handleProfitEntries = (venture: Venture) => {
+    setSelectedVenture(venture)
+    setProfitEntriesModalOpen(true)
+  }
+
+  const handleReceipt = (venture: Venture) => {
+    setSelectedVenture(venture)
+    setReceiptModalOpen(true)
   }
 
   const handleDeleteClick = (venture: Venture) => {
@@ -150,13 +164,27 @@ export function BusinessAllocationsTable<TData, TValue>({
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuItem
+                            onClick={() => handleProfitEntries(venture)}
+                            className="cursor-pointer"
+                          >
+                            <ListPlus className="mr-2 h-4 w-4 text-primary" />
+                            Profit Entries (Committee)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleReceipt(venture)}
+                            className="cursor-pointer"
+                          >
+                            <FileText className="mr-2 h-4 w-4" />
+                            Agreement Receipt
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleRecordProfit(venture)}
                             className="cursor-pointer"
                           >
                             <TrendingUp className="mr-2 h-4 w-4" />
-                            Record Profit
+                            Set Realized Profit
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -231,6 +259,20 @@ export function BusinessAllocationsTable<TData, TValue>({
         venture={selectedVenture}
         open={profitModalOpen}
         onOpenChange={setProfitModalOpen}
+      />
+
+      {/* Profit Entries Modal (Committee & Admin) */}
+      <ProfitEntriesModal
+        venture={selectedVenture}
+        open={profitEntriesModalOpen}
+        onOpenChange={setProfitEntriesModalOpen}
+      />
+
+      {/* Upload/View Agreement Receipt Modal (Admin) */}
+      <UploadReceiptModal
+        venture={selectedVenture}
+        open={receiptModalOpen}
+        onOpenChange={setReceiptModalOpen}
       />
 
       {/* Delete Confirmation Dialog */}

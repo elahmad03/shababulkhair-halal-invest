@@ -40,6 +40,7 @@ export interface BusinessVenture {
   ventureName: string;
   allocatedAmount: bigint;
   profitRealized?: bigint;
+  agreementReceiptUrl?: string | null;
 }
 
 export interface CycleDetails {

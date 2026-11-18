@@ -4,6 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import type { Venture, VentureStatus } from "@/store/modules/venture/venture.types"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/utils"
+import { FileText, ExternalLink } from "lucide-react"
 
 export const columns: ColumnDef<Venture>[] = [
   {
@@ -100,6 +101,32 @@ export const columns: ColumnDef<Venture>[] = [
         <Badge variant={config.variant}>
           {config.label}
         </Badge>
+      )
+    },
+  },
+  {
+    accessorKey: "agreementReceiptUrl",
+    header: "Agreement",
+    cell: ({ row }) => {
+      const receiptUrl = row.original.agreementReceiptUrl
+      if (!receiptUrl) {
+        return (
+          <Badge variant="outline" className="text-muted-foreground font-normal text-xs">
+            No receipt
+          </Badge>
+        )
+      }
+      return (
+        <a
+          href={receiptUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+        >
+          <FileText className="h-3.5 w-3.5" />
+          Receipt
+          <ExternalLink className="h-3 w-3" />
+        </a>
       )
     },
   },

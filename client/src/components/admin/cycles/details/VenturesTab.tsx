@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import { BusinessVenture, CycleStatus } from "@/lib/types/cycle";
 import { formatCurrency } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { FileText, ExternalLink } from "lucide-react";
 
 interface VenturesTabProps {
   ventures: BusinessVenture[];
@@ -45,6 +47,7 @@ export function VenturesTab({ ventures }: VenturesTabProps) {
                 <TableHead>Venture / Company Name</TableHead>
                 <TableHead>Allocated Amount</TableHead>
                 <TableHead>Profit Realized</TableHead>
+                <TableHead>Agreement</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -61,11 +64,29 @@ export function VenturesTab({ ventures }: VenturesTabProps) {
                         ? `${formatCurrency(venture.profitRealized)}`
                         : "N/A"}
                     </TableCell>
+                    <TableCell>
+                      {venture.agreementReceiptUrl ? (
+                        <a
+                          href={venture.agreementReceiptUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          Receipt
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground font-normal text-xs">
+                          No receipt
+                        </Badge>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                     No ventures allocated to this cycle yet.
                   </TableCell>
                 </TableRow>
