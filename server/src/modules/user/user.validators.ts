@@ -13,9 +13,23 @@ export const listUsersQuerySchema = z.object({
   kycStatus: z.string().optional(),
 });
 
+const nameRegex = /^[a-zA-Z\s'-]+$/;
+
 export const editUserSchema = z.object({
-  firstName: z.string().min(1).optional(),
-  lastName: z.string().min(1).optional(),
+  firstName: z
+    .string()
+    .trim()
+    .min(1)
+    .max(50)
+    .regex(nameRegex, "First name cannot contain formula characters or invalid symbols")
+    .optional(),
+  lastName: z
+    .string()
+    .trim()
+    .min(1)
+    .max(50)
+    .regex(nameRegex, "Last name cannot contain formula characters or invalid symbols")
+    .optional(),
   email: z.string().email().optional(),
   phoneNumber: z.string().optional(),
   status: z.enum(["ACTIVE", "SUSPENDED", "DECEASED"]).optional(),

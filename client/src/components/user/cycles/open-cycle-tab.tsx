@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { CycleCard } from "./cycle-card";
 import { useListCyclesQuery } from "@/store/hooks";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDuration } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 
@@ -23,24 +23,6 @@ export function OpenCyclesTab() {
       const e = new Date(end);
       if (isNaN(s.getTime()) || isNaN(e.getTime())) return "-";
       return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
-    } catch {
-      return "-";
-    }
-  };
-
-  const calculateDuration = (start?: string | null, end?: string | null) => {
-    if (!start || !end) return "-";
-    try {
-      const s = new Date(start);
-      const e = new Date(end);
-      if (isNaN(s.getTime()) || isNaN(e.getTime())) return "-";
-      const diffTime = Math.abs(e.getTime() - s.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      const weeks = Math.floor(diffDays / 7);
-      const months = Math.floor(diffDays / 30);
-      if (months > 0) return `${months} Month${months > 1 ? "s" : ""}`;
-      if (weeks > 0) return `${weeks} Week${weeks > 1 ? "s" : ""}`;
-      return `${diffDays} Day${diffDays > 1 ? "s" : ""}`;
     } catch {
       return "-";
     }
@@ -104,7 +86,7 @@ export function OpenCyclesTab() {
             },
             {
               label: "Cycle Duration",
-              value: calculateDuration(cycle.activeStartsAt, cycle.activeEndsAt),
+              value: formatDuration(cycle.activeStartsAt, cycle.activeEndsAt),
             },
             {
               label: "Share Price",

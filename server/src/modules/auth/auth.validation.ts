@@ -4,9 +4,21 @@ import { Request, Response, NextFunction } from "express";
 export const otpSchema = z.string().regex(/^\d{6}$/, "OTP must be exactly 6 digits");
 export const purposeSchema = z.enum(["EMAIL_VERIFICATION", "PASSWORD_RESET"]);
 
+const nameRegex = /^[a-zA-Z\s'-]+$/;
+
 export const registerSchema = z.object({
-  firstName: z.string().min(2, "First name must be at least 2 characters"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters"),
+  firstName: z
+    .string()
+    .trim()
+    .min(2, "First name must be at least 2 characters")
+    .max(50, "First name cannot exceed 50 characters")
+    .regex(nameRegex, "First name cannot contain numbers, special symbols, or formula characters"),
+  lastName: z
+    .string()
+    .trim()
+    .min(2, "Last name must be at least 2 characters")
+    .max(50, "Last name cannot exceed 50 characters")
+    .regex(nameRegex, "Last name cannot contain numbers, special symbols, or formula characters"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   phoneNumber: z.string().min(7, "Phone number must be at least 7 digits"),

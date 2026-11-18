@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,10 +26,47 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
   const [shares, setShares] = useState(0);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // Financial calculations entirely in Kobo using BigInt
-  const pricePerShareKobo = BigInt(cycle.pricePerShareKobo || "1000000");
+  // Retain the idempotency key across uncertain network failures / retries for the same order intent
+  const idempotencyKeyRef = useRef<string>(
+    `invest-${cycle.id}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+  );
+
+  const handleSharesChange = (newShares: number) => {
+    setShares(newShares);
+    // Regenerate key when share quantity changes (new purchase intent)
+    idempotencyKeyRef.current = `invest-${cycle.id}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  };
+
+  // Financial calculations entirely in Kobo using BigInt with backwards compatibility for legacy callers:
+  // 1. If pricePerShareKobo is provided, use it directly.
+  // 2. Otherwise if pricePerShareNaira or legacy pricePerShare is provided, convert from Naira to Kobo (* 100).
+  // 3. Fallback to 1,000,000 Kobo (₦10,000).
+  const pricePerShareKobo: bigint = (() => {
+    if (cycle.pricePerShareKobo != null) {
+      return BigInt(cycle.pricePerShareKobo.toString().split(".")[0] || "0");
+    }
+    const legacyNaira = (cycle as any).pricePerShareNaira ?? (cycle as any).pricePerShare;
+    if (legacyNaira != null) {
+      return BigInt(Math.round(Number(legacyNaira) * 100));
+    }
+    return 1000000n;
+  })();
+
   const totalInvestmentKobo = pricePerShareKobo * BigInt(shares);
-  const walletBalanceKobo = BigInt(wallet.balanceKobo || "0");
+
+  // 1. If wallet.balanceKobo is provided, use it directly.
+  // 2. Otherwise if balanceNaira or legacy balance is provided, convert from Naira to Kobo (* 100).
+  // 3. Fallback to 0n.
+  const walletBalanceKobo: bigint = (() => {
+    if (wallet.balanceKobo != null) {
+      return BigInt(wallet.balanceKobo.toString().split(".")[0] || "0");
+    }
+    const legacyBalance = (wallet as any).balanceNaira ?? (wallet as any).balance;
+    if (legacyBalance != null) {
+      return BigInt(Math.round(Number(legacyBalance) * 100));
+    }
+    return 0n;
+  })();
   const remainingBalanceKobo = walletBalanceKobo - totalInvestmentKobo;
   const hasSufficientFunds = remainingBalanceKobo >= 0n;
   const canSubmit = shares > 0 && hasSufficientFunds && termsAccepted && !isPurchasing;
@@ -39,7 +76,8 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
 
     if (!canSubmit) return;
 
-    const idempotencyKey = `invest-${cycle.id}-${Date.now()}`;
+    // Retain the exact same key across uncertain network failures so the server deduplicates
+    const idempotencyKey = idempotencyKeyRef.current;
 
     try {
       await purchaseShares({
@@ -51,14 +89,20 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
       }).unwrap();
 
       toast.success("Investment Successful!", {
-        description: `You've invested ${formatCurrency(totalInvestmentKobo)} in ${cycle.cycleName}`,
+        description: `You've invested ${formatCurrency(totalInvestmentKobo)} in ${cycle.cycleName || (cycle as any).name || "Investment Cycle"}`,
       });
+
+      // Refresh key for future purchase
+      idempotencyKeyRef.current = `invest-${cycle.id}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
       router.push("/user/dashboard");
     } catch (error: any) {
       toast.error("Investment Failed", {
         description: error?.data?.message || "Something went wrong. Please try again.",
       });
+      // DO NOT regenerate idempotencyKeyRef on failure:
+      // If the server committed the transaction but the client timed out waiting for the response,
+      // re-submitting with this retained key will safely return the existing purchase without a double-debit.
     }
   };
 
@@ -77,7 +121,7 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold mb-2">
-          Invest in {cycle.cycleName}
+          Invest in {cycle.cycleName || (cycle as any).name || "Investment Cycle"}
         </h1>
         <p className="text-muted-foreground">
           Secure your shares at {formatCurrency(pricePerShareKobo)} per share
@@ -121,7 +165,7 @@ const InvestmentCheckoutForm = ({ cycle, wallet }: InvestmentCheckoutFormProps) 
                 </p>
               </CardHeader>
               <CardContent className="pt-8 pb-10">
-                <ShareCounter shares={shares} onSharesChange={setShares} />
+                <ShareCounter shares={shares} onSharesChange={handleSharesChange} />
               </CardContent>
             </Card>
 

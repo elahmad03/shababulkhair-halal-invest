@@ -49,6 +49,53 @@ export function formatCurrency(amount: number | bigint | string | null | undefin
 }
 
 
+/**
+ * Calculates human-friendly duration between two dates (e.g. "3 Months", "1 Month", "2 Weeks", "5 Days").
+ * Properly accounts for calendar months (e.g. Jan 1 to Mar 31 = 3 Months, Feb 1 to Feb 28 = 1 Month)
+ * rather than truncating with naive 30-day divisions.
+ */
+export function formatDuration(
+  start?: string | Date | null,
+  end?: string | Date | null,
+  fallback = "-"
+): string {
+  if (!start || !end) return fallback;
+  const s = typeof start === "string" ? new Date(start) : start;
+  const e = typeof end === "string" ? new Date(end) : end;
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return fallback;
+
+  const startDay = s.getDate();
+  const endDay = e.getDate();
+  const lastDayOfEndMonth = new Date(e.getFullYear(), e.getMonth() + 1, 0).getDate();
+
+  // If start is 1st of month and end is last day of month (e.g. Jan 1 to Mar 31)
+  if (startDay === 1 && endDay >= lastDayOfEndMonth - 1) {
+    const months = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()) + 1;
+    if (months > 0) return `${months} Month${months > 1 ? "s" : ""}`;
+  }
+
+  // Same day of month (e.g. Jan 15 to Apr 15)
+  if (Math.abs(endDay - startDay) <= 2) {
+    const months = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
+    if (months > 0) return `${months} Month${months > 1 ? "s" : ""}`;
+  }
+
+  // General case by elapsed days
+  const diffTime = Math.abs(e.getTime() - s.getTime());
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  const approxMonths = Math.round(diffDays / 30.4375);
+  if (approxMonths >= 1) {
+    return `${approxMonths} Month${approxMonths > 1 ? "s" : ""}`;
+  }
+
+  const weeks = Math.round(diffDays / 7);
+  if (weeks >= 1) {
+    return `${weeks} Week${weeks > 1 ? "s" : ""}`;
+  }
+
+  return `${diffDays} Day${diffDays > 1 ? "s" : ""}`;
+}
+
 export function parseMarkdownToJson(markdownText: string): unknown | null {
   const regex = /```json\n([\s\S]+?)\n```/;
   const match = markdownText.match(regex);
